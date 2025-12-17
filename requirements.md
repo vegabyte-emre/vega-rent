@@ -5,63 +5,65 @@
 
 ## Tamamlanan Görevler
 
-### Backend (FastAPI + MongoDB)
-- [x] Multi-tenant mimari altyapısı
-- [x] JWT tabanlı kimlik doğrulama sistemi
-- [x] Rol bazlı yetkilendirme (SuperAdmin, FirmaAdmin, Operasyon, Muhasebe, Personel)
-- [x] Firma yönetimi (CRUD)
-- [x] Araç yönetimi (CRUD + durum takibi)
+### Müşteri Sitesi (Public Website)
+- [x] Ana sayfa (Landing) - hero section, araç arama kutusu, istatistikler
+- [x] Araçlar sayfası - filtreler (segment, vites, yakıt, fiyat), arama, araç kartları
+- [x] Araç detay sayfası - büyük görsel, özellikler, rezervasyon kartı
+- [x] Müşteri giriş/kayıt sayfaları
+- [x] Müşteri hesap paneli (rezervasyonlarım)
+- [x] Rezervasyon formu - kişisel bilgiler, KVKK onayı, ödeme onayı
+- [x] Header/Footer navigasyonu
+
+### Yönetim Paneli (Admin Dashboard)
+- [x] Auth sistemi (JWT tabanlı, rol bazlı yetkilendirme)
+- [x] Dashboard (istatistik kartları, grafikler)
+- [x] Araç yönetimi (CRUD, durum takibi)
 - [x] Müşteri yönetimi (CRUD)
-- [x] Rezervasyon sistemi (state machine: CREATED → CONFIRMED → DELIVERED → RETURNED → CLOSED)
-- [x] Teslim/İade iş akışları
-- [x] Ödeme modülü (iyzico entegrasyonu hazır - mock)
-- [x] GPS takip (mock data)
-- [x] Dashboard istatistikleri
-- [x] Audit log altyapısı
+- [x] Rezervasyon sistemi (state machine)
+- [x] GPS takip (mock)
+- [x] Ödemeler
+- [x] Raporlar
+- [x] Firmalar (SuperAdmin)
+- [x] Ayarlar
 
-### Frontend (React + Tailwind + Shadcn)
-- [x] Login/Register sayfaları
-- [x] Dashboard (istatistik kartları, grafikler, hızlı işlemler)
-- [x] Araçlar sayfası (liste, arama, filtreleme, ekleme)
-- [x] Müşteriler sayfası (liste, arama, ekleme)
-- [x] Rezervasyonlar sayfası (liste, durum güncelleme, yeni rezervasyon)
-- [x] GPS Takip sayfası (harita, araç listesi)
-- [x] Ödemeler sayfası (işlem geçmişi)
-- [x] Raporlar sayfası (gelir trendi, segment dağılımı, performans)
-- [x] Firmalar sayfası (SuperAdmin için)
-- [x] Ayarlar sayfası (profil, tema, bildirimler, entegrasyonlar)
-- [x] Responsive sidebar navigasyonu
-- [x] Koyu/Açık tema desteği
-
-## Sonraki Adımlar (Next Tasks)
-
-### Faz 2 - Entegrasyonlar
-- [ ] iyzico canlı entegrasyonu (API keys gerekli)
-- [ ] EDM e-Fatura/e-Arşiv entegrasyonu
-- [ ] Gerçek GPS cihaz entegrasyonu
-- [ ] HGS/OGS sorgu entegrasyonu
-- [ ] SMS bildirim servisi (Twilio/Netgsm)
-
-### Faz 3 - Gelişmiş Özellikler
-- [ ] NFC kimlik okuma (mobil app)
-- [ ] Sözleşme oluşturma ve PDF export
-- [ ] Hasar takip sistemi (fotoğraf/video)
-- [ ] Provizyon (pre-authorization) yönetimi
-- [ ] Trafik cezası sorgu entegrasyonu
-- [ ] Otomatik faturalama
-
-### Faz 4 - Mobil Uygulama
-- [ ] React Native mobil app
-- [ ] NFC kimlik doğrulama
-- [ ] Teslim/iade işlemleri
-- [ ] Hasar kayıt modülü
+### Backend API
+- [x] Public API (authentication gerektirmeyen): /api/public/vehicles
+- [x] Auth API: login, register, me
+- [x] CRUD endpoints: companies, vehicles, customers, reservations
+- [x] Dashboard stats, GPS mock, payments
 
 ## Demo Hesapları
 - SuperAdmin: admin@fleetease.com / admin123
 - Firma Admin: firma@fleetease.com / firma123
 
+## URL Yapısı
+- `/` - Müşteri ana sayfa
+- `/araclar` - Araç listesi (müşteri)
+- `/arac/:id` - Araç detay (müşteri)
+- `/rezervasyon` - Rezervasyon formu
+- `/musteri/giris` - Müşteri giriş
+- `/musteri/kayit` - Müşteri kayıt
+- `/hesabim` - Müşteri dashboard
+- `/login` - Admin giriş
+- `/dashboard` - Admin dashboard
+- `/vehicles`, `/customers`, `/reservations` vb. - Admin paneli
+
+## Sonraki Adımlar (Next Tasks)
+
+### Faz 2 - Entegrasyonlar
+- [ ] iyzico canlı ödeme entegrasyonu
+- [ ] EDM e-Fatura/e-Arşiv entegrasyonu
+- [ ] Gerçek GPS cihaz entegrasyonu
+- [ ] SMS bildirim servisi
+
+### Faz 3 - Gelişmiş Özellikler
+- [ ] NFC kimlik okuma (mobil)
+- [ ] Sözleşme PDF oluşturma
+- [ ] Hasar takip sistemi
+- [ ] HGS/OGS sorgu
+- [ ] Trafik cezası sorgu
+
 ## Tech Stack
 - Backend: FastAPI, MongoDB, Motor, JWT
 - Frontend: React, Tailwind CSS, Shadcn UI, Recharts
-- Ödeme: iyzico (hazır - mock modunda)
-- GPS: Mock data (canlı entegrasyon hazır)
+- Ödeme: iyzico (mock modunda)
