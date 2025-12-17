@@ -864,6 +864,243 @@ async def get_public_vehicle(vehicle_id: str):
     vehicle_data["created_at"] = datetime.fromisoformat(vehicle["created_at"]) if isinstance(vehicle["created_at"], str) else vehicle["created_at"]
     return VehicleResponse(**vehicle_data)
 
+# ============== THEME MANAGEMENT ==============
+PREDEFINED_THEMES = [
+    {
+        "id": "classic-blue",
+        "name": "Klasik Mavi",
+        "description": "Profesyonel ve güvenilir kurumsal görünüm",
+        "preview_image": "https://images.unsplash.com/photo-1557683316-973673bdar59?w=400",
+        "colors": {
+            "primary": "#3B82F6",
+            "secondary": "#1E40AF",
+            "accent": "#60A5FA",
+            "background": "#FFFFFF",
+            "text": "#1F2937",
+            "hero_overlay": "rgba(30, 64, 175, 0.8)"
+        },
+        "hero_image": "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920",
+        "style": "modern",
+        "is_premium": False
+    },
+    {
+        "id": "elegant-dark",
+        "name": "Elegant Koyu",
+        "description": "Lüks ve sofistike karanlık tema",
+        "preview_image": "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400",
+        "colors": {
+            "primary": "#F59E0B",
+            "secondary": "#D97706",
+            "accent": "#FBBF24",
+            "background": "#111827",
+            "text": "#F9FAFB",
+            "hero_overlay": "rgba(17, 24, 39, 0.9)"
+        },
+        "hero_image": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1920",
+        "style": "luxury",
+        "is_premium": False
+    },
+    {
+        "id": "fresh-green",
+        "name": "Taze Yeşil",
+        "description": "Eko-dostu ve modern görünüm",
+        "preview_image": "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400",
+        "colors": {
+            "primary": "#10B981",
+            "secondary": "#059669",
+            "accent": "#34D399",
+            "background": "#FFFFFF",
+            "text": "#1F2937",
+            "hero_overlay": "rgba(5, 150, 105, 0.8)"
+        },
+        "hero_image": "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1920",
+        "style": "eco",
+        "is_premium": False
+    },
+    {
+        "id": "royal-purple",
+        "name": "Royal Mor",
+        "description": "Premium ve dikkat çekici tasarım",
+        "preview_image": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=400",
+        "colors": {
+            "primary": "#8B5CF6",
+            "secondary": "#7C3AED",
+            "accent": "#A78BFA",
+            "background": "#FFFFFF",
+            "text": "#1F2937",
+            "hero_overlay": "rgba(124, 58, 237, 0.8)"
+        },
+        "hero_image": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=1920",
+        "style": "premium",
+        "is_premium": True
+    },
+    {
+        "id": "sunset-orange",
+        "name": "Gün Batımı",
+        "description": "Sıcak ve enerjik turuncu tema",
+        "preview_image": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400",
+        "colors": {
+            "primary": "#F97316",
+            "secondary": "#EA580C",
+            "accent": "#FB923C",
+            "background": "#FFFBEB",
+            "text": "#1F2937",
+            "hero_overlay": "rgba(234, 88, 12, 0.8)"
+        },
+        "hero_image": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=1920",
+        "style": "energetic",
+        "is_premium": False
+    },
+    {
+        "id": "minimalist-gray",
+        "name": "Minimalist Gri",
+        "description": "Sade ve şık minimalist tasarım",
+        "preview_image": "https://images.unsplash.com/photo-1502877338535-766e1452684a?w=400",
+        "colors": {
+            "primary": "#6B7280",
+            "secondary": "#4B5563",
+            "accent": "#9CA3AF",
+            "background": "#F9FAFB",
+            "text": "#111827",
+            "hero_overlay": "rgba(75, 85, 99, 0.85)"
+        },
+        "hero_image": "https://images.unsplash.com/photo-1502877338535-766e1452684a?w=1920",
+        "style": "minimal",
+        "is_premium": False
+    }
+]
+
+class ThemeSettingsUpdate(BaseModel):
+    active_theme_id: str
+    custom_hero_title: Optional[str] = None
+    custom_hero_subtitle: Optional[str] = None
+    custom_logo_url: Optional[str] = None
+    show_stats: bool = True
+    show_features: bool = True
+    show_popular_vehicles: bool = True
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    social_facebook: Optional[str] = None
+    social_instagram: Optional[str] = None
+    social_twitter: Optional[str] = None
+
+class LandingPageContent(BaseModel):
+    hero_title: Optional[str] = None
+    hero_subtitle: Optional[str] = None
+    about_text: Optional[str] = None
+    features: Optional[List[dict]] = None
+
+@api_router.get("/themes")
+async def list_themes(user: dict = Depends(get_current_user)):
+    """List all available themes"""
+    return PREDEFINED_THEMES
+
+@api_router.get("/themes/{theme_id}")
+async def get_theme(theme_id: str):
+    """Get specific theme details"""
+    for theme in PREDEFINED_THEMES:
+        if theme["id"] == theme_id:
+            return theme
+    raise HTTPException(status_code=404, detail="Theme not found")
+
+@api_router.get("/theme-settings")
+async def get_theme_settings(user: dict = Depends(get_current_user)):
+    """Get current theme settings for the company"""
+    company_id = user.get("company_id")
+    
+    settings = await db.theme_settings.find_one(
+        {"company_id": company_id} if company_id else {"is_default": True},
+        {"_id": 0}
+    )
+    
+    if not settings:
+        # Return default settings
+        return {
+            "active_theme_id": "classic-blue",
+            "custom_hero_title": "Hayalinizdeki Aracı Kiralayın",
+            "custom_hero_subtitle": "Geniş araç filomuz ve uygun fiyatlarımızla seyahatlerinizi konforlu hale getiriyoruz.",
+            "custom_logo_url": None,
+            "show_stats": True,
+            "show_features": True,
+            "show_popular_vehicles": True,
+            "contact_phone": "0850 123 4567",
+            "contact_email": "info@fleetease.com",
+            "social_facebook": None,
+            "social_instagram": None,
+            "social_twitter": None
+        }
+    return settings
+
+@api_router.put("/theme-settings")
+async def update_theme_settings(settings: ThemeSettingsUpdate, user: dict = Depends(get_current_user)):
+    """Update theme settings"""
+    if user["role"] not in [UserRole.SUPERADMIN.value, UserRole.FIRMA_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Only admins can update theme settings")
+    
+    company_id = user.get("company_id")
+    
+    settings_doc = settings.model_dump()
+    settings_doc["company_id"] = company_id
+    settings_doc["updated_at"] = datetime.now(timezone.utc).isoformat()
+    settings_doc["updated_by"] = user["id"]
+    
+    await db.theme_settings.update_one(
+        {"company_id": company_id} if company_id else {"is_default": True},
+        {"$set": settings_doc},
+        upsert=True
+    )
+    
+    return {"message": "Theme settings updated successfully", "settings": settings_doc}
+
+@api_router.get("/public/theme-settings")
+async def get_public_theme_settings():
+    """Get theme settings for public landing page (no auth required)"""
+    settings = await db.theme_settings.find_one({"is_default": True}, {"_id": 0})
+    
+    if not settings:
+        settings = {
+            "active_theme_id": "classic-blue",
+            "custom_hero_title": "Hayalinizdeki Aracı Kiralayın",
+            "custom_hero_subtitle": "Geniş araç filomuz ve uygun fiyatlarımızla seyahatlerinizi konforlu hale getiriyoruz.",
+            "show_stats": True,
+            "show_features": True,
+            "show_popular_vehicles": True,
+            "contact_phone": "0850 123 4567",
+            "contact_email": "info@fleetease.com"
+        }
+    
+    # Get theme details
+    active_theme = None
+    for theme in PREDEFINED_THEMES:
+        if theme["id"] == settings.get("active_theme_id", "classic-blue"):
+            active_theme = theme
+            break
+    
+    return {
+        "settings": settings,
+        "theme": active_theme or PREDEFINED_THEMES[0]
+    }
+
+@api_router.put("/landing-content")
+async def update_landing_content(content: LandingPageContent, user: dict = Depends(get_current_user)):
+    """Update landing page content"""
+    if user["role"] not in [UserRole.SUPERADMIN.value, UserRole.FIRMA_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Only admins can update landing content")
+    
+    company_id = user.get("company_id")
+    
+    content_doc = content.model_dump()
+    content_doc["company_id"] = company_id
+    content_doc["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.landing_content.update_one(
+        {"company_id": company_id} if company_id else {"is_default": True},
+        {"$set": content_doc},
+        upsert=True
+    )
+    
+    return {"message": "Landing content updated successfully"}
+
 app.include_router(api_router)
 
 app.add_middleware(
