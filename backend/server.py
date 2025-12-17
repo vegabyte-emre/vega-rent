@@ -500,7 +500,12 @@ async def list_customers(user: dict = Depends(get_current_user)):
         query["company_id"] = user.get("company_id")
     
     customers = await db.customers.find(query, {"_id": 0}).to_list(1000)
-    return [CustomerResponse(**c, created_at=datetime.fromisoformat(c["created_at"]) if isinstance(c["created_at"], str) else c["created_at"]) for c in customers]
+    result = []
+    for c in customers:
+        customer_data = dict(c)
+        customer_data["created_at"] = datetime.fromisoformat(c["created_at"]) if isinstance(c["created_at"], str) else c["created_at"]
+        result.append(CustomerResponse(**customer_data))
+    return result
 
 @api_router.get("/customers/{customer_id}", response_model=CustomerResponse)
 async def get_customer(customer_id: str, user: dict = Depends(get_current_user)):
