@@ -221,8 +221,9 @@ class FleetEaseAPITester:
         print("\n🔍 Testing Customer Authentication Flow...")
         
         # Test customer registration
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         register_data = {
-            "email": "newcustomer@test.com",
+            "email": f"newcustomer{timestamp}@test.com",
             "password": "testpass123",
             "full_name": "Yeni Müşteri",
             "phone": "0555 987 6543",
