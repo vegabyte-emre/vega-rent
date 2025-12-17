@@ -1,8 +1,8 @@
 {
-  "timestamp": "2025-12-17T16:51:43.891564",
-  "total_tests": 20,
-  "passed_tests": 18,
-  "success_rate": 90.0,
+  "timestamp": "2025-12-17T16:52:26.271434",
+  "total_tests": 21,
+  "passed_tests": 21,
+  "success_rate": 100.0,
   "results": [
     {
       "test": "Root Endpoint",
@@ -72,7 +72,7 @@
     },
     {
       "test": "Get Vehicle by ID",
-      "success": false,
+      "success": true,
       "details": "",
       "response_data": null
     },
@@ -96,8 +96,8 @@
     },
     {
       "test": "Create Reservation",
-      "success": false,
-      "details": "Response: {'status_code': 520, 'text': 'Internal Server Error'}",
+      "success": true,
+      "details": "",
       "response_data": null
     },
     {
@@ -108,6 +108,12 @@
     },
     {
       "test": "List Payments",
+      "success": true,
+      "details": "",
+      "response_data": null
+    },
+    {
+      "test": "Create Payment",
       "success": true,
       "details": "",
       "response_data": null
