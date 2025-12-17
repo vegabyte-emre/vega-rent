@@ -161,7 +161,7 @@ class CustomerCreate(BaseModel):
 
 class CustomerResponse(BaseModel):
     id: str
-    company_id: str
+    company_id: Optional[str] = None
     tc_no: str
     full_name: str
     email: str
