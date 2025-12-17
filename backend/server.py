@@ -378,8 +378,10 @@ async def create_vehicle(vehicle: VehicleCreate, user: dict = Depends(get_curren
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     company_id = user.get("company_id")
-    if user["role"] == UserRole.SUPERADMIN.value and not company_id:
-        raise HTTPException(status_code=400, detail="Company ID required for SuperAdmin")
+    # SuperAdmin can create vehicles without company_id (manages all companies)
+    # FirmaAdmin must have a company_id
+    if user["role"] == UserRole.FIRMA_ADMIN.value and not company_id:
+        raise HTTPException(status_code=400, detail="Company ID required for Firma Admin")
     
     vehicle_id = str(uuid.uuid4())
     vehicle_doc = {
