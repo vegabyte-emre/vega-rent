@@ -12,12 +12,12 @@
 
 **Production API URL:**  
 ```
-https://fleetease-1.preview.emergentagent.com/api
+https://rentafleet-1.preview.emergentagent.com/api
 ```
 
 **API Dokümantasyonu:**  
 ```
-https://fleetease-1.preview.emergentagent.com/docs
+https://rentafleet-1.preview.emergentagent.com/docs
 ```
 
 ---
@@ -307,9 +307,9 @@ superadmin | firma_admin | operasyon | muhasebe | personel | musteri
 
 ## 🔗 Mevcut Web Uygulaması
 
-- **Müşteri Sitesi:** https://fleetease-1.preview.emergentagent.com/
-- **Admin Panel:** https://fleetease-1.preview.emergentagent.com/login
-- **API Docs:** https://fleetease-1.preview.emergentagent.com/docs
+- **Müşteri Sitesi:** https://rentafleet-1.preview.emergentagent.com/
+- **Admin Panel:** https://rentafleet-1.preview.emergentagent.com/login
+- **API Docs:** https://rentafleet-1.preview.emergentagent.com/docs
 
 ---
 
