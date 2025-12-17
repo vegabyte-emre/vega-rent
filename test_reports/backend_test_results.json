@@ -1,134 +1,101 @@
 {
-  "timestamp": "2025-12-17T16:52:26.271434",
-  "total_tests": 21,
-  "passed_tests": 21,
-  "success_rate": 100.0,
-  "results": [
+  "summary": {
+    "total_tests": 15,
+    "passed_tests": 11,
+    "failed_tests": 4,
+    "success_rate": 73.33333333333333,
+    "test_timestamp": "2025-12-17T17:16:40.455366"
+  },
+  "test_results": [
     {
-      "test": "Root Endpoint",
+      "test": "Root endpoint",
       "success": true,
-      "details": "",
-      "response_data": null
+      "details": "Status: 200",
+      "timestamp": "2025-12-17T17:16:39.451061"
     },
     {
-      "test": "Health Check",
+      "test": "Health endpoint",
       "success": true,
-      "details": "",
-      "response_data": null
+      "details": "Status: 200",
+      "timestamp": "2025-12-17T17:16:39.524296"
     },
     {
-      "test": "SuperAdmin Login",
+      "test": "Admin login",
       "success": true,
       "details": "",
-      "response_data": null
+      "timestamp": "2025-12-17T17:16:39.788339"
     },
     {
-      "test": "FirmaAdmin Login",
+      "test": "Get current admin user",
       "success": true,
-      "details": "",
-      "response_data": null
+      "details": "Role: superadmin",
+      "timestamp": "2025-12-17T17:16:39.826243"
     },
     {
-      "test": "Invalid Login (Should Fail)",
+      "test": "List public vehicles",
       "success": true,
-      "details": "",
-      "response_data": null
+      "details": "Found 7 vehicles",
+      "timestamp": "2025-12-17T17:16:39.875505"
     },
     {
-      "test": "Get Current User",
+      "test": "List public vehicles with limit",
       "success": true,
       "details": "",
-      "response_data": null
+      "timestamp": "2025-12-17T17:16:39.912733"
     },
     {
-      "test": "Dashboard Stats",
+      "test": "Get single public vehicle",
       "success": true,
       "details": "",
-      "response_data": null
+      "timestamp": "2025-12-17T17:16:39.952836"
     },
     {
-      "test": "List Companies",
-      "success": true,
-      "details": "",
-      "response_data": null
+      "test": "Create vehicle",
+      "success": false,
+      "details": "Status: 200, Response: {'id': '851a7bf5-95cb-4a76-bb62-51a35e16aec3', 'company_id': None, 'plate': '34TEST123', 'brand': 'Toyota', 'model': 'Corolla', 'year': 2023, 'segment': 'Ekonomi', 'transmission': 'otomatik', 'fuel_type': 'benzin', 'seat_count': 5, 'door_count': 4, 'daily_rate': 250.0, 'color': 'Beyaz', 'mileage': 15000, 'status': 'available', 'image_url': None, 'created_at': '2025-12-17T17:16:39.988834Z'}",
+      "timestamp": "2025-12-17T17:16:39.993381"
     },
     {
-      "test": "Create Company",
-      "success": true,
-      "details": "",
-      "response_data": null
+      "test": "Create customer",
+      "success": false,
+      "details": "Status: 200, Response: {'id': 'd4f8c1e8-55df-4160-9c4b-a8f49b150aac', 'company_id': None, 'tc_no': '12345678901', 'full_name': 'Test Müşteri', 'email': 'test@customer.com', 'phone': '0555 123 4567', 'address': 'Test Adres, İstanbul', 'license_no': None, 'license_class': None, 'created_at': '2025-12-17T17:16:40.034161Z'}",
+      "timestamp": "2025-12-17T17:16:40.038685"
     },
     {
-      "test": "List Vehicles",
-      "success": true,
-      "details": "",
-      "response_data": null
+      "test": "Reservation flow",
+      "success": false,
+      "details": "Missing prerequisites (admin token, vehicle, or customer)",
+      "timestamp": "2025-12-17T17:16:40.038699"
     },
     {
-      "test": "Create Vehicle",
+      "test": "Dashboard stats",
       "success": true,
-      "details": "",
-      "response_data": null
+      "details": "Vehicles: 10, Customers: 6, Reservations: 2",
+      "timestamp": "2025-12-17T17:16:40.080519"
     },
     {
-      "test": "Get Vehicle by ID",
-      "success": true,
-      "details": "",
-      "response_data": null
+      "test": "Customer registration",
+      "success": false,
+      "details": "Status: 200, Response: {'access_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzNDc1ZjNmNC01NzM2LTQ2OTEtOGFkYS0wZDE1NDE5MTRmOTEiLCJyb2xlIjoibXVzdGVyaSIsImV4cCI6MTc2NjA3ODIwMH0.dqw6_dk2TM9fKu7e-xs7ONoO_rZjFvjGcaWZCoEek58', 'token_type': 'bearer', 'user': {'id': '3475f3f4-5736-4691-8ada-0d1541914f91', 'email': 'newcustomer@test.com', 'full_name': 'Yeni Müşteri', 'role': 'musteri', 'company_id': None, 'phone': '0555 987 6543', 'is_active': True, 'created_at': '2025-12-17T17:16:40.335624Z'}}",
+      "timestamp": "2025-12-17T17:16:40.340746"
     },
     {
-      "test": "List Customers",
+      "test": "Invalid endpoint returns 404",
       "success": true,
       "details": "",
-      "response_data": null
+      "timestamp": "2025-12-17T17:16:40.378209"
     },
     {
-      "test": "Create Customer",
+      "test": "Unauthorized access blocked",
       "success": true,
       "details": "",
-      "response_data": null
+      "timestamp": "2025-12-17T17:16:40.417183"
     },
     {
-      "test": "List Reservations",
+      "test": "Invalid vehicle ID returns 404",
       "success": true,
       "details": "",
-      "response_data": null
-    },
-    {
-      "test": "Create Reservation",
-      "success": true,
-      "details": "",
-      "response_data": null
-    },
-    {
-      "test": "GPS Vehicle Locations",
-      "success": true,
-      "details": "",
-      "response_data": null
-    },
-    {
-      "test": "List Payments",
-      "success": true,
-      "details": "",
-      "response_data": null
-    },
-    {
-      "test": "Create Payment",
-      "success": true,
-      "details": "",
-      "response_data": null
-    },
-    {
-      "test": "FirmaAdmin Companies Access (Should Fail)",
-      "success": true,
-      "details": "",
-      "response_data": null
-    },
-    {
-      "test": "FirmaAdmin Vehicles Access",
-      "success": true,
-      "details": "",
-      "response_data": null
+      "timestamp": "2025-12-17T17:16:40.455341"
     }
   ]
 }
