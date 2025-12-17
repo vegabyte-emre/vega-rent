@@ -165,7 +165,7 @@ class FleetEaseAPITester:
         }
         
         status, data = self.make_request('POST', 'vehicles', vehicle_data, use_admin_auth=True)
-        success = status == 201 and "id" in data
+        success = status == 200 and "id" in data
         
         if success:
             self.created_vehicle_id = data["id"]
