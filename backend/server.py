@@ -562,11 +562,12 @@ async def create_reservation(reservation: ReservationCreate, user: dict = Depend
     # Update vehicle status
     await db.vehicles.update_one({"id": reservation.vehicle_id}, {"$set": {"status": VehicleStatus.RESERVED.value}})
     
-    return ReservationResponse(**{k: v for k, v in reservation_doc.items() if k != "_id"},
-                              status=ReservationStatus(reservation_doc["status"]),
-                              start_date=datetime.fromisoformat(reservation_doc["start_date"]),
-                              end_date=datetime.fromisoformat(reservation_doc["end_date"]),
-                              created_at=datetime.fromisoformat(reservation_doc["created_at"]))
+    reservation_response_data = {k: v for k, v in reservation_doc.items() if k != "_id"}
+    reservation_response_data["status"] = ReservationStatus(reservation_doc["status"])
+    reservation_response_data["start_date"] = datetime.fromisoformat(reservation_doc["start_date"])
+    reservation_response_data["end_date"] = datetime.fromisoformat(reservation_doc["end_date"])
+    reservation_response_data["created_at"] = datetime.fromisoformat(reservation_doc["created_at"])
+    return ReservationResponse(**reservation_response_data)
 
 @api_router.get("/reservations", response_model=List[ReservationResponse])
 async def list_reservations(status: Optional[ReservationStatus] = None, user: dict = Depends(get_current_user)):
