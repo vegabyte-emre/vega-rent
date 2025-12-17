@@ -1,8 +1,8 @@
 {
-  "timestamp": "2025-12-17T16:50:30.297838",
-  "total_tests": 18,
-  "passed_tests": 13,
-  "success_rate": 72.22222222222221,
+  "timestamp": "2025-12-17T16:51:43.891564",
+  "total_tests": 20,
+  "passed_tests": 18,
+  "success_rate": 90.0,
   "results": [
     {
       "test": "Root Endpoint",
@@ -48,7 +48,7 @@
     },
     {
       "test": "List Companies",
-      "success": false,
+      "success": true,
       "details": "",
       "response_data": null
     },
@@ -66,13 +66,19 @@
     },
     {
       "test": "Create Vehicle",
+      "success": true,
+      "details": "",
+      "response_data": null
+    },
+    {
+      "test": "Get Vehicle by ID",
       "success": false,
-      "details": "Response: {'status_code': 520, 'text': 'Internal Server Error'}",
+      "details": "",
       "response_data": null
     },
     {
       "test": "List Customers",
-      "success": false,
+      "success": true,
       "details": "",
       "response_data": null
     },
@@ -83,9 +89,15 @@
       "response_data": null
     },
     {
-      "test": "Reservations API",
+      "test": "List Reservations",
+      "success": true,
+      "details": "",
+      "response_data": null
+    },
+    {
+      "test": "Create Reservation",
       "success": false,
-      "details": "Missing prerequisites (vehicle/customer)",
+      "details": "Response: {'status_code': 520, 'text': 'Internal Server Error'}",
       "response_data": null
     },
     {
@@ -108,7 +120,7 @@
     },
     {
       "test": "FirmaAdmin Vehicles Access",
-      "success": false,
+      "success": true,
       "details": "",
       "response_data": null
     }
