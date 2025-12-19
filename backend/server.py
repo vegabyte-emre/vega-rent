@@ -698,6 +698,136 @@ async def deploy_company_frontend(company_code: str, backend_url: str, container
     except Exception as e:
         logger.error(f"Frontend deployment error for {company_code}: {str(e)}")
 
+async def deploy_company_backend(company_code: str, container_name: str, mongo_service_name: str, db_name: str):
+    """
+    Background task to deploy backend code and create admin user
+    """
+    import asyncio
+    
+    logger.info(f"Starting backend deployment for {company_code}")
+    
+    try:
+        # Wait for container to be ready
+        await asyncio.sleep(10)
+        
+        backend_dir = "/app/backend"
+        
+        # Create tar with backend files
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+            # Add server.py
+            tar.add(f"{backend_dir}/server.py", arcname="server.py")
+            tar.add(f"{backend_dir}/requirements.txt", arcname="requirements.txt")
+            
+            # Add services folder
+            services_dir = f"{backend_dir}/services"
+            if os.path.exists(services_dir):
+                for root, dirs, files in os.walk(services_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, backend_dir)
+                        tar.add(file_path, arcname=arcname)
+            
+            # Add .env
+            env_content = f"""MONGO_URL=mongodb://{mongo_service_name}:27017
+DB_NAME={db_name}
+JWT_SECRET={company_code}_jwt_secret_2024
+"""
+            env_info = tarfile.TarInfo(name=".env")
+            env_bytes = env_content.encode('utf-8')
+            env_info.size = len(env_bytes)
+            tar.addfile(env_info, io.BytesIO(env_bytes))
+            
+            # Add main.py
+            main_py = "from server import app\n"
+            main_info = tarfile.TarInfo(name="main.py")
+            main_bytes = main_py.encode('utf-8')
+            main_info.size = len(main_bytes)
+            tar.addfile(main_info, io.BytesIO(main_bytes))
+        
+        tar_data = tar_buffer.getvalue()
+        
+        # Upload to container
+        upload_result = await portainer_service.upload_to_container(
+            container_name=container_name,
+            tar_data=tar_data,
+            dest_path="/app"
+        )
+        
+        if upload_result.get('error'):
+            logger.error(f"Backend upload failed for {company_code}: {upload_result.get('error')}")
+            return
+        
+        # Install dependencies
+        await portainer_service.exec_in_container(
+            container_name=container_name,
+            command='pip install "bcrypt>=4.0.0,<4.1.0" "passlib[bcrypt]>=1.7.4" motor python-jose python-dotenv httpx --quiet'
+        )
+        
+        # Restart container to load new code
+        await portainer_service.restart_container(container_name)
+        
+        logger.info(f"Backend deployed successfully for {company_code}")
+        
+    except Exception as e:
+        logger.error(f"Backend deployment error for {company_code}: {str(e)}")
+
+async def setup_company_database(company: dict, mongo_port: int):
+    """
+    Setup company database with admin user
+    """
+    from motor.motor_asyncio import AsyncIOMotorClient
+    
+    company_code = company.get("code", "").replace("-", "")
+    db_name = f"{company_code}_db"
+    
+    logger.info(f"Setting up database for {company['name']} on port {mongo_port}")
+    
+    try:
+        # Connect to company's MongoDB
+        client = AsyncIOMotorClient(f"mongodb://72.61.158.147:{mongo_port}", serverSelectionTimeoutMS=10000)
+        company_db = client[db_name]
+        
+        # Create company record
+        company_id = company.get("id")
+        existing = await company_db.companies.find_one({"id": company_id})
+        if not existing:
+            await company_db.companies.insert_one({
+                "id": company_id,
+                "name": company.get("name"),
+                "code": company.get("code"),
+                "domain": company.get("domain"),
+                "status": "active",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            logger.info(f"Company record created in {db_name}")
+        
+        # Create admin user
+        admin_email = company.get("admin_email", f"admin@{company.get('domain', 'company.com')}")
+        admin_password = company.get("admin_password", "admin123")
+        
+        existing_user = await company_db.users.find_one({"email": admin_email})
+        if not existing_user:
+            admin_user = {
+                "id": str(uuid.uuid4()),
+                "email": admin_email,
+                "password_hash": pwd_context.hash(admin_password),
+                "full_name": company.get("admin_full_name", "Admin"),
+                "role": "firma_admin",
+                "company_id": company_id,
+                "is_active": True,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await company_db.users.insert_one(admin_user)
+            logger.info(f"Admin user created: {admin_email}")
+        
+        client.close()
+        return True
+        
+    except Exception as e:
+        logger.error(f"Database setup error for {company['name']}: {str(e)}")
+        return False
+
 # ============== PORTAINER PROVISIONING ROUTES ==============
 @api_router.post("/superadmin/companies/{company_id}/provision")
 async def provision_company(company_id: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
