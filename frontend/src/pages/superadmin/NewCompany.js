@@ -48,8 +48,21 @@ export function NewCompany() {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.post(`${API_URL}/api/superadmin/companies`, formData);
-      toast.success("Firma başarıyla oluşturuldu!");
+      // 1. Firma oluştur
+      const response = await axios.post(`${API_URL}/api/superadmin/companies`, formData);
+      const companyId = response.data.id;
+      toast.success("Firma oluşturuldu, deploy başlatılıyor...");
+      
+      // 2. Domain varsa otomatik provision başlat
+      if (formData.domain) {
+        try {
+          await axios.post(`${API_URL}/api/superadmin/companies/${companyId}/provision`);
+          toast.success("Firma deploy edildi! Kurulum ~2 dakika sürecek.", { duration: 5000 });
+        } catch (provisionError) {
+          toast.error("Deploy başlatılamadı: " + (provisionError.response?.data?.detail || "Hata"));
+        }
+      }
+      
       navigate("/superadmin/companies");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Firma oluşturulurken hata oluştu");
