@@ -620,5 +620,88 @@ class PortainerService:
             return {'success': False, 'error': result.get('error', 'Unknown error')}
 
 
+    async def exec_in_container(self, container_name: str, command: str) -> Dict[str, Any]:
+        """
+        Execute a command inside a container via Portainer API
+        """
+        # First, get container ID
+        containers_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/json"
+        containers = await self._request('GET', containers_endpoint)
+        
+        container_id = None
+        if isinstance(containers, list):
+            for c in containers:
+                names = c.get('Names', [])
+                for name in names:
+                    if container_name in name:
+                        container_id = c.get('Id')
+                        break
+                if container_id:
+                    break
+        
+        if not container_id:
+            return {'error': f'Container {container_name} not found'}
+        
+        # Create exec instance
+        exec_create_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{container_id}/exec"
+        exec_payload = {
+            'Cmd': ['sh', '-c', command],
+            'AttachStdout': True,
+            'AttachStderr': True
+        }
+        
+        result = await self._request('POST', exec_create_endpoint, data=exec_payload)
+        
+        if 'Id' in result:
+            exec_id = result['Id']
+            # Start exec
+            exec_start_endpoint = f"endpoints/{self.endpoint_id}/docker/exec/{exec_id}/start"
+            start_result = await self._request('POST', exec_start_endpoint, data={'Detach': False})
+            return {'success': True, 'output': start_result}
+        
+        return {'success': False, 'error': result.get('error', 'Failed to create exec')}
+
+    async def upload_to_container(self, container_name: str, tar_data: bytes, dest_path: str) -> Dict[str, Any]:
+        """
+        Upload a tar archive to a container via Portainer API
+        """
+        # First, get container ID
+        containers_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/json"
+        containers = await self._request('GET', containers_endpoint)
+        
+        container_id = None
+        if isinstance(containers, list):
+            for c in containers:
+                names = c.get('Names', [])
+                for name in names:
+                    if container_name in name:
+                        container_id = c.get('Id')
+                        break
+                if container_id:
+                    break
+        
+        if not container_id:
+            return {'error': f'Container {container_name} not found'}
+        
+        # Upload archive to container
+        upload_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{container_id}/archive?path={dest_path}"
+        url = f"{self.base_url}/api/{upload_endpoint}"
+        
+        async with httpx.AsyncClient(verify=False, timeout=120.0) as client:
+            try:
+                headers = {
+                    'X-API-Key': self.api_key,
+                    'Content-Type': 'application/x-tar'
+                }
+                response = await client.put(url, headers=headers, content=tar_data)
+                
+                if response.status_code < 400:
+                    return {'success': True}
+                else:
+                    return {'error': response.text, 'status_code': response.status_code}
+            except Exception as e:
+                return {'error': str(e)}
+
+
 # Singleton instance
 portainer_service = PortainerService()
