@@ -583,6 +583,66 @@ async def get_superadmin_stats(user: dict = Depends(get_current_user)):
         "total_users": total_users
     }
 
+# ============== COMPANY FRONTEND DEPLOYMENT ==============
+async def deploy_company_frontend(company_code: str, backend_url: str, container_name: str):
+    """
+    Background task to build and deploy frontend to a company's container
+    """
+    import asyncio
+    
+    logger.info(f"Starting frontend deployment for {company_code}")
+    
+    try:
+        # Wait for container to be ready
+        await asyncio.sleep(30)
+        
+        frontend_dir = "/app/frontend"
+        build_dir = f"{frontend_dir}/build"
+        
+        # Build frontend with company's backend URL
+        env = os.environ.copy()
+        env["REACT_APP_BACKEND_URL"] = backend_url
+        env["CI"] = "false"
+        
+        result = subprocess.run(
+            ["yarn", "build"],
+            cwd=frontend_dir,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"Frontend build failed for {company_code}: {result.stderr}")
+            return
+        
+        # Create tar archive
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+            for root, dirs, files in os.walk(build_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, build_dir)
+                    tar.add(file_path, arcname=arcname)
+        
+        tar_data = tar_buffer.getvalue()
+        
+        # Upload to container
+        upload_result = await portainer_service.upload_to_container(
+            container_name=container_name,
+            tar_data=tar_data,
+            dest_path="/usr/share/nginx/html"
+        )
+        
+        if upload_result.get('error'):
+            logger.error(f"Frontend upload failed for {company_code}: {upload_result.get('error')}")
+        else:
+            logger.info(f"Frontend deployed successfully for {company_code}")
+            
+    except Exception as e:
+        logger.error(f"Frontend deployment error for {company_code}: {str(e)}")
+
 # ============== PORTAINER PROVISIONING ROUTES ==============
 @api_router.post("/superadmin/companies/{company_id}/provision")
 async def provision_company(company_id: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
