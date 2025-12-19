@@ -11,7 +11,6 @@ import {
   CreditCard,
   BarChart3,
   Settings,
-  Building2,
   LayoutDashboard,
   MapPin,
   FileText,
