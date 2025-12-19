@@ -930,6 +930,10 @@ async def full_auto_provision(company: dict, result: dict, port_offset: int):
         mongo_port = result.get('ports', {}).get('mongodb', 21000 + port_offset)
         await setup_company_database(company, mongo_port)
         
+        # Step 4: Restart Traefik to pick up new labels
+        logger.info(f"[AUTO-PROVISION] Step 4: Refreshing Traefik routing...")
+        await restart_traefik_for_new_labels()
+        
         logger.info(f"[AUTO-PROVISION] Full auto provision completed for {company['name']}")
         
         # Update company status to fully active
@@ -943,6 +947,41 @@ async def full_auto_provision(company: dict, result: dict, port_offset: int):
         
     except Exception as e:
         logger.error(f"[AUTO-PROVISION] Error during auto provision for {company['name']}: {str(e)}")
+
+
+async def restart_traefik_for_new_labels():
+    """
+    Restart Traefik container to pick up new Docker labels from newly created containers
+    """
+    try:
+        # Find and restart Traefik container
+        containers = await portainer_service._request('GET', f"endpoints/{portainer_service.endpoint_id}/docker/containers/json")
+        
+        traefik_id = None
+        if isinstance(containers, list):
+            for c in containers:
+                names = c.get('Names', [])
+                for name in names:
+                    if 'traefik' in name.lower():
+                        traefik_id = c.get('Id')
+                        break
+                if traefik_id:
+                    break
+        
+        if traefik_id:
+            restart_result = await portainer_service.restart_container_by_id(traefik_id)
+            if restart_result.get('success'):
+                logger.info("[AUTO-PROVISION] Traefik restarted successfully")
+                # Wait for Traefik to be ready
+                import asyncio
+                await asyncio.sleep(5)
+            else:
+                logger.warning(f"[AUTO-PROVISION] Traefik restart warning: {restart_result.get('error')}")
+        else:
+            logger.warning("[AUTO-PROVISION] Traefik container not found")
+            
+    except Exception as e:
+        logger.warning(f"[AUTO-PROVISION] Traefik restart error (non-critical): {str(e)}")
 
 
 @api_router.post("/superadmin/companies/{company_id}/provision")
