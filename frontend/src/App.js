@@ -4,6 +4,9 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { Layout } from "./components/layout/Layout";
 
+// Check if we're on panel subdomain
+const isAdminPanel = window.location.hostname.startsWith('panel.');
+
 // Admin Pages (Company Panel)
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
