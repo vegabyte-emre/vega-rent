@@ -335,6 +335,25 @@ export function SuperAdminCompanies() {
                               </DropdownMenuItem>
                             ) : null}
                             <DropdownMenuSeparator className="bg-slate-700" />
+                            {/* Portainer Actions */}
+                            {!company.portainer_stack_id ? (
+                              <DropdownMenuItem
+                                className="text-cyan-400 hover:bg-slate-700 cursor-pointer"
+                                onClick={() => handleProvision(company.id, company.name)}
+                              >
+                                <Rocket className="h-4 w-4 mr-2" />
+                                Portainer'a Deploy Et
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                className="text-orange-400 hover:bg-slate-700 cursor-pointer"
+                                onClick={() => handleDeprovision(company.id, company.name)}
+                              >
+                                <Server className="h-4 w-4 mr-2" />
+                                Stack'i Kaldır
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator className="bg-slate-700" />
                             <DropdownMenuItem
                               className="text-red-400 hover:bg-slate-700 cursor-pointer"
                               onClick={() => handleDelete(company.id)}
