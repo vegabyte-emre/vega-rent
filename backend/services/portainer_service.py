@@ -703,5 +703,61 @@ class PortainerService:
                 return {'error': str(e)}
 
 
+    async def configure_nginx_spa(self, container_name: str) -> Dict[str, Any]:
+        """
+        Configure Nginx for SPA routing in the specified container
+        """
+        nginx_conf = '''server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+}
+'''
+        
+        import tarfile
+        import io as std_io
+        
+        # Create tar with nginx config
+        tar_buffer = std_io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+            conf_info = tarfile.TarInfo(name="default.conf")
+            conf_bytes = nginx_conf.encode('utf-8')
+            conf_info.size = len(conf_bytes)
+            tar.addfile(conf_info, std_io.BytesIO(conf_bytes))
+        
+        tar_data = tar_buffer.getvalue()
+        
+        # Upload config
+        result = await self.upload_to_container(
+            container_name=container_name,
+            tar_data=tar_data,
+            dest_path="/etc/nginx/conf.d"
+        )
+        
+        if result.get('error'):
+            return result
+        
+        # Reload nginx
+        reload_result = await self.exec_in_container(
+            container_name=container_name,
+            command="nginx -s reload"
+        )
+        
+        return {'success': True, 'message': 'Nginx configured for SPA routing'}
+
+
 # Singleton instance
 portainer_service = PortainerService()
