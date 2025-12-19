@@ -789,7 +789,8 @@ async def deploy_frontend_to_kvm(background_tasks: BackgroundTasks, user: dict =
         env["REACT_APP_BACKEND_URL"] = kvm_backend_url
         env["CI"] = "true"  # Skip warnings as errors
         
-        # Run yarn build
+        # Run yarn build (CI=false to avoid treating warnings as errors)
+        env["CI"] = "false"
         result = subprocess.run(
             ["yarn", "build"],
             cwd=frontend_dir,
