@@ -140,6 +140,104 @@ networks:
 """
 
 
+def get_superadmin_compose_template() -> str:
+    """
+    Generate Docker Compose YAML for SuperAdmin stack
+    Ports: Frontend 9000, Backend 9001, MongoDB 27017
+    """
+    return """version: '3.8'
+
+services:
+  superadmin_mongodb:
+    image: mongo:6.0
+    container_name: superadmin_mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_DATABASE=superadmin_db
+    volumes:
+      - superadmin_mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - superadmin_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/superadmin_db --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  superadmin_backend:
+    image: python:3.11-slim
+    container_name: superadmin_backend
+    restart: unless-stopped
+    working_dir: /app
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y git curl &&
+        pip install fastapi uvicorn motor pydantic python-jose passlib python-dotenv bcrypt httpx email-validator &&
+        if [ ! -f /app/server.py ]; then
+          echo 'from fastapi import FastAPI' > /app/server.py &&
+          echo 'app = FastAPI()' >> /app/server.py &&
+          echo '@app.get(\"/api/health\")' >> /app/server.py &&
+          echo 'def health(): return {\"status\": \"healthy\", \"service\": \"superadmin\"}' >> /app/server.py
+        fi &&
+        uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+      "
+    environment:
+      - MONGO_URL=mongodb://superadmin_mongodb:27017
+      - DB_NAME=superadmin_db
+      - JWT_SECRET=superadmin_jwt_secret_key_2024_secure
+      - CORS_ORIGINS=*
+      - PORTAINER_URL=https://72.61.158.147:9443
+      - PORTAINER_API_KEY=ptr_XwtYmxpR0KCkqMLsPLGMM4mHQS5Q75gupgBcCGqRUEY=
+      - PORTAINER_ENDPOINT_ID=3
+      - SERVER_IP=72.61.158.147
+    ports:
+      - "9001:8001"
+    depends_on:
+      superadmin_mongodb:
+        condition: service_healthy
+    networks:
+      - superadmin_network
+    volumes:
+      - superadmin_backend_code:/app
+
+  superadmin_frontend:
+    image: node:20-alpine
+    container_name: superadmin_frontend
+    restart: unless-stopped
+    working_dir: /app
+    command: >
+      sh -c "
+        npm install -g serve &&
+        if [ ! -f /app/index.html ]; then
+          mkdir -p /app &&
+          echo '<!DOCTYPE html><html><head><title>SuperAdmin Panel</title><style>body{font-family:system-ui;background:#0f172a;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.container{text-align:center;padding:40px;background:#1e293b;border-radius:16px;border:1px solid #334155;}.status{color:#22c55e;font-size:24px;margin-bottom:16px;}h1{margin:0 0 8px 0;}p{color:#94a3b8;margin:0;}a{color:#a78bfa;}</style></head><body><div class=\"container\"><div class=\"status\">✅</div><h1>SuperAdmin Panel</h1><p>Backend API: <a href=\"http://72.61.158.147:9001/api/health\">http://72.61.158.147:9001/api/health</a></p><p style=\"margin-top:16px;\">Tam uygulama icin kod deploy edilmeli</p></div></body></html>' > /app/index.html
+        fi &&
+        serve -s /app -l 3000
+      "
+    environment:
+      - REACT_APP_BACKEND_URL=http://72.61.158.147:9001
+    ports:
+      - "9000:3000"
+    depends_on:
+      - superadmin_backend
+    networks:
+      - superadmin_network
+    volumes:
+      - superadmin_frontend_code:/app
+
+volumes:
+  superadmin_mongo_data:
+  superadmin_backend_code:
+  superadmin_frontend_code:
+
+networks:
+  superadmin_network:
+    driver: bridge
+"""
+
+
 class PortainerService:
     def __init__(self):
         self.base_url = PORTAINER_URL
