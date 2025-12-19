@@ -44,6 +44,22 @@ export function SuperAdminSettings() {
     }
   };
 
+  const deployFrontendToKVM = async () => {
+    setDeployingFrontend(true);
+    try {
+      const response = await axios.post(`${API_URL}/api/superadmin/deploy-frontend-to-kvm`);
+      if (response.data.success) {
+        toast.success("Frontend KVM sunucusuna başarıyla deploy edildi!");
+      } else {
+        toast.error(response.data.error || "Deploy başarısız");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Frontend deploy başarısız");
+    } finally {
+      setDeployingFrontend(false);
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="superadmin-settings">
       {/* Header */}
