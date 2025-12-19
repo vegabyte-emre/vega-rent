@@ -829,9 +829,82 @@ async def setup_company_database(company: dict, mongo_port: int):
         return False
 
 # ============== PORTAINER PROVISIONING ROUTES ==============
+async def full_auto_provision(company: dict, result: dict, port_offset: int):
+    """
+    Background task for full automatic provisioning:
+    1. Deploy backend code
+    2. Deploy frontend code with correct HTTPS API URL
+    3. Configure Nginx
+    4. Setup database with admin user
+    """
+    import asyncio
+    
+    company_code = company["code"]
+    safe_code = company_code.replace('-', '').replace('_', '')
+    domain = company.get("domain")
+    
+    logger.info(f"[AUTO-PROVISION] Starting full auto provision for {company['name']}")
+    
+    try:
+        # Wait for containers to start
+        logger.info(f"[AUTO-PROVISION] Waiting for containers to start...")
+        await asyncio.sleep(45)
+        
+        # Step 1: Deploy backend code
+        logger.info(f"[AUTO-PROVISION] Step 1: Deploying backend code...")
+        backend_container = f"{company_code}_backend"
+        mongo_service_name = f"{safe_code}_mongodb"
+        db_name = f"{company_code}_db"
+        
+        await deploy_company_backend(
+            company_code=company_code,
+            container_name=backend_container,
+            mongo_service_name=mongo_service_name,
+            db_name=db_name
+        )
+        
+        # Wait for backend to restart
+        await asyncio.sleep(15)
+        
+        # Step 2: Deploy frontend with HTTPS API URL
+        logger.info(f"[AUTO-PROVISION] Step 2: Deploying frontend code...")
+        frontend_container = f"{company_code}_frontend"
+        
+        # Use HTTPS API URL for frontend
+        if domain:
+            api_url = f"https://api.{domain}"
+        else:
+            api_url = f"http://72.61.158.147:{result.get('ports', {}).get('backend', 11000)}"
+        
+        await deploy_company_frontend(
+            company_code=company_code,
+            backend_url=api_url,
+            container_name=frontend_container
+        )
+        
+        # Step 3: Setup database with admin user
+        logger.info(f"[AUTO-PROVISION] Step 3: Setting up database and admin user...")
+        mongo_port = result.get('ports', {}).get('mongodb', 21000 + port_offset)
+        await setup_company_database(company, mongo_port)
+        
+        logger.info(f"[AUTO-PROVISION] Full auto provision completed for {company['name']}")
+        
+        # Update company status to fully active
+        await db.companies.update_one(
+            {"id": company["id"]},
+            {"$set": {
+                "provisioning_complete": True,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+    except Exception as e:
+        logger.error(f"[AUTO-PROVISION] Error during auto provision for {company['name']}: {str(e)}")
+
+
 @api_router.post("/superadmin/companies/{company_id}/provision")
 async def provision_company(company_id: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
-    """SuperAdmin: Provision a company stack in Portainer"""
+    """SuperAdmin: Provision a company stack in Portainer - FULL AUTOMATIC"""
     if user["role"] != UserRole.SUPERADMIN.value:
         raise HTTPException(status_code=403, detail="Only SuperAdmin can provision companies")
     
@@ -888,22 +961,23 @@ async def provision_company(company_id: str, background_tasks: BackgroundTasks, 
             }}
         )
         
-        # Auto-deploy frontend to the new company container
+        # FULL AUTOMATIC DEPLOYMENT - runs in background
         if domain:
             background_tasks.add_task(
-                deploy_company_frontend,
-                company_code=company["code"],
-                backend_url=f"http://72.61.158.147:{result.get('ports', {}).get('backend', 11000)}",
-                container_name=f"{company['code'].replace('-', '')}_frontend"
+                full_auto_provision,
+                company=company,
+                result=result,
+                port_offset=port_offset
             )
         
         return {
-            "message": "Company provisioned successfully",
+            "message": "Company provisioned successfully - Auto deployment started",
             "stack_id": result.get("stack_id"),
             "stack_name": result.get("stack_name"),
             "urls": result.get("urls"),
             "ports": result.get("ports"),
-            "frontend_deploying": True if domain else False
+            "auto_deploy_started": True if domain else False,
+            "note": "Backend, Frontend, Nginx ve Database otomatik olarak kurulacak. Bu işlem ~2-3 dakika sürebilir."
         }
     else:
         # Revert status
