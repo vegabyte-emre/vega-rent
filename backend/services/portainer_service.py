@@ -145,37 +145,33 @@ def get_superadmin_compose_template() -> str:
     Generate Docker Compose YAML for SuperAdmin stack
     Ports: Frontend 9000, Backend 9001, MongoDB 27017
     """
-    return '''version: "3.8"
+    yaml_content = """version: "3.8"
 
 services:
   superadmin_mongodb:
     image: mongo:6.0
     container_name: superadmin_mongodb
     restart: unless-stopped
-    environment:
-      MONGO_INITDB_DATABASE: superadmin_db
-    volumes:
-      - superadmin_mongo_data:/data/db
     ports:
       - "27017:27017"
+    volumes:
+      - superadmin_mongo_data:/data/db
     networks:
       - superadmin_network
 
   superadmin_backend:
-    image: python:3.11-slim
+    image: tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim
     container_name: superadmin_backend
     restart: unless-stopped
-    working_dir: /app
-    command: bash -c "pip install fastapi uvicorn && echo 'from fastapi import FastAPI' > server.py && echo 'from fastapi.middleware.cors import CORSMiddleware' >> server.py && echo 'app = FastAPI()' >> server.py && echo 'app.add_middleware(CORSMiddleware,allow_origins=[chr(42)],allow_methods=[chr(42)],allow_headers=[chr(42)])' >> server.py && echo '@app.get(chr(47)+chr(97)+chr(112)+chr(105)+chr(47)+chr(104)+chr(101)+chr(97)+chr(108)+chr(116)+chr(104))' >> server.py && echo 'def health(): return {chr(34)+chr(115)+chr(116)+chr(97)+chr(116)+chr(117)+chr(115)+chr(34): chr(34)+chr(104)+chr(101)+chr(97)+chr(108)+chr(116)+chr(104)+chr(121)+chr(34)}' >> server.py && uvicorn server:app --host 0.0.0.0 --port 8001"
-    environment:
-      MONGO_URL: mongodb://superadmin_mongodb:27017
-      DB_NAME: superadmin_db
     ports:
-      - "9001:8001"
-    depends_on:
-      - superadmin_mongodb
+      - "9001:80"
+    environment:
+      - MODULE_NAME=main
+      - VARIABLE_NAME=app
     networks:
       - superadmin_network
+    depends_on:
+      - superadmin_mongodb
 
   superadmin_frontend:
     image: nginx:alpine
@@ -185,6 +181,8 @@ services:
       - "9000:80"
     networks:
       - superadmin_network
+    depends_on:
+      - superadmin_backend
 
 volumes:
   superadmin_mongo_data:
@@ -192,7 +190,8 @@ volumes:
 networks:
   superadmin_network:
     driver: bridge
-'''
+"""
+    return yaml_content
 
 
 class PortainerService:
