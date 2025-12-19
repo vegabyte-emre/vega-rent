@@ -145,7 +145,7 @@ def get_superadmin_compose_template() -> str:
     Generate Docker Compose YAML for SuperAdmin stack
     Ports: Frontend 9000, Backend 9001, MongoDB 27017
     """
-    return """version: '3.8'
+    return '''version: "3.8"
 
 services:
   superadmin_mongodb:
@@ -153,131 +153,46 @@ services:
     container_name: superadmin_mongodb
     restart: unless-stopped
     environment:
-      - MONGO_INITDB_DATABASE=superadmin_db
+      MONGO_INITDB_DATABASE: superadmin_db
     volumes:
       - superadmin_mongo_data:/data/db
     ports:
       - "27017:27017"
     networks:
       - superadmin_network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/superadmin_db --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   superadmin_backend:
     image: python:3.11-slim
     container_name: superadmin_backend
     restart: unless-stopped
     working_dir: /app
-    command: >
-      bash -c "
-        pip install fastapi uvicorn motor pydantic email-validator httpx &&
-        cat > /app/server.py << 'PYEOF'
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI(title='SuperAdmin API')
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=['*'],
-    allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
-)
-
-@app.get('/api/health')
-def health():
-    return {'status': 'healthy', 'service': 'superadmin'}
-
-@app.get('/api/info')
-def info():
-    return {'name': 'SuperAdmin Panel', 'version': '1.0.0'}
-PYEOF
-        uvicorn server:app --host 0.0.0.0 --port 8001
-      "
+    command: bash -c "pip install fastapi uvicorn && echo 'from fastapi import FastAPI' > server.py && echo 'from fastapi.middleware.cors import CORSMiddleware' >> server.py && echo 'app = FastAPI()' >> server.py && echo 'app.add_middleware(CORSMiddleware,allow_origins=[chr(42)],allow_methods=[chr(42)],allow_headers=[chr(42)])' >> server.py && echo '@app.get(chr(47)+chr(97)+chr(112)+chr(105)+chr(47)+chr(104)+chr(101)+chr(97)+chr(108)+chr(116)+chr(104))' >> server.py && echo 'def health(): return {chr(34)+chr(115)+chr(116)+chr(97)+chr(116)+chr(117)+chr(115)+chr(34): chr(34)+chr(104)+chr(101)+chr(97)+chr(108)+chr(116)+chr(104)+chr(121)+chr(34)}' >> server.py && uvicorn server:app --host 0.0.0.0 --port 8001"
     environment:
-      - MONGO_URL=mongodb://superadmin_mongodb:27017
-      - DB_NAME=superadmin_db
-      - JWT_SECRET=superadmin_jwt_secret_key_2024_secure
-      - CORS_ORIGINS=*
-      - PORTAINER_URL=https://72.61.158.147:9443
-      - PORTAINER_API_KEY=ptr_XwtYmxpR0KCkqMLsPLGMM4mHQS5Q75gupgBcCGqRUEY=
-      - PORTAINER_ENDPOINT_ID=3
-      - SERVER_IP=72.61.158.147
+      MONGO_URL: mongodb://superadmin_mongodb:27017
+      DB_NAME: superadmin_db
     ports:
       - "9001:8001"
     depends_on:
-      superadmin_mongodb:
-        condition: service_healthy
+      - superadmin_mongodb
     networks:
       - superadmin_network
-    volumes:
-      - superadmin_backend_code:/app
 
   superadmin_frontend:
     image: nginx:alpine
     container_name: superadmin_frontend
     restart: unless-stopped
-    command: >
-      sh -c "
-        cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
-<!DOCTYPE html>
-<html>
-<head>
-    <title>SuperAdmin Panel</title>
-    <style>
-        body{font-family:system-ui;background:#0f172a;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}
-        .container{text-align:center;padding:40px;background:#1e293b;border-radius:16px;border:1px solid #334155;max-width:500px;}
-        .status{color:#22c55e;font-size:48px;margin-bottom:16px;}
-        h1{margin:0 0 8px 0;font-size:28px;}
-        p{color:#94a3b8;margin:8px 0;}
-        a{color:#a78bfa;text-decoration:none;}
-        a:hover{text-decoration:underline;}
-        .links{margin-top:24px;padding-top:24px;border-top:1px solid #334155;}
-        .btn{display:inline-block;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;margin:8px;text-decoration:none;}
-        .btn:hover{background:#6d28d9;text-decoration:none;}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="status">🚀</div>
-        <h1>SuperAdmin Panel</h1>
-        <p>Kurumsal Rent A Car Platform Yonetimi</p>
-        <div class="links">
-            <p><strong>API Endpoints:</strong></p>
-            <p><a href="http://72.61.158.147:9001/api/health">/api/health</a> - Sistem Durumu</p>
-            <p><a href="http://72.61.158.147:9001/api/info">/api/info</a> - API Bilgisi</p>
-            <p style="margin-top:16px;"><a href="https://72.61.158.147:9443" class="btn">Portainer UI</a></p>
-        </div>
-    </div>
-</body>
-</html>
-HTMLEOF
-        nginx -g 'daemon off;'
-      "
-    environment:
-      - REACT_APP_BACKEND_URL=http://72.61.158.147:9001
     ports:
-      - "9000:3000"
-    depends_on:
-      - superadmin_backend
+      - "9000:80"
     networks:
       - superadmin_network
-    volumes:
-      - superadmin_frontend_code:/app
 
 volumes:
   superadmin_mongo_data:
-  superadmin_backend_code:
-  superadmin_frontend_code:
 
 networks:
   superadmin_network:
     driver: bridge
-"""
+'''
 
 
 class PortainerService:
