@@ -607,12 +607,24 @@ async def provision_company(company_id: str, background_tasks: BackgroundTasks, 
         }}
     )
     
-    # Create stack in Portainer
-    result = await portainer_service.create_stack(
-        company_code=company["code"],
-        company_name=company["name"],
-        port_offset=port_offset
-    )
+    # Check if domain is set - use full stack if domain exists
+    domain = company.get("domain")
+    
+    if domain:
+        # Create full stack with Traefik labels for domain routing
+        result = await portainer_service.create_full_stack(
+            company_code=company["code"],
+            company_name=company["name"],
+            domain=domain,
+            port_offset=port_offset
+        )
+    else:
+        # Create minimal stack (MongoDB only) for IP-based access
+        result = await portainer_service.create_stack(
+            company_code=company["code"],
+            company_name=company["name"],
+            port_offset=port_offset
+        )
     
     if result.get("success"):
         # Update company with stack info
