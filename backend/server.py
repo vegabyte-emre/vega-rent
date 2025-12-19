@@ -708,6 +708,25 @@ async def get_portainer_status(user: dict = Depends(get_current_user)):
             "error": str(e)
         }
 
+@api_router.post("/superadmin/deploy-superadmin-stack")
+async def deploy_superadmin_stack(user: dict = Depends(get_current_user)):
+    """SuperAdmin: Deploy SuperAdmin stack to Portainer"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can deploy SuperAdmin stack")
+    
+    result = await portainer_service.create_superadmin_stack()
+    
+    if result.get("success"):
+        return {
+            "message": "SuperAdmin stack deployed successfully",
+            "stack_id": result.get("stack_id"),
+            "stack_name": result.get("stack_name"),
+            "urls": result.get("urls"),
+            "ports": result.get("ports")
+        }
+    else:
+        raise HTTPException(status_code=500, detail=f"Deployment failed: {result.get('error')}")
+
 # ============== LEGACY COMPANY ROUTES (for backward compatibility) ==============
 @api_router.post("/companies", response_model=CompanyResponse)
 async def create_company(company: CompanyCreate, user: dict = Depends(get_current_user)):
