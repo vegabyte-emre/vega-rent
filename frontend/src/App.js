@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { Layout } from "./components/layout/Layout";
 
-// Admin Pages
+// Admin Pages (Company Panel)
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
@@ -14,10 +14,17 @@ import { Reservations } from "./pages/Reservations";
 import { NewReservation } from "./pages/NewReservation";
 import { GPS } from "./pages/GPS";
 import { Payments } from "./pages/Payments";
-import { Companies } from "./pages/Companies";
 import { Reports } from "./pages/Reports";
 import { Settings } from "./pages/Settings";
 import { ThemeStore } from "./pages/ThemeStore";
+
+// SuperAdmin Pages
+import { SuperAdminLogin } from "./pages/superadmin/SuperAdminLogin";
+import { SuperAdminDashboard } from "./pages/superadmin/SuperAdminDashboard";
+import { SuperAdminCompanies } from "./pages/superadmin/SuperAdminCompanies";
+import { NewCompany } from "./pages/superadmin/NewCompany";
+import { SuperAdminSettings } from "./pages/superadmin/SuperAdminSettings";
+import { SuperAdminLayout } from "./components/layout/SuperAdminLayout";
 
 // Public Pages
 import { Home } from "./pages/public/Home";
