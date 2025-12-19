@@ -810,11 +810,15 @@ async def setup_company_database(company: dict, mongo_port: int):
     company_code = company.get("code", "").replace("-", "")
     db_name = f"{company_code}_db"
     
-    logger.info(f"Setting up database for {company['name']} on port {mongo_port}")
+    logger.info(f"[DB-SETUP] Setting up database for {company['name']} on port {mongo_port}")
+    logger.info(f"[DB-SETUP] Database name: {db_name}")
     
     try:
         # Connect to company's MongoDB
-        client = AsyncIOMotorClient(f"mongodb://72.61.158.147:{mongo_port}", serverSelectionTimeoutMS=10000)
+        mongo_url = f"mongodb://72.61.158.147:{mongo_port}"
+        logger.info(f"[DB-SETUP] Connecting to MongoDB at {mongo_url}")
+        
+        client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=15000)
         company_db = client[db_name]
         
         # Create company record
@@ -829,11 +833,18 @@ async def setup_company_database(company: dict, mongo_port: int):
                 "status": "active",
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
-            logger.info(f"Company record created in {db_name}")
+            logger.info(f"[DB-SETUP] Company record created in {db_name}")
+        else:
+            logger.info(f"[DB-SETUP] Company record already exists in {db_name}")
         
         # Create admin user
-        admin_email = company.get("admin_email", f"admin@{company.get('domain', 'company.com')}")
-        admin_password = company.get("admin_password", "admin123")
+        admin_email = company.get("admin_email")
+        if not admin_email:
+            domain = company.get("domain", "company.com")
+            admin_email = f"admin@{domain}"
+        
+        admin_password = company.get("admin_password") or "admin123"
+        admin_name = company.get("admin_full_name") or f"{company.get('name')} Admin"
         
         existing_user = await company_db.users.find_one({"email": admin_email})
         if not existing_user:
@@ -841,21 +852,24 @@ async def setup_company_database(company: dict, mongo_port: int):
                 "id": str(uuid.uuid4()),
                 "email": admin_email,
                 "password_hash": pwd_context.hash(admin_password),
-                "full_name": company.get("admin_full_name", "Admin"),
+                "full_name": admin_name,
                 "role": "firma_admin",
                 "company_id": company_id,
                 "is_active": True,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await company_db.users.insert_one(admin_user)
-            logger.info(f"Admin user created: {admin_email}")
+            logger.info(f"[DB-SETUP] Admin user created: {admin_email} with password: {admin_password}")
+        else:
+            logger.info(f"[DB-SETUP] Admin user already exists: {admin_email}")
         
         client.close()
-        return True
+        logger.info(f"[DB-SETUP] Database setup completed for {company['name']}")
+        return {"success": True, "admin_email": admin_email, "admin_password": admin_password}
         
     except Exception as e:
-        logger.error(f"Database setup error for {company['name']}: {str(e)}")
-        return False
+        logger.error(f"[DB-SETUP] Error for {company['name']}: {str(e)}")
+        return {"success": False, "error": str(e)}
 
 # ============== PORTAINER PROVISIONING ROUTES ==============
 async def full_auto_provision(company: dict, result: dict, port_offset: int):
