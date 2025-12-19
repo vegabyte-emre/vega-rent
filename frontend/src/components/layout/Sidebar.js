@@ -23,16 +23,20 @@ import {
   Palette,
 } from "lucide-react";
 
+// Check if we're on panel subdomain
+const isAdminPanel = window.location.hostname.startsWith('panel.');
+const pathPrefix = isAdminPanel ? '' : '/admin';
+
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard", roles: ["superadmin", "firma_admin", "operasyon", "muhasebe"] },
-  { icon: Car, label: "Araçlar", path: "/admin/vehicles", roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
-  { icon: Users, label: "Müşteriler", path: "/admin/customers", roles: ["superadmin", "firma_admin", "operasyon"] },
-  { icon: Calendar, label: "Rezervasyonlar", path: "/admin/reservations", roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
-  { icon: MapPin, label: "GPS Takip", path: "/admin/gps", roles: ["superadmin", "firma_admin", "operasyon"] },
-  { icon: CreditCard, label: "Ödemeler", path: "/admin/payments", roles: ["superadmin", "firma_admin", "muhasebe"] },
-  { icon: FileText, label: "Raporlar", path: "/admin/reports", roles: ["superadmin", "firma_admin", "muhasebe"] },
-  { icon: Palette, label: "Tema Mağazası", path: "/admin/theme-store", roles: ["superadmin", "firma_admin"] },
-  { icon: Settings, label: "Ayarlar", path: "/admin/settings", roles: ["superadmin", "firma_admin"] },
+  { icon: LayoutDashboard, label: "Dashboard", path: `${pathPrefix}/dashboard`, roles: ["superadmin", "firma_admin", "operasyon", "muhasebe"] },
+  { icon: Car, label: "Araçlar", path: `${pathPrefix}/vehicles`, roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
+  { icon: Users, label: "Müşteriler", path: `${pathPrefix}/customers`, roles: ["superadmin", "firma_admin", "operasyon"] },
+  { icon: Calendar, label: "Rezervasyonlar", path: `${pathPrefix}/reservations`, roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
+  { icon: MapPin, label: "GPS Takip", path: `${pathPrefix}/gps`, roles: ["superadmin", "firma_admin", "operasyon"] },
+  { icon: CreditCard, label: "Ödemeler", path: `${pathPrefix}/payments`, roles: ["superadmin", "firma_admin", "muhasebe"] },
+  { icon: FileText, label: "Raporlar", path: `${pathPrefix}/reports`, roles: ["superadmin", "firma_admin", "muhasebe"] },
+  { icon: Palette, label: "Tema Mağazası", path: `${pathPrefix}/theme-store`, roles: ["superadmin", "firma_admin"] },
+  { icon: Settings, label: "Ayarlar", path: `${pathPrefix}/settings`, roles: ["superadmin", "firma_admin"] },
 ];
 
 export function Sidebar() {
