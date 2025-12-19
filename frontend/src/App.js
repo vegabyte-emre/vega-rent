@@ -133,6 +133,25 @@ function AppRoutes() {
       </Route>
 
       {/* ============== COMPANY ADMIN AUTH ROUTES ============== */}
+      {/* Routes for panel.domain.com (without /admin prefix) */}
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
+        }
+      />
+      
+      {/* Routes for main domain (with /admin prefix) */}
       <Route
         path="/admin/login"
         element={
@@ -150,7 +169,27 @@ function AppRoutes() {
         }
       />
 
-      {/* ============== COMPANY ADMIN PROTECTED ROUTES ============== */}
+      {/* ============== COMPANY ADMIN PROTECTED ROUTES (panel subdomain - no prefix) ============== */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/vehicles" element={<Vehicles />} />
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/reservations" element={<Reservations />} />
+        <Route path="/reservations/new" element={<NewReservation />} />
+        <Route path="/gps" element={<GPS />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/theme-store" element={<ThemeStore />} />
+      </Route>
+
+      {/* ============== COMPANY ADMIN PROTECTED ROUTES (main domain - with /admin prefix) ============== */}
       <Route
         element={
           <ProtectedRoute>
@@ -169,10 +208,6 @@ function AppRoutes() {
         <Route path="/admin/settings" element={<Settings />} />
         <Route path="/admin/theme-store" element={<ThemeStore />} />
       </Route>
-      
-      {/* Legacy redirect for old /login path */}
-      <Route path="/login" element={<Navigate to="/admin/login" replace />} />
-      <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
 
       {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
