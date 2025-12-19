@@ -639,12 +639,23 @@ async def provision_company(company_id: str, background_tasks: BackgroundTasks, 
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }}
         )
+        
+        # Auto-deploy frontend to the new company container
+        if domain:
+            background_tasks.add_task(
+                deploy_company_frontend,
+                company_code=company["code"],
+                backend_url=f"http://72.61.158.147:{result.get('ports', {}).get('backend', 11000)}",
+                container_name=f"{company['code'].replace('-', '')}_frontend"
+            )
+        
         return {
             "message": "Company provisioned successfully",
             "stack_id": result.get("stack_id"),
             "stack_name": result.get("stack_name"),
             "urls": result.get("urls"),
-            "ports": result.get("ports")
+            "ports": result.get("ports"),
+            "frontend_deploying": True if domain else False
         }
     else:
         # Revert status
