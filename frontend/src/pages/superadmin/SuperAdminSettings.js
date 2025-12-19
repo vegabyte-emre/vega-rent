@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { Settings, Server, Globe, Shield, Database, Loader2, CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import { Settings, Server, Globe, Shield, Database, Loader2, CheckCircle, XCircle, ExternalLink, Upload, Monitor } from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
