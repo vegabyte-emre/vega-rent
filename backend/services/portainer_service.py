@@ -370,6 +370,25 @@ class PortainerService:
             return result
         return []
     
+    async def delete_stack(self, stack_id: int) -> Dict[str, Any]:
+        """Delete a stack by ID"""
+        endpoint = f"stacks/{stack_id}?endpointId={self.endpoint_id}"
+        
+        async with httpx.AsyncClient(verify=False, timeout=60.0) as client:
+            try:
+                url = f"{self.base_url}/api/{endpoint}"
+                response = await client.delete(url, headers=self.headers)
+                
+                if response.status_code < 400:
+                    logger.info(f"Stack {stack_id} deleted successfully")
+                    return {'success': True}
+                else:
+                    logger.error(f"Stack delete failed: {response.status_code} - {response.text}")
+                    return {'error': response.text, 'status_code': response.status_code}
+            except Exception as e:
+                logger.error(f"Stack delete error: {str(e)}")
+                return {'error': str(e)}
+    
     async def get_next_port_offset(self, db) -> int:
         """Get next available port offset based on existing companies"""
         # Find the highest port_offset used
