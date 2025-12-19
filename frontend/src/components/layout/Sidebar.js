@@ -24,15 +24,15 @@ import {
 } from "lucide-react";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", roles: ["superadmin", "firma_admin", "operasyon", "muhasebe"] },
-  { icon: Car, label: "Araçlar", path: "/vehicles", roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
-  { icon: Users, label: "Müşteriler", path: "/customers", roles: ["superadmin", "firma_admin", "operasyon"] },
-  { icon: Calendar, label: "Rezervasyonlar", path: "/reservations", roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
-  { icon: MapPin, label: "GPS Takip", path: "/gps", roles: ["superadmin", "firma_admin", "operasyon"] },
-  { icon: CreditCard, label: "Ödemeler", path: "/payments", roles: ["superadmin", "firma_admin", "muhasebe"] },
-  { icon: FileText, label: "Raporlar", path: "/reports", roles: ["superadmin", "firma_admin", "muhasebe"] },
-  { icon: Palette, label: "Tema Mağazası", path: "/theme-store", roles: ["superadmin", "firma_admin"] },
-  { icon: Settings, label: "Ayarlar", path: "/settings", roles: ["superadmin", "firma_admin"] },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard", roles: ["superadmin", "firma_admin", "operasyon", "muhasebe"] },
+  { icon: Car, label: "Araçlar", path: "/admin/vehicles", roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
+  { icon: Users, label: "Müşteriler", path: "/admin/customers", roles: ["superadmin", "firma_admin", "operasyon"] },
+  { icon: Calendar, label: "Rezervasyonlar", path: "/admin/reservations", roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
+  { icon: MapPin, label: "GPS Takip", path: "/admin/gps", roles: ["superadmin", "firma_admin", "operasyon"] },
+  { icon: CreditCard, label: "Ödemeler", path: "/admin/payments", roles: ["superadmin", "firma_admin", "muhasebe"] },
+  { icon: FileText, label: "Raporlar", path: "/admin/reports", roles: ["superadmin", "firma_admin", "muhasebe"] },
+  { icon: Palette, label: "Tema Mağazası", path: "/admin/theme-store", roles: ["superadmin", "firma_admin"] },
+  { icon: Settings, label: "Ayarlar", path: "/admin/settings", roles: ["superadmin", "firma_admin"] },
 ];
 
 export function Sidebar() {
