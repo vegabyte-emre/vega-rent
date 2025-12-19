@@ -556,6 +556,134 @@ async def get_superadmin_stats(user: dict = Depends(get_current_user)):
         "total_users": total_users
     }
 
+# ============== PORTAINER PROVISIONING ROUTES ==============
+@api_router.post("/superadmin/companies/{company_id}/provision")
+async def provision_company(company_id: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
+    """SuperAdmin: Provision a company stack in Portainer"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can provision companies")
+    
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    if company.get("portainer_stack_id"):
+        raise HTTPException(status_code=400, detail="Company already has a provisioned stack")
+    
+    # Get next available port offset
+    port_offset = await portainer_service.get_next_port_offset(db)
+    
+    # Update status to provisioning
+    await db.companies.update_one(
+        {"id": company_id},
+        {"$set": {
+            "status": CompanyStatus.PROVISIONING.value,
+            "port_offset": port_offset,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Create stack in Portainer
+    result = await portainer_service.create_stack(
+        company_code=company["code"],
+        company_name=company["name"],
+        port_offset=port_offset
+    )
+    
+    if result.get("success"):
+        # Update company with stack info
+        await db.companies.update_one(
+            {"id": company_id},
+            {"$set": {
+                "status": CompanyStatus.ACTIVE.value,
+                "portainer_stack_id": result.get("stack_id"),
+                "stack_name": result.get("stack_name"),
+                "ports": result.get("ports"),
+                "urls": result.get("urls"),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        return {
+            "message": "Company provisioned successfully",
+            "stack_id": result.get("stack_id"),
+            "stack_name": result.get("stack_name"),
+            "urls": result.get("urls"),
+            "ports": result.get("ports")
+        }
+    else:
+        # Revert status
+        await db.companies.update_one(
+            {"id": company_id},
+            {"$set": {
+                "status": CompanyStatus.PENDING.value,
+                "provisioning_error": result.get("error"),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        raise HTTPException(status_code=500, detail=f"Provisioning failed: {result.get('error')}")
+
+@api_router.delete("/superadmin/companies/{company_id}/provision")
+async def deprovision_company(company_id: str, user: dict = Depends(get_current_user)):
+    """SuperAdmin: Remove a company stack from Portainer"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can deprovision companies")
+    
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    stack_id = company.get("portainer_stack_id")
+    if not stack_id:
+        raise HTTPException(status_code=400, detail="Company has no provisioned stack")
+    
+    # Delete stack from Portainer
+    result = await portainer_service.delete_stack(stack_id)
+    
+    if result.get("success"):
+        await db.companies.update_one(
+            {"id": company_id},
+            {"$set": {
+                "status": CompanyStatus.PENDING.value,
+                "portainer_stack_id": None,
+                "stack_name": None,
+                "ports": None,
+                "urls": None,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        return {"message": "Company stack removed successfully"}
+    else:
+        raise HTTPException(status_code=500, detail=f"Deprovisioning failed: {result.get('error')}")
+
+@api_router.get("/superadmin/portainer/stacks")
+async def get_portainer_stacks(user: dict = Depends(get_current_user)):
+    """SuperAdmin: Get all stacks from Portainer"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can view Portainer stacks")
+    
+    stacks = await portainer_service.get_stacks()
+    return {"stacks": stacks}
+
+@api_router.get("/superadmin/portainer/status")
+async def get_portainer_status(user: dict = Depends(get_current_user)):
+    """SuperAdmin: Check Portainer connection status"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can check Portainer status")
+    
+    try:
+        stacks = await portainer_service.get_stacks()
+        return {
+            "connected": True,
+            "url": portainer_service.base_url,
+            "endpoint_id": portainer_service.endpoint_id,
+            "stack_count": len(stacks) if isinstance(stacks, list) else 0
+        }
+    except Exception as e:
+        return {
+            "connected": False,
+            "error": str(e)
+        }
+
 # ============== LEGACY COMPANY ROUTES (for backward compatibility) ==============
 @api_router.post("/companies", response_model=CompanyResponse)
 async def create_company(company: CompanyCreate, user: dict = Depends(get_current_user)):
