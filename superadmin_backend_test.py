@@ -331,6 +331,111 @@ class SuperAdminAPITester:
             # Company might be completely removed from listing
             self.log_test("Company removed from system", status == 404, f"Status: {status}")
 
+    def test_portainer_status(self):
+        """Test Portainer connection status"""
+        if not self.superadmin_token:
+            self.log_test("Portainer status", False, "No SuperAdmin token available")
+            return
+            
+        print("\n🔍 Testing Portainer Connection Status...")
+        
+        status, data = self.make_request('GET', 'superadmin/portainer/status', use_superadmin_auth=True)
+        success = status == 200 and isinstance(data, dict)
+        
+        if success:
+            connected = data.get('connected', False)
+            stack_count = data.get('stack_count', 0)
+            url = data.get('url', '')
+            
+            self.log_test("Portainer status API", True, 
+                         f"Connected: {connected}, Stacks: {stack_count}, URL: {url}")
+            
+            # Check required fields
+            required_fields = ['connected', 'url', 'endpoint_id']
+            all_fields_present = all(field in data for field in required_fields)
+            self.log_test("Portainer status data structure", all_fields_present)
+        else:
+            self.log_test("Portainer status API", False, f"Status: {status}, Response: {data}")
+
+    def test_provision_endpoint(self):
+        """Test company provisioning endpoint"""
+        if not self.superadmin_token or not self.created_company_id:
+            self.log_test("Company provision", False, "No SuperAdmin token or company ID available")
+            return
+            
+        print("\n🔍 Testing Company Provisioning Endpoint...")
+        
+        # First check if company already has a stack
+        status, company_data = self.make_request('GET', f'superadmin/companies/{self.created_company_id}', use_superadmin_auth=True)
+        
+        if status == 200 and company_data.get('portainer_stack_id'):
+            # Company already provisioned, test deprovision first
+            status, data = self.make_request('DELETE', f'superadmin/companies/{self.created_company_id}/provision', 
+                                           use_superadmin_auth=True)
+            self.log_test("Deprovision existing stack", status == 200, f"Status: {status}")
+        
+        # Test provision endpoint
+        status, data = self.make_request('POST', f'superadmin/companies/{self.created_company_id}/provision', 
+                                       use_superadmin_auth=True)
+        success = status == 200 and isinstance(data, dict)
+        
+        if success:
+            # Check for required response fields
+            required_fields = ['message', 'stack_id', 'stack_name', 'ports']
+            all_fields_present = all(field in data for field in required_fields)
+            
+            auto_deploy_started = data.get('auto_deploy_started', False)
+            stack_id = data.get('stack_id')
+            ports = data.get('ports', {})
+            
+            self.log_test("Company provision API", True, 
+                         f"Stack ID: {stack_id}, Auto Deploy: {auto_deploy_started}")
+            self.log_test("Provision response structure", all_fields_present)
+            
+            # Verify ports are assigned
+            if ports:
+                mongodb_port = ports.get('mongodb')
+                self.log_test("MongoDB port assigned", mongodb_port is not None, f"Port: {mongodb_port}")
+        else:
+            self.log_test("Company provision API", False, f"Status: {status}, Response: {data}")
+
+    def test_tenant_login_credentials(self):
+        """Test existing tenant login credentials"""
+        print("\n🔍 Testing Existing Tenant Login (Bitlis Rent A Car)...")
+        
+        # Test login with existing tenant credentials
+        login_data = {
+            "email": "admin@bitlisrentacar.com",
+            "password": "admin123"
+        }
+        
+        status, data = self.make_request('POST', 'auth/login', login_data)
+        success = status == 200 and "access_token" in data
+        
+        if success:
+            user_role = data.get("user", {}).get("role")
+            company_id = data.get("user", {}).get("company_id")
+            
+            self.log_test("Bitlis tenant admin login", True, 
+                         f"Role: {user_role}, Company: {company_id}")
+            
+            # Test get current user for tenant
+            tenant_token = data["access_token"]
+            headers = {'Authorization': f'Bearer {tenant_token}', 'Content-Type': 'application/json'}
+            
+            try:
+                response = requests.get(f"{self.base_url}/api/auth/me", headers=headers, timeout=30)
+                if response.status_code == 200:
+                    user_data = response.json()
+                    self.log_test("Tenant user profile access", True, 
+                                 f"Email: {user_data.get('email')}")
+                else:
+                    self.log_test("Tenant user profile access", False, f"Status: {response.status_code}")
+            except Exception as e:
+                self.log_test("Tenant user profile access", False, f"Error: {str(e)}")
+        else:
+            self.log_test("Bitlis tenant admin login", False, f"Status: {status}, Response: {data}")
+
     def test_error_handling(self):
         """Test error handling for SuperAdmin endpoints"""
         print("\n🔍 Testing SuperAdmin Error Handling...")
