@@ -13,6 +13,7 @@ export function SuperAdminSettings() {
   const [traefikStatus, setTraefikStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deploying, setDeploying] = useState(false);
+  const [deployingFrontend, setDeployingFrontend] = useState(false);
 
   useEffect(() => {
     checkTraefikStatus();
