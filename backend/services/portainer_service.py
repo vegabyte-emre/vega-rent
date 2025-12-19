@@ -218,18 +218,45 @@ PYEOF
       - superadmin_backend_code:/app
 
   superadmin_frontend:
-    image: node:20-alpine
+    image: nginx:alpine
     container_name: superadmin_frontend
     restart: unless-stopped
-    working_dir: /app
     command: >
       sh -c "
-        npm install -g serve &&
-        if [ ! -f /app/index.html ]; then
-          mkdir -p /app &&
-          echo '<!DOCTYPE html><html><head><title>SuperAdmin Panel</title><style>body{font-family:system-ui;background:#0f172a;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.container{text-align:center;padding:40px;background:#1e293b;border-radius:16px;border:1px solid #334155;}.status{color:#22c55e;font-size:24px;margin-bottom:16px;}h1{margin:0 0 8px 0;}p{color:#94a3b8;margin:0;}a{color:#a78bfa;}</style></head><body><div class=\"container\"><div class=\"status\">✅</div><h1>SuperAdmin Panel</h1><p>Backend API: <a href=\"http://72.61.158.147:9001/api/health\">http://72.61.158.147:9001/api/health</a></p><p style=\"margin-top:16px;\">Tam uygulama icin kod deploy edilmeli</p></div></body></html>' > /app/index.html
-        fi &&
-        serve -s /app -l 3000
+        cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SuperAdmin Panel</title>
+    <style>
+        body{font-family:system-ui;background:#0f172a;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}
+        .container{text-align:center;padding:40px;background:#1e293b;border-radius:16px;border:1px solid #334155;max-width:500px;}
+        .status{color:#22c55e;font-size:48px;margin-bottom:16px;}
+        h1{margin:0 0 8px 0;font-size:28px;}
+        p{color:#94a3b8;margin:8px 0;}
+        a{color:#a78bfa;text-decoration:none;}
+        a:hover{text-decoration:underline;}
+        .links{margin-top:24px;padding-top:24px;border-top:1px solid #334155;}
+        .btn{display:inline-block;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;margin:8px;text-decoration:none;}
+        .btn:hover{background:#6d28d9;text-decoration:none;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status">🚀</div>
+        <h1>SuperAdmin Panel</h1>
+        <p>Kurumsal Rent A Car Platform Yonetimi</p>
+        <div class="links">
+            <p><strong>API Endpoints:</strong></p>
+            <p><a href="http://72.61.158.147:9001/api/health">/api/health</a> - Sistem Durumu</p>
+            <p><a href="http://72.61.158.147:9001/api/info">/api/info</a> - API Bilgisi</p>
+            <p style="margin-top:16px;"><a href="https://72.61.158.147:9443" class="btn">Portainer UI</a></p>
+        </div>
+    </div>
+</body>
+</html>
+HTMLEOF
+        nginx -g 'daemon off;'
       "
     environment:
       - REACT_APP_BACKEND_URL=http://72.61.158.147:9001
