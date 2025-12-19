@@ -637,6 +637,13 @@ async def deploy_company_frontend(company_code: str, backend_url: str, container
         
         if upload_result.get('error'):
             logger.error(f"Frontend upload failed for {company_code}: {upload_result.get('error')}")
+            return
+        
+        # Configure Nginx for SPA routing
+        nginx_result = await portainer_service.configure_nginx_spa(container_name)
+        
+        if nginx_result.get('error'):
+            logger.error(f"Nginx config failed for {company_code}: {nginx_result.get('error')}")
         else:
             logger.info(f"Frontend deployed successfully for {company_code}")
             
