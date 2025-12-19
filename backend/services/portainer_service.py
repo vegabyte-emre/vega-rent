@@ -135,15 +135,14 @@ networks:
 
 def get_full_company_stack_template(company_code: str, company_name: str, domain: str, port_offset: int) -> str:
     """
-    Generate full Rent A Car stack with Traefik labels for domain routing
-    Includes: MongoDB + Backend + Frontend with SSL support
+    Generate Docker Compose for a complete company stack with Traefik SSL
+    ALL names use safe_code (no dashes/underscores) for consistency
     """
+    safe_code = company_code.replace('-', '').replace('_', '')
+    
     frontend_port = BASE_FRONTEND_PORT + port_offset
     backend_port = BASE_BACKEND_PORT + port_offset
     mongo_port = BASE_MONGO_PORT + port_offset
-    
-    # Sanitize company code for container names
-    safe_code = company_code.replace('-', '').replace('_', '')
     
     return f"""version: '3.8'
 
@@ -199,17 +198,14 @@ services:
       - traefik_network
     labels:
       - "traefik.enable=true"
-      # Landing page router (domain.com and www.domain.com)
       - "traefik.http.routers.{safe_code}-web.rule=Host(`{domain}`) || Host(`www.{domain}`)"
       - "traefik.http.routers.{safe_code}-web.entrypoints=websecure"
       - "traefik.http.routers.{safe_code}-web.tls.certresolver=letsencrypt"
       - "traefik.http.routers.{safe_code}-web.service={safe_code}-frontend"
-      # Admin panel router (panel.domain.com)
       - "traefik.http.routers.{safe_code}-panel.rule=Host(`panel.{domain}`)"
       - "traefik.http.routers.{safe_code}-panel.entrypoints=websecure"
       - "traefik.http.routers.{safe_code}-panel.tls.certresolver=letsencrypt"
       - "traefik.http.routers.{safe_code}-panel.service={safe_code}-frontend"
-      # Service definition
       - "traefik.http.services.{safe_code}-frontend.loadbalancer.server.port=80"
 
 volumes:
