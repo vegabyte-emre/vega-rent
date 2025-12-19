@@ -100,14 +100,22 @@ export function SuperAdminCompanies() {
     }
   };
 
-  const handleDelete = async (companyId) => {
-    if (!window.confirm("Bu firmayı silmek istediğinize emin misiniz?")) return;
+  const handleDelete = async (companyId, companyName) => {
+    if (!window.confirm(`"${companyName}" firmasını silmek istediğinize emin misiniz?\n\nBu işlem:\n- Portainer stack'ini silecek\n- Tüm araçları silecek\n- Tüm müşterileri silecek\n- Tüm rezervasyonları silecek\n- Firma kaydını silecek\n\nBu işlem GERİ ALINAMAZ!`)) return;
     try {
-      await axios.delete(`${API_URL}/api/superadmin/companies/${companyId}`);
-      toast.success("Firma silindi");
+      toast.loading("Firma siliniyor...", { id: "delete" });
+      const response = await axios.delete(`${API_URL}/api/superadmin/companies/${companyId}`);
+      toast.success(
+        <div>
+          <p className="font-medium">{response.data.message}</p>
+          <p className="text-xs mt-1">Silinen: {response.data.deleted_resources?.join(', ')}</p>
+          {response.data.errors && <p className="text-xs text-red-400 mt-1">Hatalar: {response.data.errors.join(', ')}</p>}
+        </div>,
+        { id: "delete", duration: 5000 }
+      );
       fetchCompanies();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Firma silinirken hata oluştu");
+      toast.error(error.response?.data?.detail || "Firma silinirken hata oluştu", { id: "delete" });
     }
   };
 
