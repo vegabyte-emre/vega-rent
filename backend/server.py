@@ -542,22 +542,70 @@ async def update_company_status(company_id: str, status: CompanyStatus, user: di
     return {"message": "Company status updated", "status": status.value}
 
 @api_router.delete("/superadmin/companies/{company_id}")
-async def delete_company_superadmin(company_id: str, user: dict = Depends(get_current_user)):
-    """SuperAdmin: Delete (soft delete) a company"""
+async def delete_company_superadmin(company_id: str, hard_delete: bool = False, user: dict = Depends(get_current_user)):
+    """SuperAdmin: Delete a company - removes from Portainer and database"""
     if user["role"] != UserRole.SUPERADMIN.value:
         raise HTTPException(status_code=403, detail="Only SuperAdmin can delete companies")
     
-    result = await db.companies.update_one(
-        {"id": company_id},
-        {"$set": {
-            "status": CompanyStatus.DELETED.value,
-            "is_active": False,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
-    )
-    if result.modified_count == 0:
+    # Get company details
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    return {"message": "Company deleted successfully"}
+    
+    deleted_resources = []
+    errors = []
+    
+    # 1. Delete Portainer stack if exists
+    if company.get("portainer_stack_id"):
+        try:
+            stack_result = await portainer_service.delete_stack(company["portainer_stack_id"])
+            if stack_result.get("success"):
+                deleted_resources.append(f"Portainer Stack (ID: {company['portainer_stack_id']})")
+            else:
+                errors.append(f"Portainer stack silme hatası: {stack_result.get('error')}")
+        except Exception as e:
+            errors.append(f"Portainer hatası: {str(e)}")
+    
+    # 2. Delete all company data from database
+    try:
+        # Delete vehicles
+        vehicles_result = await db.vehicles.delete_many({"company_id": company_id})
+        if vehicles_result.deleted_count > 0:
+            deleted_resources.append(f"{vehicles_result.deleted_count} araç")
+        
+        # Delete customers
+        customers_result = await db.customers.delete_many({"company_id": company_id})
+        if customers_result.deleted_count > 0:
+            deleted_resources.append(f"{customers_result.deleted_count} müşteri")
+        
+        # Delete reservations
+        reservations_result = await db.reservations.delete_many({"company_id": company_id})
+        if reservations_result.deleted_count > 0:
+            deleted_resources.append(f"{reservations_result.deleted_count} rezervasyon")
+        
+        # Delete payments
+        payments_result = await db.payments.delete_many({"company_id": company_id})
+        if payments_result.deleted_count > 0:
+            deleted_resources.append(f"{payments_result.deleted_count} ödeme")
+        
+        # Delete company users
+        users_result = await db.users.delete_many({"company_id": company_id})
+        if users_result.deleted_count > 0:
+            deleted_resources.append(f"{users_result.deleted_count} kullanıcı")
+        
+        # Delete company record
+        await db.companies.delete_one({"id": company_id})
+        deleted_resources.append("Firma kaydı")
+        
+    except Exception as e:
+        errors.append(f"Veritabanı hatası: {str(e)}")
+    
+    return {
+        "message": "Firma ve tüm verileri silindi" if not errors else "Firma kısmen silindi",
+        "company_name": company.get("name"),
+        "deleted_resources": deleted_resources,
+        "errors": errors if errors else None
+    }
 
 @api_router.get("/superadmin/stats")
 async def get_superadmin_stats(user: dict = Depends(get_current_user)):
