@@ -367,5 +367,56 @@ class PortainerService:
         return await self._request('POST', endpoint)
 
 
+    async def create_superadmin_stack(self) -> Dict[str, Any]:
+        """
+        Create SuperAdmin stack in Portainer
+        Ports: Frontend 9000, Backend 9001, MongoDB 27017
+        """
+        stack_name = "superadmin"
+        compose_content = get_superadmin_compose_template()
+        
+        # Check if stack already exists
+        existing_stacks = await self.get_stacks()
+        for stack in existing_stacks:
+            if isinstance(stack, dict) and stack.get("Name") == stack_name:
+                return {
+                    'success': False,
+                    'error': 'SuperAdmin stack already exists',
+                    'stack_id': stack.get('Id')
+                }
+        
+        endpoint = f"stacks/create/standalone/string?endpointId={self.endpoint_id}"
+        
+        payload = {
+            'name': stack_name,
+            'stackFileContent': compose_content,
+            'env': []
+        }
+        
+        result = await self._request('POST', endpoint, data=payload)
+        
+        if 'error' not in result:
+            logger.info(f"SuperAdmin stack created successfully")
+            return {
+                'success': True,
+                'stack_id': result.get('Id'),
+                'stack_name': stack_name,
+                'ports': {
+                    'frontend': 9000,
+                    'backend': 9001,
+                    'mongodb': 27017
+                },
+                'urls': {
+                    'frontend': f"http://{SERVER_IP}:9000",
+                    'backend': f"http://{SERVER_IP}:9001",
+                    'api': f"http://{SERVER_IP}:9001/api",
+                    'health': f"http://{SERVER_IP}:9001/api/health"
+                }
+            }
+        else:
+            logger.error(f"SuperAdmin stack creation failed: {result}")
+            return {'success': False, 'error': result.get('error', 'Unknown error')}
+
+
 # Singleton instance
 portainer_service = PortainerService()
