@@ -475,13 +475,20 @@ class SuperAdminAPITester:
             
             # SuperAdmin functionality tests
             self.test_superadmin_stats()
+            self.test_portainer_status()
             self.test_company_creation()
             self.test_company_listing()
             self.test_company_details()
             self.test_company_status_change()
             
+            # Provisioning tests
+            self.test_provision_endpoint()
+            
             # Auto-created admin tests
             self.test_firma_admin_login()
+            
+            # Tenant login tests
+            self.test_tenant_login_credentials()
             
             # Security tests
             self.test_role_based_access_control()
