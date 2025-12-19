@@ -335,6 +335,47 @@ class PortainerService:
         max_offset = max(c.get('port_offset', 0) for c in companies)
         return max_offset + 1
     
+    async def create_full_stack(self, company_code: str, company_name: str, domain: str, port_offset: int) -> Dict[str, Any]:
+        """
+        Create a full company stack with Frontend + Backend + MongoDB
+        With Traefik labels for domain-based routing
+        """
+        stack_name = f"rentacar_{company_code}"
+        compose_content = get_full_company_stack_template(company_code, company_name, domain, port_offset)
+        
+        endpoint = f"stacks/create/standalone/string?endpointId={self.endpoint_id}"
+        
+        payload = {
+            'name': stack_name,
+            'stackFileContent': compose_content,
+            'env': []
+        }
+        
+        result = await self._request('POST', endpoint, data=payload)
+        
+        if 'error' not in result:
+            logger.info(f"Full stack created successfully: {stack_name}")
+            return {
+                'success': True,
+                'stack_id': result.get('Id'),
+                'stack_name': stack_name,
+                'ports': {
+                    'frontend': BASE_FRONTEND_PORT + port_offset,
+                    'backend': BASE_BACKEND_PORT + port_offset,
+                    'mongodb': BASE_MONGO_PORT + port_offset
+                },
+                'urls': {
+                    'website': f"https://{domain}",
+                    'panel': f"https://panel.{domain}",
+                    'api': f"https://api.{domain}",
+                    'ip_frontend': f"http://{SERVER_IP}:{BASE_FRONTEND_PORT + port_offset}",
+                    'ip_backend': f"http://{SERVER_IP}:{BASE_BACKEND_PORT + port_offset}"
+                }
+            }
+        else:
+            logger.error(f"Full stack creation failed: {result}")
+            return {'success': False, 'error': result.get('error', 'Unknown error')}
+
     async def create_stack(self, company_code: str, company_name: str, port_offset: int) -> Dict[str, Any]:
         """
         Create a new stack in Portainer for a company
