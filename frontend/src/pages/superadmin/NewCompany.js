@@ -377,8 +377,14 @@ export function NewCompany() {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <span className="text-slate-400">Firma Adı:</span>
                   <span className="text-white">{formData.name || "-"}</span>
-                  <span className="text-slate-400">Subdomain:</span>
-                  <span className="text-purple-400">{formData.subdomain}.rentafleet.com</span>
+                  <span className="text-slate-400">Domain:</span>
+                  {formData.domain ? (
+                    <span className="text-green-400">{formData.domain}</span>
+                  ) : formData.subdomain ? (
+                    <span className="text-purple-400">{formData.subdomain}.rentafleet.com</span>
+                  ) : (
+                    <span className="text-yellow-400">Belirtilmedi</span>
+                  )}
                   <span className="text-slate-400">Admin:</span>
                   <span className="text-white">{formData.admin_email || "-"}</span>
                   <span className="text-slate-400">Plan:</span>
