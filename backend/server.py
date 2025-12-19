@@ -97,24 +97,54 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: UserResponse
 
+class CompanyStatus(str, Enum):
+    PENDING = "pending"
+    PROVISIONING = "provisioning"
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    DELETED = "deleted"
+
+class SubscriptionPlan(str, Enum):
+    FREE = "free"
+    STARTER = "starter"
+    PROFESSIONAL = "professional"
+    ENTERPRISE = "enterprise"
+
 class CompanyCreate(BaseModel):
     name: str
     code: str
+    domain: Optional[str] = None  # Custom domain (e.g., abcrentacar.com)
+    subdomain: Optional[str] = None  # Subdomain (e.g., abc for abc.rentafleet.com)
     address: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     tax_number: Optional[str] = None
+    subscription_plan: SubscriptionPlan = SubscriptionPlan.FREE
+    # Admin user info for automatic creation
+    admin_email: Optional[EmailStr] = None
+    admin_password: Optional[str] = None
+    admin_full_name: Optional[str] = None
 
 class CompanyResponse(BaseModel):
     id: str
     name: str
     code: str
+    domain: Optional[str] = None
+    subdomain: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     tax_number: Optional[str] = None
+    subscription_plan: SubscriptionPlan = SubscriptionPlan.FREE
+    status: CompanyStatus = CompanyStatus.PENDING
     is_active: bool = True
+    vehicle_count: int = 0
+    customer_count: int = 0
+    admin_email: Optional[str] = None
+    portainer_stack_id: Optional[str] = None
+    created_by: Optional[str] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
 class VehicleCreate(BaseModel):
     plate: str
