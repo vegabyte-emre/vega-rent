@@ -166,8 +166,10 @@ services:
     ports:
       - "9001:80"
     environment:
-      - MODULE_NAME=main
-      - VARIABLE_NAME=app
+      - MONGO_URL=mongodb://superadmin_mongodb:27017
+      - DB_NAME=superadmin_db
+    volumes:
+      - superadmin_backend_app:/app
     networks:
       - superadmin_network
     depends_on:
@@ -179,6 +181,8 @@ services:
     restart: unless-stopped
     ports:
       - "9000:80"
+    volumes:
+      - superadmin_frontend_html:/usr/share/nginx/html
     networks:
       - superadmin_network
     depends_on:
@@ -186,6 +190,8 @@ services:
 
 volumes:
   superadmin_mongo_data:
+  superadmin_backend_app:
+  superadmin_frontend_html:
 
 networks:
   superadmin_network:
