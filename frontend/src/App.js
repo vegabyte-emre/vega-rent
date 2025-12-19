@@ -108,8 +108,19 @@ function SuperAdminRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* ============== ROOT ROUTE ============== */}
+      {/* If on panel subdomain, show login. Otherwise show landing page */}
+      <Route path="/" element={
+        isAdminPanel ? (
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        ) : (
+          <Home />
+        )
+      } />
+      
       {/* ============== PUBLIC ROUTES (Customer Facing) ============== */}
-      <Route path="/" element={<Home />} />
       <Route path="/araclar" element={<VehicleList />} />
       <Route path="/arac/:id" element={<VehicleDetail />} />
       <Route path="/rezervasyon" element={<Reservation />} />
