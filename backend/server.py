@@ -765,6 +765,91 @@ async def deploy_traefik(user: dict = Depends(get_current_user), admin_email: st
     else:
         raise HTTPException(status_code=500, detail=f"Traefik deployment failed: {result.get('error')}")
 
+@api_router.post("/superadmin/deploy-frontend-to-kvm")
+async def deploy_frontend_to_kvm(background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Build and deploy frontend to KVM server's SuperAdmin container
+    This builds the React app with correct REACT_APP_BACKEND_URL and uploads to Nginx container
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can deploy frontend")
+    
+    import subprocess
+    import tarfile
+    import io
+    import shutil
+    
+    kvm_backend_url = "http://72.61.158.147:9001"
+    frontend_dir = "/app/frontend"
+    build_dir = f"{frontend_dir}/build"
+    
+    try:
+        # Step 1: Build frontend with correct backend URL
+        env = os.environ.copy()
+        env["REACT_APP_BACKEND_URL"] = kvm_backend_url
+        env["CI"] = "true"  # Skip warnings as errors
+        
+        # Run yarn build
+        result = subprocess.run(
+            ["yarn", "build"],
+            cwd=frontend_dir,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=180
+        )
+        
+        if result.returncode != 0:
+            return {
+                "success": False,
+                "error": "Build failed",
+                "details": result.stderr
+            }
+        
+        # Step 2: Create tar archive of build folder
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+            for root, dirs, files in os.walk(build_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, build_dir)
+                    tar.add(file_path, arcname=arcname)
+        
+        tar_data = tar_buffer.getvalue()
+        
+        # Step 3: Upload to Portainer container
+        upload_result = await portainer_service.upload_to_container(
+            container_name="superadmin_frontend",
+            tar_data=tar_data,
+            dest_path="/usr/share/nginx/html"
+        )
+        
+        if upload_result.get('error'):
+            return {
+                "success": False,
+                "error": "Upload to container failed",
+                "details": upload_result.get('error')
+            }
+        
+        return {
+            "success": True,
+            "message": "Frontend deployed successfully to KVM server",
+            "backend_url": kvm_backend_url,
+            "frontend_url": "http://72.61.158.147:9000",
+            "files_uploaded": len([f for r, d, files in os.walk(build_dir) for f in files])
+        }
+        
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "error": "Build timed out (180s)"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 # ============== LEGACY COMPANY ROUTES (for backward compatibility) ==============
 @api_router.post("/companies", response_model=CompanyResponse)
 async def create_company(company: CompanyCreate, user: dict = Depends(get_current_user)):
