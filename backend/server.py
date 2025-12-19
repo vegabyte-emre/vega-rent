@@ -801,14 +801,16 @@ JWT_SECRET={company_code}_jwt_secret_2024
         logger.error(f"[BACKEND-DEPLOY] Error for {company_code}: {str(e)}")
         return {"success": False, "error": str(e)}
 
-async def setup_company_database(company: dict, mongo_port: int):
+async def setup_company_database(company: dict, mongo_port: int, db_name: str = None):
     """
     Setup company database with admin user
     """
     from motor.motor_asyncio import AsyncIOMotorClient
     
-    company_code = company.get("code", "").replace("-", "")
-    db_name = f"{company_code}_db"
+    # Use provided db_name or calculate from company code
+    if not db_name:
+        company_code = company.get("code", "").replace("-", "").replace("_", "")
+        db_name = f"{company_code}_db"
     
     logger.info(f"[DB-SETUP] Setting up database for {company['name']} on port {mongo_port}")
     logger.info(f"[DB-SETUP] Database name: {db_name}")
