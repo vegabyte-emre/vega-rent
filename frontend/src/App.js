@@ -114,7 +114,22 @@ function AppRoutes() {
       <Route path="/musteri/kayit" element={<CustomerRegister />} />
       <Route path="/hesabim" element={<CustomerDashboard />} />
 
-      {/* ============== ADMIN AUTH ROUTES ============== */}
+      {/* ============== SUPERADMIN ROUTES ============== */}
+      <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+      <Route
+        element={
+          <SuperAdminRoute>
+            <SuperAdminLayout />
+          </SuperAdminRoute>
+        }
+      >
+        <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
+        <Route path="/superadmin/companies" element={<SuperAdminCompanies />} />
+        <Route path="/superadmin/companies/new" element={<NewCompany />} />
+        <Route path="/superadmin/settings" element={<SuperAdminSettings />} />
+      </Route>
+
+      {/* ============== COMPANY ADMIN AUTH ROUTES ============== */}
       <Route
         path="/login"
         element={
@@ -132,7 +147,7 @@ function AppRoutes() {
         }
       />
 
-      {/* ============== ADMIN PROTECTED ROUTES ============== */}
+      {/* ============== COMPANY ADMIN PROTECTED ROUTES ============== */}
       <Route
         element={
           <ProtectedRoute>
@@ -150,16 +165,6 @@ function AppRoutes() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/theme-store" element={<ThemeStore />} />
-        
-        {/* SuperAdmin Only */}
-        <Route
-          path="/companies"
-          element={
-            <ProtectedRoute allowedRoles={["superadmin"]}>
-              <Companies />
-            </ProtectedRoute>
-          }
-        />
       </Route>
 
       {/* Catch-all redirect */}
