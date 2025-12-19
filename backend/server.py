@@ -459,6 +459,11 @@ async def list_companies_superadmin(user: dict = Depends(get_current_user)):
             company_data["updated_at"] = datetime.fromisoformat(c["updated_at"]) if isinstance(c["updated_at"], str) else c["updated_at"]
         company_data["subscription_plan"] = SubscriptionPlan(c.get("subscription_plan", "free"))
         company_data["status"] = CompanyStatus(c.get("status", "active"))
+        # Handle ports and urls as nested objects
+        if c.get("ports") and isinstance(c["ports"], dict):
+            company_data["ports"] = PortainerPorts(**c["ports"])
+        if c.get("urls") and isinstance(c["urls"], dict):
+            company_data["urls"] = PortainerUrls(**c["urls"])
         result.append(CompanyResponse(**company_data))
     return result
 
