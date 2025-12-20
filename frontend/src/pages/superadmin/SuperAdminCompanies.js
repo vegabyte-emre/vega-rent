@@ -131,9 +131,52 @@ export function SuperAdminCompanies() {
         </div>,
         { id: "provision", duration: 5000 }
       );
+      
+      // Otomatik olarak kod deploy et
+      toast.loading("Frontend ve Backend yükleniyor...", { id: "deploy-code" });
+      try {
+        const deployResponse = await axios.post(`${API_URL}/api/superadmin/companies/${companyId}/deploy-code`);
+        if (deployResponse.data.success) {
+          toast.success(
+            <div>
+              <p className="font-medium">Kod başarıyla yüklendi!</p>
+              <p className="text-xs mt-1">Login: {deployResponse.data.results?.database?.admin_email}</p>
+            </div>,
+            { id: "deploy-code", duration: 8000 }
+          );
+        } else {
+          toast.error("Kod yüklenemedi: " + deployResponse.data.error, { id: "deploy-code" });
+        }
+      } catch (deployError) {
+        toast.error("Kod yükleme hatası: " + (deployError.response?.data?.detail || deployError.message), { id: "deploy-code" });
+      }
+      
       fetchCompanies();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Deploy işlemi başarısız", { id: "provision" });
+    }
+  };
+
+  const handleDeployCode = async (companyId, companyName) => {
+    if (!window.confirm(`"${companyName}" firmasına Frontend ve Backend kodunu yüklemek istediğinize emin misiniz?`)) return;
+    try {
+      toast.loading("Kod yükleniyor (2-3 dakika sürebilir)...", { id: "deploy-code" });
+      const response = await axios.post(`${API_URL}/api/superadmin/companies/${companyId}/deploy-code`);
+      if (response.data.success) {
+        toast.success(
+          <div>
+            <p className="font-medium">Kod başarıyla yüklendi!</p>
+            <p className="text-xs mt-1">Admin: {response.data.results?.database?.admin_email}</p>
+            <p className="text-xs">Şifre: {response.data.results?.database?.admin_password}</p>
+          </div>,
+          { id: "deploy-code", duration: 10000 }
+        );
+      } else {
+        toast.error("Kod yüklenemedi: " + response.data.error, { id: "deploy-code" });
+      }
+      fetchCompanies();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Kod yükleme başarısız", { id: "deploy-code" });
     }
   };
 
