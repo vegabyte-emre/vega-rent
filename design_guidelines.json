@@ -1,203 +1,146 @@
 {
-  "design_system": {
-    "identity": {
-      "name": "Corporate Rent A Car Platform",
-      "persona": "E1: The Anti-AI Designer",
-      "theme": "Modern Corporate Utility",
-      "archetype": "Swiss & High-Contrast (Modified for Utility)"
+  "project_name": "SuperAdmin Panel - Rent A Car SaaS",
+  "design_philosophy": {
+    "archetype": "Jewel & Luxury (Adapted for B2B SaaS)",
+    "core_values": ["Authority", "Trust", "Speed", "Global"],
+    "visual_style": "Deep Midnight Blue backgrounds for impact, crisp white/grey for data. High-contrast Orange accents for conversion.",
+    "theme_strategy": "Hybrid. Dark Mode for Hero/Impact sections. Light Mode for Pricing/Features/Forms to ensure readability and trust."
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Outfit, sans-serif",
+      "body": "Plus Jakarta Sans, sans-serif",
+      "mono": "JetBrains Mono, monospace"
     },
-    "typography": {
-      "font_family": {
-        "headings": "Manrope, sans-serif",
-        "body": "IBM Plex Sans, sans-serif",
-        "mono": "JetBrains Mono, monospace"
-      },
-      "scale": {
-        "h1": "text-4xl md:text-5xl font-bold tracking-tight",
-        "h2": "text-3xl md:text-4xl font-semibold tracking-tight",
-        "h3": "text-2xl font-semibold tracking-tight",
-        "h4": "text-xl font-medium",
-        "body_lg": "text-lg leading-relaxed",
-        "body_base": "text-base leading-relaxed",
-        "body_sm": "text-sm leading-normal",
-        "caption": "text-xs text-muted-foreground uppercase tracking-wider"
-      },
-      "imports": [
-        "@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');"
-      ]
+    "usage_rules": {
+      "headings": "Bold (700) or ExtraBold (800). Tight tracking (-0.02em). Use for H1-H3.",
+      "subheadings": "Medium (500) or SemiBold (600). Normal tracking.",
+      "body": "Regular (400) for long text. Medium (500) for UI labels.",
+      "buttons": "SemiBold (600). Uppercase optional for primary CTAs."
     },
-    "colors": {
-      "palette": {
-        "primary": {
-          "DEFAULT": "#0F172A",
-          "foreground": "#F8FAFC",
-          "description": "Deep Slate 900 - Trust, Authority, Corporate"
-        },
-        "secondary": {
-          "DEFAULT": "#F1F5F9",
-          "foreground": "#0F172A",
-          "description": "Slate 100 - Backgrounds, Secondary Actions"
-        },
-        "accent": {
-          "DEFAULT": "#3B82F6",
-          "foreground": "#FFFFFF",
-          "description": "Blue 500 - Primary Actions, Active States"
-        },
-        "success": {
-          "DEFAULT": "#10B981",
-          "foreground": "#FFFFFF",
-          "description": "Emerald 500 - Available, Completed"
-        },
-        "warning": {
-          "DEFAULT": "#F59E0B",
-          "foreground": "#FFFFFF",
-          "description": "Amber 500 - Rented, Maintenance, Pending"
-        },
-        "destructive": {
-          "DEFAULT": "#EF4444",
-          "foreground": "#FFFFFF",
-          "description": "Red 500 - Overdue, Error, Delete"
-        },
-        "background": {
-          "light": "#FFFFFF",
-          "dark": "#020617"
-        },
-        "surface": {
-          "light": "#F8FAFC",
-          "dark": "#0F172A"
-        }
+    "scale": {
+      "h1": "text-5xl md:text-7xl leading-tight",
+      "h2": "text-4xl md:text-5xl leading-tight",
+      "h3": "text-2xl md:text-3xl",
+      "body_lg": "text-lg md:text-xl leading-relaxed",
+      "body_base": "text-base leading-relaxed"
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#0F172A",
+        "foreground": "#F8FAFC",
+        "description": "Deep Midnight Blue (Slate 900) - Authority & Stability"
       },
-      "gradients": {
-        "dashboard_hero": "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900",
-        "active_state": "bg-gradient-to-r from-blue-600 to-blue-500"
+      "secondary": {
+        "DEFAULT": "#F1F5F9",
+        "foreground": "#0F172A",
+        "description": "Cloud White (Slate 100) - Clarity & Space"
+      },
+      "accent": {
+        "DEFAULT": "#F97316",
+        "foreground": "#FFFFFF",
+        "hover": "#EA580C",
+        "description": "Vibrant Orange (Orange 500) - Action & Energy"
+      },
+      "muted": {
+        "DEFAULT": "#64748B",
+        "foreground": "#F8FAFC",
+        "description": "Cool Grey (Slate 500) - Subtlety"
+      },
+      "background": {
+        "dark": "#020617",
+        "light": "#FFFFFF"
       }
     },
+    "gradients": {
+      "hero": "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
+      "card_glow": "bg-gradient-to-br from-white/10 to-white/5",
+      "text_gradient": "bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400"
+    }
+  },
+  "layout_strategies": {
     "spacing": {
-      "container_padding": "p-6 md:p-8 lg:p-12",
-      "section_gap": "gap-8 md:gap-12",
-      "component_gap": "gap-4",
-      "border_radius": {
-        "sm": "rounded-sm",
-        "md": "rounded-md",
-        "lg": "rounded-lg",
-        "full": "rounded-full"
-      }
+      "section_padding": "py-20 md:py-32",
+      "container_padding": "px-6 md:px-12",
+      "element_gap": "gap-8 md:gap-12"
     },
+    "grids": {
+      "bento_features": "grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[minmax(200px,auto)]",
+      "pricing_table": "grid grid-cols-1 md:grid-cols-3 gap-8 items-start"
+    },
+    "containers": {
+      "max_width": "max-w-7xl mx-auto"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-accent hover:bg-accent/90 text-white rounded-full px-8 py-4 text-lg font-semibold shadow-lg shadow-orange-500/20 transition-all hover:scale-105",
+      "secondary": "bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-full px-8 py-4 text-lg font-medium backdrop-blur-sm transition-all",
+      "outline": "border-2 border-slate-200 text-slate-900 hover:border-slate-900 hover:bg-slate-50 rounded-full px-6 py-3 transition-all"
+    },
+    "cards": {
+      "feature": "group relative overflow-hidden rounded-3xl bg-slate-50 hover:bg-white border border-slate-200 p-8 transition-all hover:shadow-xl hover:shadow-slate-200/50",
+      "pricing": "relative flex flex-col p-8 rounded-3xl border border-slate-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2",
+      "pricing_featured": "relative flex flex-col p-8 rounded-3xl border border-orange-500/30 bg-slate-900 text-white shadow-2xl shadow-orange-500/10 scale-105 z-10"
+    },
+    "inputs": {
+      "default": "h-12 rounded-xl border-slate-200 bg-white px-4 text-slate-900 focus:border-orange-500 focus:ring-orange-500/20"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-white/10 border border-white/10",
+    "noise_texture": "opacity-[0.03] pointer-events-none absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]",
     "shadows": {
-      "card": "shadow-[0_1px_3px_0_rgb(0,0,0,0.1),0_1px_2px_-1px_rgb(0,0,0,0.1)]",
-      "card_hover": "shadow-[0_4px_6px_-1px_rgb(0,0,0,0.1),0_2px_4px_-2px_rgb(0,0,0,0.1)]",
-      "dropdown": "shadow-lg border border-border/50"
-    },
-    "layout_strategies": {
-      "dashboard": {
-        "name": "Control Room Grid",
-        "classes": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6",
-        "rules": "Dense packing. Widgets must stretch to fill height (h-full). No jagged bottoms."
-      },
-      "marketing": {
-        "name": "Tetris Grid",
-        "classes": "grid grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-8",
-        "rules": "Asymmetry. Use col-span-full for hero, col-span-4 for features. Leave negative space."
-      },
-      "form": {
-        "name": "Single Column Focus",
-        "classes": "max-w-2xl mx-auto space-y-6",
-        "rules": "Labels above inputs. Clear validation messages. Primary action full width on mobile."
-      }
-    },
-    "components": {
-      "buttons": {
-        "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6 rounded-md font-medium transition-all active:scale-95",
-        "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-6 rounded-md font-medium transition-all",
-        "ghost": "hover:bg-accent hover:text-accent-foreground h-10 px-4 rounded-md transition-all",
-        "destructive": "bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-6 rounded-md transition-all"
-      },
-      "cards": {
-        "base": "bg-card text-card-foreground rounded-lg border border-border shadow-sm transition-all hover:shadow-md",
-        "interactive": "cursor-pointer hover:border-accent/50 hover:shadow-md transition-all duration-200"
-      },
-      "inputs": {
-        "base": "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-      },
-      "tables": {
-        "wrapper": "w-full overflow-auto rounded-md border",
-        "header": "bg-muted/50 text-muted-foreground font-medium text-xs uppercase tracking-wider",
-        "row": "hover:bg-muted/50 transition-colors data-[state=selected]:bg-muted"
-      }
-    },
-    "motion": {
-      "page_transition": {
-        "initial": { "opacity": 0, "y": 10 },
-        "animate": { "opacity": 1, "y": 0 },
-        "exit": { "opacity": 0, "y": -10 },
-        "transition": { "duration": 0.3, "ease": "easeOut" }
-      },
-      "list_item": {
-        "initial": { "opacity": 0, "x": -20 },
-        "animate": { "opacity": 1, "x": 0 },
-        "transition": { "type": "spring", "stiffness": 300, "damping": 24 }
-      }
+      "soft": "shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+      "glow": "shadow-[0_0_50px_-12px_rgb(249,115,22,0.3)]"
     }
   },
-  "assets": {
-    "images": [
-      {
-        "category": "auth_background",
-        "url": "https://images.unsplash.com/photo-1639693805920-605b38f3d0d5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMG1vZGVybiUyMGNhciUyMHNpbGhvdWV0dGUlMjBkYXJrJTIwYmFja2dyb3VuZHxlbnwwfHx8Ymx1ZXwxNzY1OTg5MzQ0fDA&ixlib=rb-4.1.0&q=85",
-        "description": "Abstract blurry car driving, dark blue tones. Perfect for login page background."
-      },
-      {
-        "category": "dashboard_hero",
-        "url": "https://images.unsplash.com/photo-1760465066570-6c2261f851e6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBjYXIlMjBmbGVldCUyMHBhcmtpbmclMjBsb3R8ZW58MHx8fHwxNzY1OTg5MzQ2fDA&ixlib=rb-4.1.0&q=85",
-        "description": "Luxury car fleet in parking lot. Use for 'Fleet Status' widget or dashboard header."
-      },
-      {
-        "category": "team_meeting",
-        "url": "https://images.unsplash.com/photo-1758518729685-f88df7890776?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwxfHxjb3Jwb3JhdGUlMjBvZmZpY2UlMjB0ZWFtJTIwbWVldGluZyUyMG1vZGVybnxlbnwwfHx8fDE3NjU5ODkzNDd8MA&ixlib=rb-4.1.0&q=85",
-        "description": "Corporate team meeting. Use for 'About Us' or 'Team' section if needed."
-      }
-    ],
-    "icons": {
-      "library": "lucide-react",
-      "preferred_set": ["Car", "Users", "Calendar", "CreditCard", "BarChart3", "Settings", "MapPin", "Navigation", "FileText", "AlertCircle", "CheckCircle2", "XCircle"]
+  "image_assets": {
+    "hero_bg": {
+      "url": "https://images.unsplash.com/photo-1629515161476-ef3b805702ab?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBjYXIlMjBmbGVldCUyMG1vZGVybiUyMHBhcmtpbmclMjBsb3R8ZW58MHx8fGJsdWV8MTc2NjIzMjg4M3ww&ixlib=rb-4.1.0&q=85",
+      "alt": "Luxury Porsche Fleet",
+      "usage": "Hero Section Background with heavy dark overlay (bg-slate-950/80)"
+    },
+    "feature_management": {
+      "url": "https://images.unsplash.com/photo-1758873267213-c20dc5568c8c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMHBlcnNvbiUyMHVzaW5nJTIwbGFwdG9wJTIwbW9kZXJuJTIwb2ZmaWNlfGVufDB8fHx8MTc2NjIzMjg4NXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Manager using dashboard",
+      "usage": "Features Section - Management Dashboard"
+    },
+    "feature_fleet": {
+      "url": "https://images.unsplash.com/photo-1716877868413-144fd8cd3160?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHw0fHxsdXh1cnklMjBjYXIlMjBmbGVldCUyMG1vZGVybiUyMHBhcmtpbmclMjBsb3R8ZW58MHx8fGJsdWV8MTc2NjIzMjg4M3ww&ixlib=rb-4.1.0&q=85",
+      "alt": "Fleet Management",
+      "usage": "Features Section - Fleet Tracking"
+    },
+    "emotional_connect": {
+      "url": "https://images.unsplash.com/photo-1689866499892-53e5e619c3fc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwyfHxoYXBweSUyMHBlcnNvbiUyMGRyaXZpbmclMjBjYXIlMjBzdW5zZXR8ZW58MHx8fHwxNzY2MjMyODg3fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Happy customer driving",
+      "usage": "Testimonials or CTA Section Background"
     }
   },
-  "implementation_guide": {
-    "steps": [
-      {
-        "phase": "Setup",
-        "action": "Install dependencies",
-        "command": "yarn add lucide-react framer-motion clsx tailwind-merge date-fns recharts react-day-picker @radix-ui/react-dialog @radix-ui/react-slot @radix-ui/react-dropdown-menu @radix-ui/react-label @radix-ui/react-select @radix-ui/react-switch @radix-ui/react-tabs @radix-ui/react-avatar @radix-ui/react-separator @radix-ui/react-tooltip @radix-ui/react-popover @radix-ui/react-accordion"
-      },
-      {
-        "phase": "Global Styles",
-        "action": "Update index.css",
-        "details": "Add font imports. Define CSS variables for colors (primary, secondary, accent, etc.) in :root and .dark classes. Apply base styles for body and headings."
-      },
-      {
-        "phase": "Components",
-        "action": "Create UI Library",
-        "details": "Build atomic components (Button, Input, Card, Badge) using the design tokens. Ensure they support dark mode and have proper focus states."
-      },
-      {
-        "phase": "Layouts",
-        "action": "Build Shell",
-        "details": "Create Sidebar/Navbar layout. Ensure responsive behavior (collapsible sidebar on mobile). Implement the 'Control Room' grid for the dashboard."
-      },
-      {
-        "phase": "Pages",
-        "action": "Develop Views",
-        "details": "Implement pages in order: Auth -> Dashboard -> Vehicle List -> Reservation Flow. Use the 'Tetris' grid for marketing/landing pages if applicable."
-      }
+  "instructions_to_main_agent": [
+    "1. INSTALL DEPENDENCIES: Run 'npm install lucide-react framer-motion clsx tailwind-merge @radix-ui/react-slot @radix-ui/react-accordion @radix-ui/react-dialog @radix-ui/react-label @radix-ui/react-select @radix-ui/react-switch'.",
+    "2. FONT SETUP: Add 'Outfit' and 'Plus Jakarta Sans' from Google Fonts to index.css.",
+    "3. TAILWIND CONFIG: Update tailwind.config.js to include the new colors (slate-900 as primary, orange-500 as accent) and fonts.",
+    "4. COMPONENT STRATEGY: Build the Landing Page as a single page with scroll sections (Hero -> Features -> Pricing -> Testimonials -> FAQ -> Contact).",
+    "5. MULTI-LANGUAGE: Create a simple 'LanguageSelector' component in the Navbar. Mock the translation logic for now (just show the UI).",
+    "6. PRICING: Implement the 'Tracing Beam' effect on the pricing cards using framer-motion.",
+    "7. FORMS: Use Shadcn UI components for the 'Demo Request' form. Ensure validation is visible.",
+    "8. ACCESSIBILITY: Ensure all text on the dark hero section has sufficient contrast. Use 'data-testid' on all interactive elements."
+  ],
+  "universal_guidelines": {
+    "do_not": [
+      "Do NOT use generic 'Inter' font for headings.",
+      "Do NOT use pure black (#000000). Use Slate-950 (#020617).",
+      "Do NOT make the design too 'flat'. Use subtle borders and shadows.",
+      "Do NOT forget mobile responsiveness. Stack grids on mobile."
     ],
-    "universal_rules": [
-      "DO NOT use gradients for text or backgrounds unless specified in the 'gradients' section.",
-      "Ensure all interactive elements have a hover state and a focus ring.",
-      "Use 'data-testid' on all buttons, inputs, and links for testing.",
-      "Always use 'lucide-react' for icons.",
-      "Follow the 'Control Room' grid for data-heavy screens.",
-      "Use 'Manrope' for all headings and 'IBM Plex Sans' for body text.",
-      "Dark mode is mandatory. Test all components in both modes."
+    "must_do": [
+      "MUST use the provided image URLs.",
+      "MUST implement hover states for all buttons and cards.",
+      "MUST use 'framer-motion' for smooth entrance animations (fade-up).",
+      "MUST keep the 'Rent A Car' context in mind (professional, reliable)."
     ]
   }
 }
