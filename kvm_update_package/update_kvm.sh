@@ -13,10 +13,13 @@ echo "  + Template Güncelleme Butonu"
 echo "============================================"
 echo ""
 
-# Değişkenler - KENDİ ORTAMINIZA GÖRE DÜZENLEYİN
-CONTAINER_NAME="${CONTAINER_NAME:-superadmin-app}"
-BACKEND_PATH="${BACKEND_PATH:-/app/backend}"
-FRONTEND_PATH="${FRONTEND_PATH:-/app/frontend/build}"
+# Container isimleri - KVM'deki gerçek isimler
+FRONTEND_CONTAINER="superadmin_frontend"
+BACKEND_CONTAINER="superadmin_backend"
+
+# Path'ler
+BACKEND_PATH="/app"
+FRONTEND_PATH="/usr/share/nginx/html"
 
 # Kontroller
 if [ ! -d "frontend_build" ] || [ ! -d "backend" ]; then
@@ -25,47 +28,56 @@ if [ ! -d "frontend_build" ] || [ ! -d "backend" ]; then
     exit 1
 fi
 
-echo "[1/6] Mevcut container kontrol ediliyor..."
-if ! docker ps | grep -q "$CONTAINER_NAME"; then
-    echo "UYARI: $CONTAINER_NAME container'ı çalışmıyor veya bulunamadı."
-    echo ""
-    echo "Mevcut container'lar:"
-    docker ps --format "table {{.Names}}\t{{.Status}}" | head -10
-    echo ""
-    read -p "Container adını girin (veya devam etmek için Enter): " custom_name
-    if [ -n "$custom_name" ]; then
-        CONTAINER_NAME="$custom_name"
-    fi
+echo "[1/6] Container'lar kontrol ediliyor..."
+if ! docker ps | grep -q "$BACKEND_CONTAINER"; then
+    echo "HATA: $BACKEND_CONTAINER bulunamadı!"
+    exit 1
 fi
+if ! docker ps | grep -q "$FRONTEND_CONTAINER"; then
+    echo "HATA: $FRONTEND_CONTAINER bulunamadı!"
+    exit 1
+fi
+echo "  ✓ $BACKEND_CONTAINER çalışıyor"
+echo "  ✓ $FRONTEND_CONTAINER çalışıyor"
 
+echo ""
 echo "[2/6] Backend dosyaları güncelleniyor..."
-docker cp backend/server.py $CONTAINER_NAME:$BACKEND_PATH/server.py
+docker cp backend/server.py $BACKEND_CONTAINER:$BACKEND_PATH/server.py
 echo "  ✓ server.py güncellendi"
 
 # Services klasörünü oluştur (yoksa)
-docker exec $CONTAINER_NAME mkdir -p $BACKEND_PATH/services 2>/dev/null || true
+docker exec $BACKEND_CONTAINER mkdir -p $BACKEND_PATH/services 2>/dev/null || true
 
-docker cp backend/services/. $CONTAINER_NAME:$BACKEND_PATH/services/
-echo "  ✓ services/ klasörü güncellendi"
-echo "    - iyzico_service.py"
-echo "    - portainer_service.py"
+for file in backend/services/*.py; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        docker cp "$file" $BACKEND_CONTAINER:$BACKEND_PATH/services/$filename
+        echo "  ✓ services/$filename güncellendi"
+    fi
+done
 
+echo ""
 echo "[3/6] Frontend dosyaları güncelleniyor..."
-docker cp frontend_build/. $CONTAINER_NAME:$FRONTEND_PATH/
+docker cp frontend_build/. $FRONTEND_CONTAINER:$FRONTEND_PATH/
 echo "  ✓ Frontend build dosyaları güncellendi"
 
-echo "[4/6] Backend bağımlılıkları kontrol ediliyor..."
-docker exec $CONTAINER_NAME pip install iyzipay httpx --quiet 2>/dev/null || echo "  (pip zaten güncel)"
+echo ""
+echo "[4/6] Backend bağımlılıkları kuruluyor..."
+docker exec $BACKEND_CONTAINER pip install iyzipay httpx --quiet 2>/dev/null && echo "  ✓ iyzipay, httpx kuruldu" || echo "  (zaten mevcut)"
 
-echo "[5/6] __pycache__ temizleniyor..."
-docker exec $CONTAINER_NAME find $BACKEND_PATH -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+echo ""
+echo "[5/6] Cache temizleniyor..."
+docker exec $BACKEND_CONTAINER find $BACKEND_PATH -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+echo "  ✓ __pycache__ temizlendi"
 
-echo "[6/6] Servisler yeniden başlatılıyor..."
-docker exec $CONTAINER_NAME supervisorctl restart backend 2>/dev/null || docker restart $CONTAINER_NAME
+echo ""
+echo "[6/6] Backend yeniden başlatılıyor..."
+docker restart $BACKEND_CONTAINER
+echo "  ✓ $BACKEND_CONTAINER yeniden başlatıldı"
 
 echo ""
 echo "============================================"
-echo "  GÜNCELLEME TAMAMLANDI!"
+echo "  ✅ GÜNCELLEME TAMAMLANDI!"
 echo "============================================"
 echo ""
 echo "Yeni Özellikler:"
@@ -76,20 +88,15 @@ echo ""
 echo "  ✓ iyzico Ödeme Entegrasyonu"
 echo "    - SuperAdmin > Abonelikler > iyzico ile Ödeme"
 echo ""
-echo "  ✓ Template Güncelleme Butonu (YENİ!)"
+echo "  ✓ Template Güncelleme Butonu"
 echo "    - SuperAdmin > Firmalar > 'Template Güncelle'"
-echo "    - Tüm tenant'ları tek tıkla güncelleyin"
 echo ""
 echo "============================================"
-echo "  SIRADAKI ADIM"
+echo "  📋 SIRADAKI ADIMLAR"
 echo "============================================"
 echo ""
 echo "1. SuperAdmin paneline giriş yapın"
 echo "2. Firmalar sayfasına gidin"
 echo "3. 'Template Güncelle' butonuna tıklayın"
-echo "4. Sonra 'Tümünü Güncelle' ile tenant'ları güncelleyin"
-echo ""
-echo "iyzico Yapılandırması (opsiyonel):"
-echo "  IYZICO_API_KEY=your_api_key"
-echo "  IYZICO_SECRET_KEY=your_secret_key"
+echo "4. 'Tümünü Güncelle' ile tenant'ları güncelleyin"
 echo ""
