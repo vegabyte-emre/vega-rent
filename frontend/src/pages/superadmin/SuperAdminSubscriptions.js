@@ -342,6 +342,16 @@ export const SuperAdminSubscriptions = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
                               <DropdownMenuItem
+                                className="text-purple-400 hover:bg-slate-700 cursor-pointer"
+                                onClick={() => {
+                                  setSelectedCompany(sub);
+                                  setIsIyzicoOpen(true);
+                                }}
+                              >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                iyzico ile Ödeme
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 className="text-green-400 hover:bg-slate-700 cursor-pointer"
                                 onClick={() => {
                                   setSelectedCompany(sub);
@@ -349,8 +359,9 @@ export const SuperAdminSubscriptions = () => {
                                 }}
                               >
                                 <Banknote className="h-4 w-4 mr-2" />
-                                Ödeme Kaydet
+                                Manuel Ödeme Kaydet
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-slate-700" />
                               <DropdownMenuItem
                                 className="text-blue-400 hover:bg-slate-700 cursor-pointer"
                                 onClick={() => {
