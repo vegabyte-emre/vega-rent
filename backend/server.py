@@ -1053,25 +1053,32 @@ async def provision_company(company_id: str, background_tasks: BackgroundTasks, 
             }}
         )
         
-        # FULL AUTOMATIC DEPLOYMENT - runs in background
-        # Refresh company data to get latest info including admin credentials
+        # Setup database with admin user (synchronous - runs from this server)
+        # Wait a bit for MongoDB to start
+        import asyncio
+        await asyncio.sleep(10)
+        
+        # Get company with admin credentials
         updated_company = await db.companies.find_one({"id": company_id}, {"_id": 0})
-        if domain and updated_company:
-            background_tasks.add_task(
-                full_auto_provision,
-                company=updated_company,
-                result=result,
-                port_offset=port_offset
-            )
+        mongo_port = result.get("ports", {}).get("mongodb")
+        safe_code = company["code"].replace('-', '').replace('_', '')
+        db_name = f"{safe_code}_db"
+        
+        if updated_company and mongo_port:
+            try:
+                db_setup_result = await setup_company_database(updated_company, mongo_port, db_name)
+                logger.info(f"[PROVISION] Database setup result: {db_setup_result}")
+            except Exception as e:
+                logger.error(f"[PROVISION] Database setup error: {str(e)}")
         
         return {
-            "message": "Company provisioned successfully - Auto deployment started",
+            "message": "Company provisioned successfully",
             "stack_id": result.get("stack_id"),
             "stack_name": result.get("stack_name"),
             "urls": result.get("urls"),
             "ports": result.get("ports"),
-            "auto_deploy_started": True if domain else False,
-            "note": "Backend, Frontend, Nginx ve Database otomatik olarak kurulacak. Bu işlem ~2-3 dakika sürebilir."
+            "admin_email": updated_company.get("admin_email") if updated_company else None,
+            "note": "Stack ve database kuruldu. Frontend/Backend template'den yüklendi."
         }
     else:
         # Revert status
