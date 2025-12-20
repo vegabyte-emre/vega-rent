@@ -10,10 +10,8 @@ frontend/build/
 *.egg-info/
 dist/
 
-# Environment files (IMPORTANT - contains secrets!)
+# Environment files (contains secrets!)
 .env
-.env.local
-.env.production
 backend/.env
 frontend/.env
 
@@ -21,11 +19,9 @@ frontend/.env
 .vscode/
 .idea/
 *.swp
-*.swo
 
 # Logs
 *.log
-logs/
 
 # OS
 .DS_Store
@@ -33,18 +29,9 @@ Thumbs.db
 
 # Test
 .coverage
-htmlcov/
 .pytest_cache/
 
-# Temp files
-*.tmp
-*.temp
+# Temp
 /tmp/
-
-# Docker
-docker-compose.override.yml
+*.tmp
 frontend/node_modules/.cache/default-development/7.pack
--e 
-# Environment files
-*.env
-*.env.*
