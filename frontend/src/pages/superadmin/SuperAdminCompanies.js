@@ -177,6 +177,27 @@ export function SuperAdminCompanies() {
     }
   };
 
+  const handleUpdateMasterTemplate = async () => {
+    if (!window.confirm(`Master Template'i güncellemek istediğinize emin misiniz?\n\nBu işlem:\n✅ Mevcut kodu template container'larına kopyalayacak\n✅ Template'i en güncel hale getirecek\n\nSonra "Tüm Firmaları Güncelle" ile tenant'ları güncelleyebilirsiniz.`)) return;
+    
+    try {
+      toast.loading("Master Template güncelleniyor...", { id: "master-template" });
+      const response = await axios.post(`${API_URL}/api/superadmin/template/update-master`);
+      
+      if (response.data.success) {
+        toast.success(
+          <div>
+            <p className="font-medium">{response.data.message}</p>
+            <p className="text-xs mt-1">{response.data.next_step}</p>
+          </div>,
+          { id: "master-template", duration: 8000 }
+        );
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Master Template güncellenemedi", { id: "master-template" });
+    }
+  };
+
   const filteredCompanies = companies.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
