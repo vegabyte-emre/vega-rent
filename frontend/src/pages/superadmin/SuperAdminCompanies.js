@@ -239,6 +239,15 @@ export function SuperAdminCompanies() {
             </div>
             <Button 
               variant="outline" 
+              onClick={handleUpdateMasterTemplate} 
+              className="border-orange-600 text-orange-400 hover:bg-orange-900/30"
+              title="Master Template'i güncelle (önce bunu yapın)"
+            >
+              <Server className="h-4 w-4 mr-2" />
+              Template Güncelle
+            </Button>
+            <Button 
+              variant="outline" 
               onClick={handleUpdateAllFromTemplate} 
               className="border-cyan-600 text-cyan-400 hover:bg-cyan-900/30"
               title="Tüm aktif firmaları template'den güncelle"
