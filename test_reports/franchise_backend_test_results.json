@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-20T14:18:42.225396",
+  "timestamp": "2025-12-20T14:18:53.055966",
   "total_tests": 2,
   "passed_tests": 1,
   "failed_tests": 1,
@@ -10,7 +10,7 @@
       "success": true,
       "details": "",
       "response_data": {
-        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZTM1NzM1Ni1hMDY4LTQyNjAtYWUxMC1iZDI5M2U4ZmNkNjIiLCJyb2xlIjoic3VwZXJhZG1pbiIsImV4cCI6MTc2NjMyNjcyMn0.ATKTegvSChNE1mwwn3QGQQ_NxOi_akkDPjpyKEK15PM",
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZTM1NzM1Ni1hMDY4LTQyNjAtYWUxMC1iZDI5M2U4ZmNkNjIiLCJyb2xlIjoic3VwZXJhZG1pbiIsImV4cCI6MTc2NjMyNjczM30.kaDyLsVLaf-Y8gFNEysamYrUE_nLBfNnkbt7Pu_YHXA",
         "token_type": "bearer",
         "user": {
           "id": "be357356-a068-4260-ae10-bd293e8fcd62",
