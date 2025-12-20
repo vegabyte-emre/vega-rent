@@ -38,6 +38,9 @@ import { CustomerRegister } from "./pages/public/CustomerRegister";
 import { CustomerDashboard } from "./pages/public/CustomerDashboard";
 import { Reservation } from "./pages/public/Reservation";
 
+// Landing Page (SaaS Marketing)
+import { LandingPage } from "./pages/landing/LandingPage";
+
 import { Toaster } from "./components/ui/sonner";
 
 // Protected Route Component (for admin panel)
