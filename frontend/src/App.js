@@ -27,6 +27,7 @@ import { SuperAdminDashboard } from "./pages/superadmin/SuperAdminDashboard";
 import { SuperAdminCompanies } from "./pages/superadmin/SuperAdminCompanies";
 import { NewCompany } from "./pages/superadmin/NewCompany";
 import { SuperAdminSettings } from "./pages/superadmin/SuperAdminSettings";
+import { SuperAdminSubscriptions } from "./pages/superadmin/SuperAdminSubscriptions";
 import { SuperAdminLayout } from "./components/layout/SuperAdminLayout";
 
 // Public Pages
