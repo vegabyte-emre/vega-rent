@@ -2388,6 +2388,83 @@ async def update_landing_content(content: LandingPageContent, user: dict = Depen
     
     return {"message": "Landing content updated successfully"}
 
+# ============== IMAGE UPLOAD ==============
+UPLOAD_DIR = Path("/app/uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+@api_router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    type: str = Form("general"),
+    user: dict = Depends(get_current_user)
+):
+    """
+    Upload image file (logo, slider, vehicle, etc.)
+    Max size: 10MB
+    Returns URL to access the uploaded file
+    """
+    if user["role"] not in [UserRole.SUPERADMIN.value, UserRole.FIRMA_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Only admins can upload images")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type. Allowed: JPEG, PNG, GIF, WebP, SVG")
+    
+    # Read file content
+    content = await file.read()
+    
+    # Check file size (10MB max)
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+    
+    # Generate unique filename
+    file_hash = hashlib.md5(content).hexdigest()[:12]
+    ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    filename = f"{type}_{file_hash}.{ext}"
+    
+    # Save file
+    file_path = UPLOAD_DIR / filename
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Generate URL (will be served via API)
+    file_url = f"/api/uploads/{filename}"
+    
+    logger.info(f"Image uploaded: {filename} ({len(content)} bytes)")
+    
+    return {
+        "success": True,
+        "url": file_url,
+        "filename": filename,
+        "size": len(content)
+    }
+
+@api_router.get("/uploads/{filename}")
+async def get_uploaded_file(filename: str):
+    """Serve uploaded files"""
+    from fastapi.responses import FileResponse
+    
+    file_path = UPLOAD_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Determine content type
+    ext = filename.split('.')[-1].lower()
+    content_types = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "gif": "image/gif",
+        "webp": "image/webp",
+        "svg": "image/svg+xml"
+    }
+    
+    return FileResponse(
+        file_path,
+        media_type=content_types.get(ext, "application/octet-stream")
+    )
+
 app.include_router(api_router)
 
 app.add_middleware(
