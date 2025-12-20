@@ -20,6 +20,7 @@ export const LandingNavbar = () => {
     { href: '#features', label: t('nav.features') },
     { href: '#pricing', label: t('nav.pricing') },
     { href: '#testimonials', label: t('nav.testimonials') },
+    { href: '#franchise', label: 'Bayilik' },
     { href: '#faq', label: t('nav.faq') },
     { href: '#contact', label: t('nav.contact') },
   ];
