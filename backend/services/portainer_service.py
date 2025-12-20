@@ -1375,6 +1375,94 @@ class PortainerService:
                 'results': results
             }
 
+    async def update_master_template(self, frontend_tar_path: str = None, backend_files: dict = None) -> Dict[str, Any]:
+        """
+        Update the master template containers with new code.
+        This is used to push updates that will then be available for tenant updates.
+        
+        Args:
+            frontend_tar_path: Path to frontend build tar file
+            backend_files: Dict of {filename: content} for backend files to update
+        """
+        template_frontend = "rentacar_template_frontend"
+        template_backend = "rentacar_template_backend"
+        
+        results = {
+            'frontend_update': None,
+            'backend_update': None,
+            'frontend_restart': None,
+            'backend_restart': None
+        }
+        
+        logger.info("[MASTER-TEMPLATE] Starting master template update...")
+        
+        try:
+            # Update frontend if tar provided
+            if frontend_tar_path:
+                logger.info("[MASTER-TEMPLATE] Updating frontend template...")
+                # Copy tar to container and extract
+                copy_cmd = f"docker cp {frontend_tar_path} {template_frontend}:/tmp/frontend_update.tar.gz"
+                extract_cmd = f"docker exec {template_frontend} sh -c 'cd /usr/share/nginx/html && tar -xzf /tmp/frontend_update.tar.gz --strip-components=1 && rm /tmp/frontend_update.tar.gz'"
+                
+                import subprocess
+                copy_result = subprocess.run(copy_cmd, shell=True, capture_output=True, text=True)
+                extract_result = subprocess.run(extract_cmd, shell=True, capture_output=True, text=True)
+                
+                results['frontend_update'] = {
+                    'copy': copy_result.returncode == 0,
+                    'extract': extract_result.returncode == 0
+                }
+            
+            # Update backend files if provided
+            if backend_files:
+                logger.info("[MASTER-TEMPLATE] Updating backend template...")
+                import subprocess
+                import tempfile
+                import os
+                
+                for filename, content in backend_files.items():
+                    # Write to temp file
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+                        f.write(content)
+                        temp_path = f.name
+                    
+                    # Copy to container
+                    dest_path = f"/app/{filename}"
+                    copy_cmd = f"docker cp {temp_path} {template_backend}:{dest_path}"
+                    result = subprocess.run(copy_cmd, shell=True, capture_output=True, text=True)
+                    
+                    # Cleanup temp file
+                    os.unlink(temp_path)
+                    
+                    if result.returncode != 0:
+                        logger.error(f"[MASTER-TEMPLATE] Failed to update {filename}: {result.stderr}")
+                
+                results['backend_update'] = True
+            
+            # Restart template containers
+            logger.info("[MASTER-TEMPLATE] Restarting template containers...")
+            if frontend_tar_path:
+                results['frontend_restart'] = await self.restart_container(template_frontend)
+            if backend_files:
+                results['backend_restart'] = await self.restart_container(template_backend)
+            
+            logger.info("[MASTER-TEMPLATE] Master template update complete!")
+            
+            return {
+                'success': True,
+                'message': 'Master template updated successfully',
+                'results': results,
+                'note': 'Şimdi tenant\'ları güncellemek için "Template\'den Güncelle" butonunu kullanabilirsiniz.'
+            }
+            
+        except Exception as e:
+            logger.error(f"[MASTER-TEMPLATE] Error: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'results': results
+            }
+
 
 # Singleton instance
 portainer_service = PortainerService()
