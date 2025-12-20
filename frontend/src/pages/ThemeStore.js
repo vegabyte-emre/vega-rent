@@ -149,12 +149,15 @@ export function ThemeStore() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      if (response.data.url) {
-        handleSettingChange('logo_url', response.data.url);
+      if (response.data.success) {
+        // Use data_uri for immediate display and persistent storage
+        const imageUrl = response.data.data_uri || `${API_URL}${response.data.url}`;
+        handleSettingChange('logo_url', imageUrl);
         toast.success("Logo yüklendi!");
       }
     } catch (error) {
-      toast.error("Logo yüklenirken hata oluştu");
+      const errorMsg = error.response?.data?.detail || "Logo yüklenirken hata oluştu";
+      toast.error(errorMsg);
     } finally {
       setUploadingLogo(false);
     }
