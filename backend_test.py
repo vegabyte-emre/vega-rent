@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 class FleetEaseAPITester:
-    def __init__(self, base_url: str = "https://rentacar-control.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://tenantfleet.preview.emergentagent.com"):
         self.base_url = base_url
         self.admin_token = None
         self.customer_token = None

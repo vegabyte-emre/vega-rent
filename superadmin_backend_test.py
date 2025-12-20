@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class SuperAdminAPITester:
-    def __init__(self, base_url: str = "https://rentacar-control.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://tenantfleet.preview.emergentagent.com"):
         self.base_url = base_url
         self.superadmin_token = None
         self.firma_admin_token = None

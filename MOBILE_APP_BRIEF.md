@@ -12,12 +12,12 @@
 
 **Production API URL:**  
 ```
-https://rentacar-control.preview.emergentagent.com/api
+https://tenantfleet.preview.emergentagent.com/api
 ```
 
 **API Dokümantasyonu:**  
 ```
-https://rentacar-control.preview.emergentagent.com/docs
+https://tenantfleet.preview.emergentagent.com/docs
 ```
 
 ---
@@ -307,9 +307,9 @@ superadmin | firma_admin | operasyon | muhasebe | personel | musteri
 
 ## 🔗 Mevcut Web Uygulaması
 
-- **Müşteri Sitesi:** https://rentacar-control.preview.emergentagent.com/
-- **Admin Panel:** https://rentacar-control.preview.emergentagent.com/login
-- **API Docs:** https://rentacar-control.preview.emergentagent.com/docs
+- **Müşteri Sitesi:** https://tenantfleet.preview.emergentagent.com/
+- **Admin Panel:** https://tenantfleet.preview.emergentagent.com/login
+- **API Docs:** https://tenantfleet.preview.emergentagent.com/docs
 
 ---
 
