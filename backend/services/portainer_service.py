@@ -409,6 +409,8 @@ class PortainerService:
                     
             except Exception as e:
                 logger.error(f"Portainer API request failed: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 return {'error': str(e)}
     
     async def get_stacks(self) -> list:
