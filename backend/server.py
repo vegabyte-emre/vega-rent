@@ -1054,10 +1054,12 @@ async def provision_company(company_id: str, background_tasks: BackgroundTasks, 
         )
         
         # FULL AUTOMATIC DEPLOYMENT - runs in background
-        if domain:
+        # Refresh company data to get latest info including admin credentials
+        updated_company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+        if domain and updated_company:
             background_tasks.add_task(
                 full_auto_provision,
-                company=company,
+                company=updated_company,
                 result=result,
                 port_offset=port_offset
             )
