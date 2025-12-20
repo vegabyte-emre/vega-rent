@@ -3154,6 +3154,260 @@ async def get_finance_summary(user: dict = Depends(get_current_user)):
         "currency": "TRY"
     }
 
+# ============== SUPPORT TICKET SYSTEM ==============
+
+class TicketStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    WAITING_CUSTOMER = "waiting_customer"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+
+class TicketPriority(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    URGENT = "urgent"
+
+class TicketCategory(str, Enum):
+    TECHNICAL = "technical"
+    BILLING = "billing"
+    FEATURE_REQUEST = "feature_request"
+    BUG_REPORT = "bug_report"
+    GENERAL = "general"
+    ACCOUNT = "account"
+
+class TicketCreate(BaseModel):
+    subject: str
+    message: str
+    category: str = "general"
+    priority: str = "medium"
+
+class TicketReply(BaseModel):
+    message: str
+
+# Tenant: Create a support ticket
+@api_router.post("/support/tickets")
+async def create_ticket(ticket: TicketCreate, user: dict = Depends(get_current_user)):
+    """Create a support ticket (for company admins)"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Only company users can create tickets")
+    
+    company_id = user.get("company_id")
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0, "name": 1})
+    
+    now = datetime.now(timezone.utc)
+    ticket_id = str(uuid.uuid4())
+    ticket_number = f"TKT-{now.strftime('%Y%m%d')}-{ticket_id[:6].upper()}"
+    
+    ticket_doc = {
+        "id": ticket_id,
+        "ticket_number": ticket_number,
+        "company_id": company_id,
+        "company_name": company.get("name") if company else "Unknown",
+        "created_by": user["id"],
+        "created_by_email": user["email"],
+        "created_by_name": user.get("full_name", user["email"]),
+        "subject": ticket.subject,
+        "category": ticket.category,
+        "priority": ticket.priority,
+        "status": TicketStatus.OPEN.value,
+        "messages": [
+            {
+                "id": str(uuid.uuid4()),
+                "sender_id": user["id"],
+                "sender_name": user.get("full_name", user["email"]),
+                "sender_type": "customer",
+                "message": ticket.message,
+                "created_at": now.isoformat()
+            }
+        ],
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "resolved_at": None,
+        "assigned_to": None
+    }
+    
+    await db.support_tickets.insert_one(ticket_doc)
+    logger.info(f"Support ticket created: {ticket_number} by {user['email']}")
+    
+    return {
+        "success": True,
+        "ticket_id": ticket_id,
+        "ticket_number": ticket_number,
+        "message": "Destek talebiniz oluşturuldu"
+    }
+
+# Tenant: Get my tickets
+@api_router.get("/support/tickets")
+async def get_my_tickets(user: dict = Depends(get_current_user)):
+    """Get all tickets for the current user's company"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Only company users can view tickets")
+    
+    company_id = user.get("company_id")
+    tickets = await db.support_tickets.find(
+        {"company_id": company_id},
+        {"_id": 0}
+    ).sort("updated_at", -1).to_list(100)
+    
+    return tickets
+
+# Tenant: Get single ticket
+@api_router.get("/support/tickets/{ticket_id}")
+async def get_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific ticket"""
+    ticket = await db.support_tickets.find_one({"id": ticket_id}, {"_id": 0})
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    # Check access
+    if user["role"] == UserRole.SUPERADMIN.value:
+        return ticket
+    elif user.get("company_id") == ticket.get("company_id"):
+        return ticket
+    else:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+# Tenant: Reply to ticket
+@api_router.post("/support/tickets/{ticket_id}/reply")
+async def reply_to_ticket(ticket_id: str, reply: TicketReply, user: dict = Depends(get_current_user)):
+    """Add a reply to a ticket"""
+    ticket = await db.support_tickets.find_one({"id": ticket_id})
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    # Check access
+    is_superadmin = user["role"] == UserRole.SUPERADMIN.value
+    is_owner = user.get("company_id") == ticket.get("company_id")
+    
+    if not is_superadmin and not is_owner:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    now = datetime.now(timezone.utc)
+    
+    new_message = {
+        "id": str(uuid.uuid4()),
+        "sender_id": user["id"],
+        "sender_name": user.get("full_name", user["email"]),
+        "sender_type": "support" if is_superadmin else "customer",
+        "message": reply.message,
+        "created_at": now.isoformat()
+    }
+    
+    # Update status based on who replied
+    new_status = ticket["status"]
+    if is_superadmin and ticket["status"] == TicketStatus.OPEN.value:
+        new_status = TicketStatus.IN_PROGRESS.value
+    elif is_superadmin:
+        new_status = TicketStatus.WAITING_CUSTOMER.value
+    elif not is_superadmin and ticket["status"] == TicketStatus.WAITING_CUSTOMER.value:
+        new_status = TicketStatus.IN_PROGRESS.value
+    
+    await db.support_tickets.update_one(
+        {"id": ticket_id},
+        {
+            "$push": {"messages": new_message},
+            "$set": {
+                "status": new_status,
+                "updated_at": now.isoformat()
+            }
+        }
+    )
+    
+    logger.info(f"Reply added to ticket {ticket['ticket_number']} by {user['email']}")
+    
+    return {"success": True, "message": "Yanıt eklendi"}
+
+# SuperAdmin: Get all tickets
+@api_router.get("/superadmin/tickets")
+async def get_all_tickets(
+    user: dict = Depends(get_current_user),
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    limit: int = 100
+):
+    """SuperAdmin: Get all support tickets"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can view all tickets")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    if priority:
+        query["priority"] = priority
+    
+    tickets = await db.support_tickets.find(
+        query,
+        {"_id": 0}
+    ).sort("updated_at", -1).limit(limit).to_list(limit)
+    
+    # Get ticket stats
+    stats = {
+        "total": await db.support_tickets.count_documents({}),
+        "open": await db.support_tickets.count_documents({"status": "open"}),
+        "in_progress": await db.support_tickets.count_documents({"status": "in_progress"}),
+        "waiting_customer": await db.support_tickets.count_documents({"status": "waiting_customer"}),
+        "resolved": await db.support_tickets.count_documents({"status": "resolved"}),
+        "closed": await db.support_tickets.count_documents({"status": "closed"})
+    }
+    
+    return {"tickets": tickets, "stats": stats}
+
+# SuperAdmin: Update ticket status
+@api_router.patch("/superadmin/tickets/{ticket_id}/status")
+async def update_ticket_status(
+    ticket_id: str,
+    status: str,
+    user: dict = Depends(get_current_user)
+):
+    """SuperAdmin: Update ticket status"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can update ticket status")
+    
+    ticket = await db.support_tickets.find_one({"id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    now = datetime.now(timezone.utc)
+    update_data = {
+        "status": status,
+        "updated_at": now.isoformat()
+    }
+    
+    if status == TicketStatus.RESOLVED.value:
+        update_data["resolved_at"] = now.isoformat()
+        update_data["resolved_by"] = user["id"]
+    
+    await db.support_tickets.update_one({"id": ticket_id}, {"$set": update_data})
+    
+    logger.info(f"Ticket {ticket['ticket_number']} status updated to {status}")
+    
+    return {"success": True, "message": f"Durum güncellendi: {status}"}
+
+# SuperAdmin: Assign ticket
+@api_router.patch("/superadmin/tickets/{ticket_id}/assign")
+async def assign_ticket(
+    ticket_id: str,
+    assigned_to: str,
+    user: dict = Depends(get_current_user)
+):
+    """SuperAdmin: Assign ticket to a support agent"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can assign tickets")
+    
+    await db.support_tickets.update_one(
+        {"id": ticket_id},
+        {"$set": {
+            "assigned_to": assigned_to,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"success": True, "message": "Ticket atandı"}
+
 app.include_router(api_router)
 
 app.add_middleware(
