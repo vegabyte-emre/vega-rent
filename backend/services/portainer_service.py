@@ -233,6 +233,48 @@ networks:
 """
 
 
+def get_template_stack_compose() -> str:
+    """
+    Generate Docker Compose for template volumes - contains pre-built frontend and backend code
+    This stack creates shared volumes that all tenant stacks will use
+    """
+    return """version: '3.8'
+
+services:
+  template_frontend:
+    image: nginx:alpine
+    container_name: rentacar_template_frontend
+    restart: unless-stopped
+    volumes:
+      - rentacar_template_frontend:/usr/share/nginx/html
+    ports:
+      - "10099:80"
+    networks:
+      - template_network
+
+  template_backend:
+    image: tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim
+    container_name: rentacar_template_backend
+    restart: unless-stopped
+    volumes:
+      - rentacar_template_backend:/app
+    ports:
+      - "11099:80"
+    networks:
+      - template_network
+
+volumes:
+  rentacar_template_frontend:
+    name: rentacar_template_frontend
+  rentacar_template_backend:
+    name: rentacar_template_backend
+
+networks:
+  template_network:
+    driver: bridge
+"""
+
+
 def get_traefik_compose_template(admin_email: str = "admin@rentafleet.com") -> str:
     """
     Generate Traefik reverse proxy stack with automatic SSL
