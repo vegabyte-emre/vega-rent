@@ -234,6 +234,7 @@ function AppRoutes() {
         <Route path="/admin/reports" element={<Reports />} />
         <Route path="/admin/settings" element={<Settings />} />
         <Route path="/admin/theme-store" element={<ThemeStore />} />
+        <Route path="/admin/support" element={<Support />} />
       </Route>
 
       {/* Catch-all redirect */}
