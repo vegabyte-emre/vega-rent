@@ -1287,6 +1287,15 @@ async def get_portainer_stacks(user: dict = Depends(get_current_user)):
     stacks = await portainer_service.get_stacks()
     return {"stacks": stacks}
 
+@api_router.get("/superadmin/portainer/containers")
+async def get_portainer_containers(user: dict = Depends(get_current_user)):
+    """SuperAdmin: Get all containers from Portainer"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can view Portainer containers")
+    
+    containers = await portainer_service.get_containers()
+    return {"containers": containers}
+
 @api_router.get("/superadmin/portainer/status")
 async def get_portainer_status(user: dict = Depends(get_current_user)):
     """SuperAdmin: Check Portainer connection status"""
