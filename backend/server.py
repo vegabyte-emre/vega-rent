@@ -410,6 +410,8 @@ async def create_company_superadmin(company: CompanyCreate, user: dict = Depends
         "vehicle_count": 0,
         "customer_count": 0,
         "admin_email": company.admin_email,
+        "admin_password": company.admin_password,  # Store for provision step
+        "admin_full_name": company.admin_full_name,
         "portainer_stack_id": None,
         "created_by": user["id"],
         "created_at": now,
