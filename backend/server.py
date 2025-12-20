@@ -2421,10 +2421,7 @@ async def update_landing_content(content: LandingPageContent, user: dict = Depen
     
     return {"message": "Landing content updated successfully"}
 
-# ============== IMAGE UPLOAD ==============
-UPLOAD_DIR = Path("/app/uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
-
+# ============== IMAGE UPLOAD (MongoDB Storage) ==============
 @api_router.post("/upload/image")
 async def upload_image(
     file: UploadFile = File(...),
@@ -2433,8 +2430,8 @@ async def upload_image(
 ):
     """
     Upload image file (logo, slider, vehicle, etc.)
-    Max size: 10MB
-    Returns URL to access the uploaded file
+    Max size: 2MB for logo, 5MB for sliders
+    Stores image in MongoDB as base64 for persistent storage across containers
     """
     if user["role"] not in [UserRole.SUPERADMIN.value, UserRole.FIRMA_ADMIN.value]:
         raise HTTPException(status_code=403, detail="Only admins can upload images")
@@ -2442,61 +2439,94 @@ async def upload_image(
     # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"]
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Invalid file type. Allowed: JPEG, PNG, GIF, WebP, SVG")
+        raise HTTPException(status_code=400, detail="Geçersiz dosya türü. İzin verilenler: JPEG, PNG, GIF, WebP, SVG")
     
     # Read file content
     content = await file.read()
     
-    # Check file size (10MB max)
-    if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+    # Check file size based on type
+    max_size = 2 * 1024 * 1024 if type == "logo" else 5 * 1024 * 1024  # 2MB for logo, 5MB for others
+    if len(content) > max_size:
+        max_mb = max_size // (1024 * 1024)
+        raise HTTPException(status_code=400, detail=f"Dosya boyutu {max_mb}MB sınırını aşıyor")
     
-    # Generate unique filename
-    file_hash = hashlib.md5(content).hexdigest()[:12]
-    ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
-    filename = f"{type}_{file_hash}.{ext}"
+    # Generate unique ID
+    image_id = str(uuid.uuid4())
     
-    # Save file
-    file_path = UPLOAD_DIR / filename
-    with open(file_path, "wb") as f:
-        f.write(content)
+    # Convert to base64 for storage
+    base64_content = base64.b64encode(content).decode('utf-8')
     
-    # Generate URL (will be served via API)
-    file_url = f"/api/uploads/{filename}"
+    # Create data URI for direct embedding in HTML/CSS
+    data_uri = f"data:{file.content_type};base64,{base64_content}"
     
-    logger.info(f"Image uploaded: {filename} ({len(content)} bytes)")
+    # Store in MongoDB
+    company_id = user.get("company_id")
+    image_doc = {
+        "id": image_id,
+        "company_id": company_id,
+        "type": type,
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "size": len(content),
+        "data": base64_content,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": user["id"]
+    }
+    
+    await db.uploaded_images.insert_one(image_doc)
+    
+    logger.info(f"Image uploaded to MongoDB: {image_id} ({len(content)} bytes) by {user['email']}")
     
     return {
         "success": True,
-        "url": file_url,
-        "filename": filename,
+        "id": image_id,
+        "url": f"/api/images/{image_id}",
+        "data_uri": data_uri,
+        "filename": file.filename,
         "size": len(content)
     }
 
-@api_router.get("/uploads/{filename}")
-async def get_uploaded_file(filename: str):
-    """Serve uploaded files"""
-    from fastapi.responses import FileResponse
+@api_router.get("/images/{image_id}")
+async def get_image(image_id: str):
+    """Serve uploaded images from MongoDB"""
+    from fastapi.responses import Response
     
-    file_path = UPLOAD_DIR / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
+    image = await db.uploaded_images.find_one({"id": image_id}, {"_id": 0})
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
     
-    # Determine content type
-    ext = filename.split('.')[-1].lower()
-    content_types = {
-        "jpg": "image/jpeg",
-        "jpeg": "image/jpeg",
-        "png": "image/png",
-        "gif": "image/gif",
-        "webp": "image/webp",
-        "svg": "image/svg+xml"
-    }
+    # Decode base64 content
+    content = base64.b64decode(image["data"])
     
-    return FileResponse(
-        file_path,
-        media_type=content_types.get(ext, "application/octet-stream")
+    return Response(
+        content=content,
+        media_type=image.get("content_type", "image/jpeg"),
+        headers={
+            "Cache-Control": "public, max-age=31536000",
+            "Content-Disposition": f"inline; filename={image.get('filename', 'image')}"
+        }
     )
+
+@api_router.delete("/images/{image_id}")
+async def delete_image(image_id: str, user: dict = Depends(get_current_user)):
+    """Delete an uploaded image"""
+    if user["role"] not in [UserRole.SUPERADMIN.value, UserRole.FIRMA_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Only admins can delete images")
+    
+    company_id = user.get("company_id")
+    
+    # Find and delete the image
+    result = await db.uploaded_images.delete_one({
+        "id": image_id,
+        "$or": [{"company_id": company_id}, {"company_id": None}]
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Image not found or no permission")
+    
+    logger.info(f"Image deleted: {image_id} by {user['email']}")
+    
+    return {"success": True, "message": "Image deleted successfully"}
 
 app.include_router(api_router)
 
