@@ -119,9 +119,15 @@ function AppRoutes() {
             <Login />
           </PublicRoute>
         ) : (
-          <Home />
+          <LandingPage />
         )
       } />
+      
+      {/* Landing Page route (for direct access) */}
+      <Route path="/landing" element={<LandingPage />} />
+      
+      {/* Old Home Route (tenant public page) */}
+      <Route path="/home" element={<Home />} />
       
       {/* ============== PUBLIC ROUTES (Customer Facing) ============== */}
       <Route path="/araclar" element={<VehicleList />} />
