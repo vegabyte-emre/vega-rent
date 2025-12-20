@@ -1345,6 +1345,77 @@ async def update_all_companies_from_template(user: dict = Depends(get_current_us
         "note": "Veritabanı verileri korundu. Sadece kodlar güncellendi."
     }
 
+@api_router.post("/superadmin/template/update-master")
+async def update_master_template(user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Update the master template with latest code.
+    This pushes the current code to the template containers.
+    After this, you can update individual tenants from the template.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can update master template")
+    
+    logger.info("[MASTER-TEMPLATE] API called - updating master template")
+    
+    try:
+        import subprocess
+        import tempfile
+        import os
+        
+        # Prepare frontend build
+        frontend_build_path = "/app/frontend/build"
+        if not os.path.exists(frontend_build_path):
+            raise HTTPException(status_code=400, detail="Frontend build bulunamadı. Önce 'yarn build' çalıştırın.")
+        
+        # Create tar of frontend build
+        tar_path = "/tmp/frontend_template_update.tar.gz"
+        tar_cmd = f"cd {frontend_build_path} && tar -czf {tar_path} ."
+        tar_result = subprocess.run(tar_cmd, shell=True, capture_output=True, text=True)
+        
+        if tar_result.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"Frontend tar oluşturulamadı: {tar_result.stderr}")
+        
+        # Read backend files
+        backend_files = {}
+        
+        # Main server.py
+        with open("/app/backend/server.py", "r") as f:
+            backend_files["server.py"] = f.read()
+        
+        # Services
+        services_dir = "/app/backend/services"
+        if os.path.exists(services_dir):
+            for filename in os.listdir(services_dir):
+                if filename.endswith(".py"):
+                    with open(os.path.join(services_dir, filename), "r") as f:
+                        backend_files[f"services/{filename}"] = f.read()
+        
+        # Call portainer service to update template
+        result = await portainer_service.update_master_template(
+            frontend_tar_path=tar_path,
+            backend_files=backend_files
+        )
+        
+        # Cleanup tar
+        if os.path.exists(tar_path):
+            os.unlink(tar_path)
+        
+        if result.get("success"):
+            return {
+                "success": True,
+                "message": "Master template güncellendi!",
+                "results": result.get("results"),
+                "next_step": "Şimdi 'Tüm Firmaları Güncelle' veya tek tek firma güncellemesi yapabilirsiniz."
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result.get("error", "Template güncellenemedi"))
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[MASTER-TEMPLATE] API error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/superadmin/portainer/stacks")
 async def get_portainer_stacks(user: dict = Depends(get_current_user)):
     """SuperAdmin: Get all stacks from Portainer"""
