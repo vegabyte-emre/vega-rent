@@ -616,6 +616,20 @@ export const SuperAdminSubscriptions = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* iyzico Payment Dialog */}
+      {isIyzicoOpen && selectedCompany && (
+        <IyzicoPayment
+          companyId={selectedCompany.id}
+          companyName={selectedCompany.name}
+          onSuccess={() => {
+            setIsIyzicoOpen(false);
+            fetchData();
+            toast.success('Ödeme başarıyla alındı');
+          }}
+          onClose={() => setIsIyzicoOpen(false)}
+        />
+      )}
     </div>
   );
 };
