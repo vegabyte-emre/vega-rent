@@ -1,16 +1,16 @@
 {
-  "timestamp": "2025-12-20T14:18:53.055966",
-  "total_tests": 2,
-  "passed_tests": 1,
-  "failed_tests": 1,
-  "success_rate": "50.0%",
+  "timestamp": "2025-12-20T14:19:06.147674",
+  "total_tests": 5,
+  "passed_tests": 5,
+  "failed_tests": 0,
+  "success_rate": "100.0%",
   "test_results": [
     {
       "test_name": "SuperAdmin Login",
       "success": true,
       "details": "",
       "response_data": {
-        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZTM1NzM1Ni1hMDY4LTQyNjAtYWUxMC1iZDI5M2U4ZmNkNjIiLCJyb2xlIjoic3VwZXJhZG1pbiIsImV4cCI6MTc2NjMyNjczM30.kaDyLsVLaf-Y8gFNEysamYrUE_nLBfNnkbt7Pu_YHXA",
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZTM1NzM1Ni1hMDY4LTQyNjAtYWUxMC1iZDI5M2U4ZmNkNjIiLCJyb2xlIjoic3VwZXJhZG1pbiIsImV4cCI6MTc2NjMyNjc0NX0.Rxp96Av1bX7Mi597nClhHMOK6mWZgvvnzhOVAKMhSBU",
         "token_type": "bearer",
         "user": {
           "id": "be357356-a068-4260-ae10-bd293e8fcd62",
@@ -26,10 +26,169 @@
     },
     {
       "test_name": "Franchise Application Submission",
-      "success": false,
-      "details": "Expected 200, got 400",
+      "success": true,
+      "details": "",
       "response_data": {
-        "detail": "Bu e-posta ile daha \u00f6nce ba\u015fvuru yap\u0131lm\u0131\u015f"
+        "success": true,
+        "application_number": "FRN-20251220-43FD99",
+        "message": "Franchise ba\u015fvurunuz al\u0131nd\u0131. En k\u0131sa s\u00fcrede sizinle ileti\u015fime ge\u00e7ece\u011fiz."
+      }
+    },
+    {
+      "test_name": "Get Franchises List",
+      "success": true,
+      "details": "",
+      "response_data": {
+        "franchises": [
+          {
+            "id": "43fd99cc-f4ce-4477-9a5f-ca59c1744c4b",
+            "application_number": "FRN-20251220-43FD99",
+            "status": "application",
+            "full_name": "Test Franchise Owner",
+            "email": "test.franchise.20251220_141905@example.com",
+            "phone": "+90 555 123 4567",
+            "tc_no": null,
+            "company_name": null,
+            "tax_no": null,
+            "city": "\u0130stanbul",
+            "district": "Kad\u0131k\u00f6y",
+            "address": "Test Address 123",
+            "experience_years": 5,
+            "current_vehicle_count": 10,
+            "has_office": true,
+            "investment_budget": "250000-500000",
+            "how_did_you_hear": null,
+            "message": "Test franchise application message",
+            "created_at": "2025-12-20T14:19:05.977270+00:00",
+            "updated_at": "2025-12-20T14:19:05.977270+00:00",
+            "notes": [],
+            "documents": [],
+            "assigned_to": null
+          },
+          {
+            "id": "91725d28-b92e-4d95-8168-55e83e0e0d95",
+            "application_number": "FRN-20251220-91725D",
+            "status": "application",
+            "full_name": "Test Franchise Owner",
+            "email": "test.franchise@example.com",
+            "phone": "+90 555 123 4567",
+            "tc_no": null,
+            "company_name": null,
+            "tax_no": null,
+            "city": "\u0130stanbul",
+            "district": "Kad\u0131k\u00f6y",
+            "address": "Test Address 123",
+            "experience_years": 5,
+            "current_vehicle_count": 10,
+            "has_office": true,
+            "investment_budget": "250000-500000",
+            "how_did_you_hear": null,
+            "message": "Test franchise application message",
+            "created_at": "2025-12-20T14:18:22.878347+00:00",
+            "updated_at": "2025-12-20T14:18:22.878347+00:00",
+            "notes": [],
+            "documents": [],
+            "assigned_to": null
+          },
+          {
+            "id": "1ceff218-0727-4a4a-9b51-966472b2e63d",
+            "application_number": "FRN-20251220-1CEFF2",
+            "status": "approved",
+            "full_name": "Ahmet Y\u0131lmaz",
+            "email": "ahmet@example.com",
+            "phone": "+90 532 111 22 33",
+            "tc_no": null,
+            "company_name": null,
+            "tax_no": null,
+            "city": "\u0130stanbul",
+            "district": "Kad\u0131k\u00f6y",
+            "address": "Ba\u011fdat Caddesi No:123",
+            "experience_years": 5,
+            "current_vehicle_count": 15,
+            "has_office": true,
+            "investment_budget": "250000-500000",
+            "how_did_you_hear": null,
+            "message": "Bayilik almak istiyorum",
+            "created_at": "2025-12-20T14:16:37.477690+00:00",
+            "updated_at": "2025-12-20T14:17:07.206040+00:00",
+            "notes": [
+              {
+                "id": "ced93603-7755-49d0-8201-29828356d054",
+                "type": "status_change",
+                "old_status": "application",
+                "new_status": "under_review",
+                "by": "superadmin@example.com",
+                "created_at": "2025-12-20T14:16:57.190642+00:00"
+              },
+              {
+                "id": "5c5bce54-a229-40a4-a317-1b3b38703a12",
+                "type": "status_change",
+                "old_status": "under_review",
+                "new_status": "approved",
+                "by": "superadmin@example.com",
+                "created_at": "2025-12-20T14:17:07.206040+00:00"
+              }
+            ],
+            "documents": [],
+            "assigned_to": null
+          }
+        ],
+        "stats": {
+          "total": 3,
+          "application": 2,
+          "under_review": 0,
+          "approved": 1,
+          "active": 0,
+          "suspended": 0
+        }
+      }
+    },
+    {
+      "test_name": "Update Franchise Status",
+      "success": true,
+      "details": "",
+      "response_data": {
+        "success": true,
+        "message": "Durum g\u00fcncellendi: under_review"
+      }
+    },
+    {
+      "test_name": "Get Franchise Details",
+      "success": true,
+      "details": "",
+      "response_data": {
+        "id": "43fd99cc-f4ce-4477-9a5f-ca59c1744c4b",
+        "application_number": "FRN-20251220-43FD99",
+        "status": "under_review",
+        "full_name": "Test Franchise Owner",
+        "email": "test.franchise.20251220_141905@example.com",
+        "phone": "+90 555 123 4567",
+        "tc_no": null,
+        "company_name": null,
+        "tax_no": null,
+        "city": "\u0130stanbul",
+        "district": "Kad\u0131k\u00f6y",
+        "address": "Test Address 123",
+        "experience_years": 5,
+        "current_vehicle_count": 10,
+        "has_office": true,
+        "investment_budget": "250000-500000",
+        "how_did_you_hear": null,
+        "message": "Test franchise application message",
+        "created_at": "2025-12-20T14:19:05.977270+00:00",
+        "updated_at": "2025-12-20T14:19:06.096387+00:00",
+        "notes": [
+          {
+            "id": "bf290773-b128-437f-a212-2eb9acafaa52",
+            "type": "status_change",
+            "old_status": "application",
+            "new_status": "under_review",
+            "by": "superadmin@example.com",
+            "created_at": "2025-12-20T14:19:06.096387+00:00"
+          }
+        ],
+        "documents": [],
+        "assigned_to": null
       }
     }
   ]
