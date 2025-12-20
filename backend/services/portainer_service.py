@@ -176,8 +176,11 @@ services:
       - COMPANY_CODE={company_code}
       - COMPANY_NAME={company_name}
     volumes:
-      - rentacar_template_backend:/app:ro
-      - {safe_code}_backend_env:/app/env
+      - rentacar_template_backend:/template_app:ro
+    command: >
+      bash -c "cp -r /template_app/* /app/ 2>/dev/null || true && 
+               pip install motor python-jose passlib python-dotenv httpx bcrypt --quiet 2>/dev/null &&
+               uvicorn main:app --host 0.0.0.0 --port 80"
     ports:
       - "{backend_port}:80"
     depends_on:
@@ -197,7 +200,12 @@ services:
     container_name: {safe_code}_frontend
     restart: unless-stopped
     volumes:
-      - rentacar_template_frontend:/usr/share/nginx/html:ro
+      - rentacar_template_frontend:/template_html:ro
+      - {safe_code}_frontend_config:/usr/share/nginx/html/config
+    command: >
+      sh -c "cp -r /template_html/* /usr/share/nginx/html/ 2>/dev/null || true &&
+             echo 'window.__RUNTIME_CONFIG__ = {{ API_URL: \"https://api.{domain}\" }};' > /usr/share/nginx/html/config.js &&
+             nginx -g 'daemon off;'"
     ports:
       - "{frontend_port}:80"
     depends_on:
@@ -219,7 +227,7 @@ services:
 
 volumes:
   {safe_code}_mongo_data:
-  {safe_code}_backend_env:
+  {safe_code}_frontend_config:
   rentacar_template_frontend:
     external: true
   rentacar_template_backend:
