@@ -137,12 +137,16 @@ def get_full_company_stack_template(company_code: str, company_name: str, domain
     """
     Generate Docker Compose for a complete company stack with Traefik SSL
     ALL names use safe_code (no dashes/underscores) for consistency
+    Uses shared template volumes for frontend and backend code
     """
     safe_code = company_code.replace('-', '').replace('_', '')
     
     frontend_port = BASE_FRONTEND_PORT + port_offset
     backend_port = BASE_BACKEND_PORT + port_offset
     mongo_port = BASE_MONGO_PORT + port_offset
+    
+    # API URL for this tenant
+    api_url = f"https://api.{domain}"
     
     return f"""version: '3.8'
 
@@ -171,6 +175,9 @@ services:
       - JWT_SECRET={safe_code}_jwt_secret_2024
       - COMPANY_CODE={company_code}
       - COMPANY_NAME={company_name}
+    volumes:
+      - rentacar_template_backend:/app:ro
+      - {safe_code}_backend_env:/app/env
     ports:
       - "{backend_port}:80"
     depends_on:
@@ -189,6 +196,8 @@ services:
     image: nginx:alpine
     container_name: {safe_code}_frontend
     restart: unless-stopped
+    volumes:
+      - rentacar_template_frontend:/usr/share/nginx/html:ro
     ports:
       - "{frontend_port}:80"
     depends_on:
@@ -210,6 +219,11 @@ services:
 
 volumes:
   {safe_code}_mongo_data:
+  {safe_code}_backend_env:
+  rentacar_template_frontend:
+    external: true
+  rentacar_template_backend:
+    external: true
 
 networks:
   {safe_code}_network:
