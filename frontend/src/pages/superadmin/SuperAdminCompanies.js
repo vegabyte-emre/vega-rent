@@ -341,7 +341,7 @@ export function SuperAdminCompanies() {
                                   onClick={() => handleDeprovision(company.id, company.name)}
                                 >
                                   <Server className="h-4 w-4 mr-2" />
-                                  Stack'i Kaldır
+                                  Stack&apos;i Kaldır
                                 </DropdownMenuItem>
                               </>
                             )}
