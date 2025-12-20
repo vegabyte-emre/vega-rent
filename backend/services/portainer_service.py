@@ -1269,6 +1269,95 @@ class PortainerService:
             logger.error(f"[DB-SETUP] Error: {str(e)}")
             return {'success': False, 'error': str(e)}
 
+    async def update_tenant_from_template(self, company_code: str, domain: str) -> Dict[str, Any]:
+        """
+        Update existing tenant from template WITHOUT touching database.
+        Only updates:
+        1. Frontend code (new features, UI updates)
+        2. Backend code (new API endpoints, bug fixes)
+        3. Nginx configuration
+        
+        DOES NOT TOUCH:
+        - MongoDB data (customers, vehicles, reservations, etc.)
+        - Admin credentials
+        - Theme settings stored in DB
+        """
+        safe_code = company_code.replace('-', '').replace('_', '')
+        frontend_container = f"{safe_code}_frontend"
+        backend_container = f"{safe_code}_backend"
+        api_url = f"https://api.{domain}"
+        
+        results = {
+            'frontend_copy': None,
+            'backend_copy': None,
+            'deps_install': None,
+            'config_js': None,
+            'nginx_config': None,
+            'frontend_restart': None,
+            'backend_restart': None
+        }
+        
+        logger.info(f"[UPDATE-TEMPLATE] Starting template update for {company_code} ({domain})")
+        
+        try:
+            import asyncio
+            
+            # Step 1: Copy frontend from template
+            logger.info(f"[UPDATE-TEMPLATE] Step 1: Copying frontend code...")
+            results['frontend_copy'] = await self.copy_from_template(
+                template_container="rentacar_template_frontend",
+                target_container=frontend_container,
+                source_path="/usr/share/nginx/html",
+                dest_path="/usr/share/nginx"
+            )
+            
+            # Step 2: Copy backend from template
+            logger.info(f"[UPDATE-TEMPLATE] Step 2: Copying backend code...")
+            results['backend_copy'] = await self.copy_from_template(
+                template_container="rentacar_template_backend",
+                target_container=backend_container,
+                source_path="/app",
+                dest_path="/"
+            )
+            
+            # Step 3: Install/Update backend dependencies
+            logger.info(f"[UPDATE-TEMPLATE] Step 3: Installing dependencies...")
+            results['deps_install'] = await self.install_backend_dependencies(backend_container)
+            
+            # Step 4: Recreate config.js with correct API URL
+            logger.info(f"[UPDATE-TEMPLATE] Step 4: Updating config.js...")
+            results['config_js'] = await self.create_config_js(frontend_container, api_url)
+            
+            # Step 5: Re-configure Nginx for SPA
+            logger.info(f"[UPDATE-TEMPLATE] Step 5: Updating Nginx config...")
+            results['nginx_config'] = await self.configure_nginx_spa(frontend_container)
+            
+            # Step 6: Restart containers to apply changes
+            logger.info(f"[UPDATE-TEMPLATE] Step 6: Restarting containers...")
+            results['backend_restart'] = await self.restart_container(backend_container)
+            await asyncio.sleep(3)
+            results['frontend_restart'] = await self.restart_container(frontend_container)
+            
+            logger.info(f"[UPDATE-TEMPLATE] Template update complete for {company_code}")
+            
+            return {
+                'success': True,
+                'message': f'Tenant {company_code} updated from template successfully',
+                'company_code': company_code,
+                'domain': domain,
+                'results': results,
+                'note': 'Database verileri korundu. Sadece kod güncellendi.'
+            }
+            
+        except Exception as e:
+            logger.error(f"[UPDATE-TEMPLATE] Error: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'company_code': company_code,
+                'results': results
+            }
+
 
 # Singleton instance
 portainer_service = PortainerService()
