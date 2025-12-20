@@ -1413,6 +1413,97 @@ async def seed_kvm_database(user: dict = Depends(get_current_user)):
             "error": str(e)
         }
 
+# ============== TENANT DEPLOYMENT ENDPOINT ==============
+@api_router.post("/superadmin/companies/{company_id}/deploy-code")
+async def deploy_code_to_tenant(company_id: str, user: dict = Depends(get_current_user)):
+    """
+    Deploy frontend and backend code to a tenant's containers.
+    This endpoint builds frontend locally and uploads to the tenant's Nginx container.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can deploy code")
+    
+    # Get company from database
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    if not company.get("portainer_stack_id"):
+        raise HTTPException(status_code=400, detail="Company stack not provisioned yet")
+    
+    company_code = company["code"]
+    safe_code = company_code.replace('-', '').replace('_', '')
+    domain = company.get("domain")
+    ports = company.get("ports", {})
+    
+    results = {"frontend": None, "backend": None, "database": None}
+    
+    try:
+        # Step 1: Deploy Backend
+        logger.info(f"[DEPLOY-CODE] Deploying backend for {company['name']}...")
+        backend_container = f"{safe_code}_backend"
+        mongo_service = f"{safe_code}_mongodb"
+        db_name = f"{safe_code}_db"
+        
+        backend_result = await deploy_company_backend(
+            company_code=company_code,
+            container_name=backend_container,
+            mongo_service_name=mongo_service,
+            db_name=db_name
+        )
+        results["backend"] = backend_result
+        
+        # Step 2: Deploy Frontend
+        logger.info(f"[DEPLOY-CODE] Deploying frontend for {company['name']}...")
+        frontend_container = f"{safe_code}_frontend"
+        
+        if domain:
+            api_url = f"https://api.{domain}"
+        else:
+            api_url = f"http://72.61.158.147:{ports.get('backend', 11000)}"
+        
+        frontend_result = await deploy_company_frontend(
+            company_code=company_code,
+            backend_url=api_url,
+            container_name=frontend_container
+        )
+        results["frontend"] = frontend_result
+        
+        # Step 3: Setup Database
+        logger.info(f"[DEPLOY-CODE] Setting up database for {company['name']}...")
+        mongo_port = ports.get("mongodb", 12000)
+        db_result = await setup_company_database(company, mongo_port, db_name)
+        results["database"] = db_result
+        
+        # Update company status
+        await db.companies.update_one(
+            {"id": company_id},
+            {"$set": {
+                "provisioning_complete": True,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {
+            "success": True,
+            "message": f"Code deployed to {company['name']}",
+            "results": results,
+            "urls": {
+                "frontend": f"https://{domain}" if domain else f"http://72.61.158.147:{ports.get('frontend')}",
+                "panel": f"https://panel.{domain}" if domain else None,
+                "api": f"https://api.{domain}" if domain else f"http://72.61.158.147:{ports.get('backend')}"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"[DEPLOY-CODE] Error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "results": results
+        }
+
+
 # ============== LEGACY COMPANY ROUTES (for backward compatibility) ==============
 @api_router.post("/companies", response_model=CompanyResponse)
 async def create_company(company: CompanyCreate, user: dict = Depends(get_current_user)):
