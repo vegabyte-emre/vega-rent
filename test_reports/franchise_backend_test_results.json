@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-20T14:18:22.881944",
+  "timestamp": "2025-12-20T14:18:42.225396",
   "total_tests": 2,
   "passed_tests": 1,
   "failed_tests": 1,
@@ -10,7 +10,7 @@
       "success": true,
       "details": "",
       "response_data": {
-        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZTM1NzM1Ni1hMDY4LTQyNjAtYWUxMC1iZDI5M2U4ZmNkNjIiLCJyb2xlIjoic3VwZXJhZG1pbiIsImV4cCI6MTc2NjMyNjcwMn0.V1j0objl55Y2Iy9P78fUV14OJeXVaGkA_rL6DsGf4Rw",
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZTM1NzM1Ni1hMDY4LTQyNjAtYWUxMC1iZDI5M2U4ZmNkNjIiLCJyb2xlIjoic3VwZXJhZG1pbiIsImV4cCI6MTc2NjMyNjcyMn0.ATKTegvSChNE1mwwn3QGQQ_NxOi_akkDPjpyKEK15PM",
         "token_type": "bearer",
         "user": {
           "id": "be357356-a068-4260-ae10-bd293e8fcd62",
@@ -27,11 +27,9 @@
     {
       "test_name": "Franchise Application Submission",
       "success": false,
-      "details": "Expected 201, got 200",
+      "details": "Expected 200, got 400",
       "response_data": {
-        "success": true,
-        "application_number": "FRN-20251220-91725D",
-        "message": "Franchise ba\u015fvurunuz al\u0131nd\u0131. En k\u0131sa s\u00fcrede sizinle ileti\u015fime ge\u00e7ece\u011fiz."
+        "detail": "Bu e-posta ile daha \u00f6nce ba\u015fvuru yap\u0131lm\u0131\u015f"
       }
     }
   ]
