@@ -37,9 +37,7 @@ import {
   Users,
   Globe,
   ExternalLink,
-  Rocket,
   Server,
-  Loader2,
   XCircle
 } from "lucide-react";
 import { toast } from "sonner";
