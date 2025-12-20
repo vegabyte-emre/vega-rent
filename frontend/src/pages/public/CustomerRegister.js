@@ -1,3 +1,4 @@
+import { API_URL } from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
@@ -8,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Car, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function CustomerRegister() {
   const [formData, setFormData] = useState({

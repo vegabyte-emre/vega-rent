@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
@@ -20,7 +21,6 @@ import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function Dashboard() {
   const { user } = useAuth();

@@ -1,3 +1,4 @@
+import { API_URL } from '../../config/api';
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Building2, ArrowLeft, Loader2, User, Globe, CreditCard, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function NewCompany() {
   const navigate = useNavigate();

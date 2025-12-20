@@ -1,3 +1,4 @@
+import { API_URL } from '../../config/api';
 import React, { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -27,7 +28,6 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function VehicleList() {
   const [searchParams] = useSearchParams();

@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -16,7 +17,6 @@ import { formatCurrency, formatDateTime } from "../lib/utils";
 import { CreditCard, Search, RefreshCw, CheckCircle, Clock, XCircle, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function Payments() {
   const [payments, setPayments] = useState([]);

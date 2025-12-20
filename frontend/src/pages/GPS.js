@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -7,7 +8,6 @@ import { MapPin, Car, RefreshCw, Navigation, Clock, Gauge } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateTime } from "../lib/utils";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function GPS() {
   const [locations, setLocations] = useState([]);

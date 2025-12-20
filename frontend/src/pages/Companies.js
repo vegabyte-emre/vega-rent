@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent } from "../components/ui/card";
@@ -25,7 +26,6 @@ import { formatDateTime } from "../lib/utils";
 import { Building2, Plus, Search, RefreshCw, Loader2, Mail, Phone, FileText } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function Companies() {
   const [companies, setCompanies] = useState([]);

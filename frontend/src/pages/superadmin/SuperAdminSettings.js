@@ -1,3 +1,4 @@
+import { API_URL } from '../../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -7,7 +8,6 @@ import { Label } from "../../components/ui/label";
 import { Settings, Server, Globe, Shield, Database, Loader2, CheckCircle, XCircle, ExternalLink, Upload, Monitor } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function SuperAdminSettings() {
   const [traefikStatus, setTraefikStatus] = useState(null);

@@ -1,10 +1,10 @@
+import { API_URL } from '../../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Building2, Car, Users, Calendar, TrendingUp, Activity, Server, Globe, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function SuperAdminDashboard() {
   const [stats, setStats] = useState(null);

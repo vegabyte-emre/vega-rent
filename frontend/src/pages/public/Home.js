@@ -1,3 +1,4 @@
+import { API_URL } from '../../config/api';
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -28,7 +29,6 @@ import {
   Mail,
 } from "lucide-react";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function Home() {
   const [vehicles, setVehicles] = useState([]);

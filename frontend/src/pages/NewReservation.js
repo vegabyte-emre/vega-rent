@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +22,6 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function NewReservation() {
   const navigate = useNavigate();
