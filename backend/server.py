@@ -1192,6 +1192,120 @@ async def deploy_traefik(user: dict = Depends(get_current_user), admin_email: st
     else:
         raise HTTPException(status_code=500, detail=f"Traefik deployment failed: {result.get('error')}")
 
+@api_router.post("/superadmin/template/create")
+async def create_template_stack(user: dict = Depends(get_current_user)):
+    """SuperAdmin: Create template stack with shared volumes for tenant deployments"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can create template stack")
+    
+    result = await portainer_service.create_template_stack()
+    
+    if result.get("success"):
+        return result
+    else:
+        raise HTTPException(status_code=500, detail=f"Template stack creation failed: {result.get('error')}")
+
+@api_router.post("/superadmin/template/deploy-code")
+async def deploy_code_to_template(user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Deploy frontend build and backend code to template containers.
+    This is done once, then all new tenants will use these shared volumes.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can deploy template code")
+    
+    results = {"frontend": None, "backend": None}
+    
+    try:
+        # Step 1: Build frontend with runtime config (no hardcoded API URL)
+        logger.info("[TEMPLATE] Building frontend...")
+        env = os.environ.copy()
+        env["REACT_APP_BACKEND_URL"] = ""  # Empty - will use runtime config
+        env["CI"] = "false"
+        
+        build_result = subprocess.run(
+            ["yarn", "build"],
+            cwd="/app/frontend",
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if build_result.returncode != 0:
+            return {"success": False, "error": "Frontend build failed", "details": build_result.stderr}
+        
+        logger.info("[TEMPLATE] Frontend build successful, uploading...")
+        
+        # Upload to template frontend container
+        build_dir = "/app/frontend/build"
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+            for root, dirs, files in os.walk(build_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, build_dir)
+                    tar.add(file_path, arcname=arcname)
+        
+        tar_data = tar_buffer.getvalue()
+        
+        frontend_upload = await portainer_service.upload_to_container(
+            container_name="rentacar_template_frontend",
+            tar_data=tar_data,
+            dest_path="/usr/share/nginx/html"
+        )
+        results["frontend"] = {"success": not frontend_upload.get("error"), "error": frontend_upload.get("error")}
+        
+        # Step 2: Upload backend code to template backend container
+        logger.info("[TEMPLATE] Uploading backend code...")
+        backend_dir = "/app/backend"
+        
+        backend_tar = io.BytesIO()
+        with tarfile.open(fileobj=backend_tar, mode='w') as tar:
+            tar.add(f"{backend_dir}/server.py", arcname="server.py")
+            tar.add(f"{backend_dir}/requirements.txt", arcname="requirements.txt")
+            
+            services_dir = f"{backend_dir}/services"
+            if os.path.exists(services_dir):
+                for root, dirs, files in os.walk(services_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, backend_dir)
+                        tar.add(file_path, arcname=arcname)
+            
+            # Add main.py
+            main_content = b"from server import app\n"
+            main_info = tarfile.TarInfo(name="main.py")
+            main_info.size = len(main_content)
+            tar.addfile(main_info, io.BytesIO(main_content))
+        
+        backend_tar_data = backend_tar.getvalue()
+        
+        backend_upload = await portainer_service.upload_to_container(
+            container_name="rentacar_template_backend",
+            tar_data=backend_tar_data,
+            dest_path="/app"
+        )
+        results["backend"] = {"success": not backend_upload.get("error"), "error": backend_upload.get("error")}
+        
+        # Install dependencies in template backend
+        await portainer_service.exec_in_container(
+            container_name="rentacar_template_backend",
+            command="pip install motor python-jose passlib[bcrypt] python-dotenv httpx bcrypt>=4.0.0,<4.1.0 --quiet"
+        )
+        
+        logger.info("[TEMPLATE] Template code deployed successfully")
+        
+        return {
+            "success": True,
+            "message": "Template code deployed. All new tenants will use this code.",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"[TEMPLATE] Deploy error: {str(e)}")
+        return {"success": False, "error": str(e), "results": results}
+
 @api_router.post("/superadmin/deploy-frontend-to-kvm")
 async def deploy_frontend_to_kvm(background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     """
