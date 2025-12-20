@@ -1143,6 +1143,141 @@ async def deprovision_company(company_id: str, user: dict = Depends(get_current_
     else:
         raise HTTPException(status_code=500, detail=f"Deprovisioning failed: {result.get('error')}")
 
+@api_router.post("/superadmin/companies/{company_id}/update-from-template")
+async def update_company_from_template(company_id: str, user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Update company code from template WITHOUT touching database.
+    This updates Frontend and Backend code while preserving all customer data.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can update companies")
+    
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Check if company has a stack
+    if not company.get("portainer_stack_id"):
+        raise HTTPException(status_code=400, detail="Bu firma henüz deploy edilmemiş. Önce deploy edin.")
+    
+    # Get domain
+    domain = company.get("domain")
+    if not domain:
+        raise HTTPException(status_code=400, detail="Firma domain bilgisi bulunamadı")
+    
+    company_code = company.get("code")
+    
+    logger.info(f"[UPDATE-TEMPLATE] Starting template update for {company['name']} ({company_code})")
+    
+    # Update from template
+    result = await portainer_service.update_tenant_from_template(
+        company_code=company_code,
+        domain=domain
+    )
+    
+    if result.get("success"):
+        # Update company record
+        await db.companies.update_one(
+            {"id": company_id},
+            {"$set": {
+                "last_template_update": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {
+            "success": True,
+            "message": f"{company['name']} template'den güncellendi",
+            "company_name": company['name'],
+            "domain": domain,
+            "results": result.get("results"),
+            "note": "Veritabanı verileri korundu. Sadece kod güncellendi."
+        }
+    else:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Güncelleme başarısız: {result.get('error')}"
+        )
+
+@api_router.post("/superadmin/companies/update-all-from-template")
+async def update_all_companies_from_template(user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Update ALL active companies from template.
+    This is a batch operation that updates all deployed companies.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can perform batch updates")
+    
+    # Get all active companies with stacks
+    companies = await db.companies.find({
+        "status": CompanyStatus.ACTIVE.value,
+        "portainer_stack_id": {"$ne": None},
+        "domain": {"$ne": None}
+    }, {"_id": 0}).to_list(1000)
+    
+    if not companies:
+        raise HTTPException(status_code=404, detail="Güncellenecek aktif firma bulunamadı")
+    
+    logger.info(f"[BATCH-UPDATE] Starting batch update for {len(companies)} companies")
+    
+    results = []
+    success_count = 0
+    fail_count = 0
+    
+    for company in companies:
+        company_code = company.get("code")
+        domain = company.get("domain")
+        
+        try:
+            result = await portainer_service.update_tenant_from_template(
+                company_code=company_code,
+                domain=domain
+            )
+            
+            if result.get("success"):
+                success_count += 1
+                # Update company record
+                await db.companies.update_one(
+                    {"id": company["id"]},
+                    {"$set": {
+                        "last_template_update": datetime.now(timezone.utc).isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                results.append({
+                    "company": company["name"],
+                    "code": company_code,
+                    "success": True
+                })
+            else:
+                fail_count += 1
+                results.append({
+                    "company": company["name"],
+                    "code": company_code,
+                    "success": False,
+                    "error": result.get("error")
+                })
+        except Exception as e:
+            fail_count += 1
+            results.append({
+                "company": company["name"],
+                "code": company_code,
+                "success": False,
+                "error": str(e)
+            })
+    
+    logger.info(f"[BATCH-UPDATE] Completed: {success_count} success, {fail_count} failed")
+    
+    return {
+        "success": fail_count == 0,
+        "message": f"Toplu güncelleme tamamlandı: {success_count} başarılı, {fail_count} başarısız",
+        "total_companies": len(companies),
+        "success_count": success_count,
+        "fail_count": fail_count,
+        "results": results,
+        "note": "Veritabanı verileri korundu. Sadece kodlar güncellendi."
+    }
+
 @api_router.get("/superadmin/portainer/stacks")
 async def get_portainer_stacks(user: dict = Depends(get_current_user)):
     """SuperAdmin: Get all stacks from Portainer"""
