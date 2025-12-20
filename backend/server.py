@@ -107,17 +107,84 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 class CompanyStatus(str, Enum):
-    PENDING = "pending"
+    PENDING_APPROVAL = "pending_approval"  # Demo request, awaiting approval
+    PENDING_PAYMENT = "pending_payment"    # Approved, awaiting first payment
+    PENDING = "pending"                    # Payment received, pending provisioning
     PROVISIONING = "provisioning"
     ACTIVE = "active"
     SUSPENDED = "suspended"
     DELETED = "deleted"
 
 class SubscriptionPlan(str, Enum):
-    FREE = "free"
-    STARTER = "starter"
-    PROFESSIONAL = "professional"
-    ENTERPRISE = "enterprise"
+    FREE = "free"           # Trial - 14 days
+    STARTER = "starter"     # 10 vehicles - ₺999/month
+    PROFESSIONAL = "professional"  # 50 vehicles - ₺2,499/month
+    ENTERPRISE = "enterprise"      # Unlimited - ₺4,999/month
+
+class BillingCycle(str, Enum):
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+
+class PaymentMethod(str, Enum):
+    BANK_TRANSFER = "bank_transfer"
+    CREDIT_CARD = "credit_card"
+    IYZICO = "iyzico"
+    PAYTR = "paytr"
+    PARATIKA = "paratika"
+
+class PaymentStatus(str, Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    REFUNDED = "refunded"
+
+# Subscription Plan Details
+SUBSCRIPTION_PLANS = {
+    "free": {
+        "name": "Deneme",
+        "name_en": "Trial",
+        "max_vehicles": 5,
+        "max_users": 2,
+        "price_monthly": 0,
+        "price_yearly": 0,
+        "trial_days": 14,
+        "features": ["online_booking", "basic_reports"],
+        "description": "14 gün ücretsiz deneme"
+    },
+    "starter": {
+        "name": "Başlangıç",
+        "name_en": "Starter",
+        "max_vehicles": 10,
+        "max_users": 5,
+        "price_monthly": 999,
+        "price_yearly": 9590,  # 2 months free
+        "trial_days": 0,
+        "features": ["online_booking", "basic_reports", "customer_management", "email_support"],
+        "description": "Küçük filolar için ideal"
+    },
+    "professional": {
+        "name": "Profesyonel",
+        "name_en": "Professional",
+        "max_vehicles": 50,
+        "max_users": 15,
+        "price_monthly": 2499,
+        "price_yearly": 23990,  # 2 months free
+        "trial_days": 0,
+        "features": ["online_booking", "advanced_reports", "customer_management", "sms_notifications", "e_invoice", "priority_support"],
+        "description": "Büyüyen işletmeler için"
+    },
+    "enterprise": {
+        "name": "Kurumsal",
+        "name_en": "Enterprise",
+        "max_vehicles": -1,  # Unlimited
+        "max_users": -1,     # Unlimited
+        "price_monthly": 4999,
+        "price_yearly": 47990,  # 2 months free
+        "trial_days": 0,
+        "features": ["online_booking", "advanced_reports", "customer_management", "sms_notifications", "whatsapp", "e_invoice", "gps_tracking", "api_access", "dedicated_support", "custom_training"],
+        "description": "Büyük filolar için"
+    }
+}
 
 class CompanyCreate(BaseModel):
     name: str
