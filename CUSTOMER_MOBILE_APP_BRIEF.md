@@ -22,17 +22,17 @@
 
 **Production API URL:**  
 ```
-https://fleetease-dash.preview.emergentagent.com/api
+https://carfleet-hub-5.preview.emergentagent.com/api
 ```
 
 **API Dokümantasyonu (Swagger):**  
 ```
-https://fleetease-dash.preview.emergentagent.com/docs
+https://carfleet-hub-5.preview.emergentagent.com/docs
 ```
 
 **Mevcut Web Sitesi:**  
 ```
-https://fleetease-dash.preview.emergentagent.com/
+https://carfleet-hub-5.preview.emergentagent.com/
 ```
 
 ---
@@ -887,8 +887,8 @@ GET /api/public/locations/nearest
 ## 📞 İLETİŞİM & DESTEK
 
 **Backend API:** Aktif ve çalışıyor  
-**API Docs:** https://fleetease-dash.preview.emergentagent.com/docs  
-**Web App:** https://fleetease-dash.preview.emergentagent.com/
+**API Docs:** https://carfleet-hub-5.preview.emergentagent.com/docs  
+**Web App:** https://carfleet-hub-5.preview.emergentagent.com/
 
 ---
 

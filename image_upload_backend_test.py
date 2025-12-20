@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class ImageUploadAPITester:
-    def __init__(self, base_url: str = "https://fleetease-dash.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://carfleet-hub-5.preview.emergentagent.com"):
         self.base_url = base_url
         self.admin_token = None
         self.firma_token = None

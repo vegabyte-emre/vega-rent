@@ -12,12 +12,12 @@
 
 **Production API URL:**  
 ```
-https://fleetease-dash.preview.emergentagent.com/api
+https://carfleet-hub-5.preview.emergentagent.com/api
 ```
 
 **API Dokümantasyonu:**  
 ```
-https://fleetease-dash.preview.emergentagent.com/docs
+https://carfleet-hub-5.preview.emergentagent.com/docs
 ```
 
 ---
@@ -307,9 +307,9 @@ superadmin | firma_admin | operasyon | muhasebe | personel | musteri
 
 ## 🔗 Mevcut Web Uygulaması
 
-- **Müşteri Sitesi:** https://fleetease-dash.preview.emergentagent.com/
-- **Admin Panel:** https://fleetease-dash.preview.emergentagent.com/login
-- **API Docs:** https://fleetease-dash.preview.emergentagent.com/docs
+- **Müşteri Sitesi:** https://carfleet-hub-5.preview.emergentagent.com/
+- **Admin Panel:** https://carfleet-hub-5.preview.emergentagent.com/login
+- **API Docs:** https://carfleet-hub-5.preview.emergentagent.com/docs
 
 ---
 

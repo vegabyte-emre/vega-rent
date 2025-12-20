@@ -1,202 +1,169 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to build a SuperAdmin Panel to function as a multi-tenant corporate car rental platform. This central panel must be capable of provisioning, deploying, and managing complete, isolated Rent A Car application stacks (Frontend, Backend, Database) for different tenants. These deployments are to be made on a user-provided KVM server, which is managed by Portainer, with Traefik handling domain routing and SSL.
+The user's primary goal is to build a SuperAdmin Panel to function as a multi-tenant corporate car rental platform. This central panel must be capable of provisioning, deploying, and managing complete, isolated Rent A Car application stacks for different tenants on a user-provided KVM server managed by Portainer.
 
+Subsequently, the user requested a significant expansion of the SuperAdmin panel into a full-fledged SaaS platform, including:
 **PRODUCT REQUIREMENTS:**
-- **SuperAdmin Panel:** A central dashboard for managing tenant companies.
-- **Automated Tenant Provisioning:** Adding a new tenant company via the SuperAdmin panel must automatically deploy a full, independent application stack (React Frontend, FastAPI Backend, MongoDB) as Docker containers on the user's Portainer-managed server.
-- **Custom Domain Management:** Tenant applications must be accessible via custom domains (e.g., , ), with Traefik automatically managing reverse proxying and SSL certificates.
-- **URL Structure:** For each tenant, the landing page should be at , the admin panel at , and the API at .
-- **Infrastructure:** The system runs on the user's KVM server (), managed with Portainer for container orchestration and Traefik for routing.
+-   **SuperAdmin SaaS Landing Page:** A modern, multi-lingual public-facing website to market the platform and its subscription plans.
+-   **Subscription System:** Allow new customers to sign up for different packages (e.g., Starter, Professional). New sign-ups should appear in the SuperAdmin panel with a Pending Approval status.
+-   **Payment Integration:** Integrate a payment gateway (user selected Iyzico as an option) to automate subscriptions. Initially, a manual bank transfer option is acceptable.
+-   **Franchise Management:** A system for managing franchise/dealership applications.
+-   **Support/Ticket System:** An integrated helpdesk for tenants to create support requests and for SuperAdmins to manage them.
+-   **3rd Party Integration Management:** A centralized place to manage integrations for tenants (SMS, E-Fatura, GPS, HGS, etc.).
 
-**User's preferred language**: The user communicates in **Turkish**. All responses MUST be in Turkish.
+**User's preferred language**: The user communicates in **Turkish**. The next agent MUST respond in Turkish only.
 
 **what currently exists?**
-A full-stack SuperAdmin application (FastAPI, React) that functions as a control plane for the user's KVM server. It is deployed and running on the KVM server.
-- It can connect to the external Portainer instance and programmatically deploy/manage Docker stacks (tenants).
-- The tenant stack deployment includes a React frontend (served by Nginx), a FastAPI backend, and a MongoDB database.
-- Traefik is deployed and configured to handle routing for tenant domains, including subdomains for the panel () and API ().
-- The SuperAdmin panel UI includes a dashboard with live statistics, a company management page with create/delete functionality, and deployment settings.
-- The company deletion process is hard delete, meaning it removes the Portainer stack and associated database records.
-- The tenant provisioning process attempts to automate frontend/backend code deployment and Nginx configuration.
+The initial goal of automated, KVM-native tenant provisioning via the Portainer API is complete and stable. The system uses a template-based approach to deploy new tenants.
+
+The agent has since built several major features for the SuperAdmin SaaS platform:
+1.  **SaaS Landing Page:** A complete, multi-lingual (TR, EN, DE, FR, RU) landing page has been developed and is ready for deployment.
+2.  **Subscription Management:** A full-featured backend and frontend module for creating, viewing, and managing company subscriptions and payments within the SuperAdmin panel.
+3.  **Support/Ticket System:** A two-way communication system is in place, allowing tenants to create support tickets and SuperAdmins to manage and respond to them.
+4.  **Tenant Code Updates:** A critical feature was added that allows the SuperAdmin to update the code of existing tenants from the master template without wiping their data.
+5.  **Image Persistence Fix:** The initial blocker where uploaded images were not persistent has been resolved by storing image data directly in MongoDB.
 
 **Last working item**:
-- **Last item agent was working:** The user reported that after successfully provisioning a new company stack, they are unable to log into the tenant's admin panel (e.g., ) and receive an Invalid credentials error. The agent was simultaneously working on making the entire provisioning process (stack deployment, code deployment, user creation, etc.) fully automatic, as the user was also reporting that the frontend landing page was not being deployed correctly after creating a new company.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: Y (Partial)
-- **Which testing method agent to use?**: backend testing agent. The agent has verified via  that the backend API on the KVM server is working correctly and login is successful. However, the user is still facing issues from the browser. The next step is to use the  on the live tenant URL () to check for browser console errors (like CORS, Mixed Content) and verify the page loads correctly.
-- **User Testing Done**: N (User is actively testing and reporting the failure).
+-   **Last item agent was working:** The agent was in the middle of implementing the **Franchise (Bayilik) Management** system. The backend models and API endpoints have been created in , and the main UI component () has been generated. The work stopped before this new page was integrated into the application's routing and menu, and before the franchise application form was added to the public landing page.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: manual testing by curl, screenshot tool
+-   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Invalid credentials error on newly provisioned tenant admin panel (Priority: P0)
--   **Issue 2**: Tenant provisioning is not fully automatic (Priority: P0)
--   **Issue 3**: Frontend Test Suite Failures (Priority: P1)
+-   **Issue 1**: Frontend Test Suite Failures (Priority: P2)
+-   **Issue 2**: Monolithic Backend Codebase (Priority: P2)
 
 **Issues Detail**:
 -   **Issue 1**:
-    -   **Description**: Despite the agent verifying that the credentials are correct and the backend login API works via , the user consistently gets an Invalid credentials error when trying to log in through the browser on the newly created tenant's admin panel ().
-    -   **Attempted fixes**:
-        -   Fixed  version incompatibilities in tenant backend containers.
-        -   Corrected Docker container entrypoints to run the correct application code ().
-        -   Resolved Docker inter-container networking issues between the SuperAdmin backend and Portainer.
-        -   Set the  in the frontend build to the correct HTTPS API subdomain ().
-        -   Ensured the admin user is created in the correct tenant-specific MongoDB database.
-        -   Verified backend API functionality directly with .
-    -   **Next debug checklist**:
-        1.  Re-deploy the tenant frontend with the very latest build to rule out any browser caching or stale build issues.
-        2.  Instruct the user on how to open the browser's developer console to check for JavaScript errors, especially CORS or Mixed Content errors, when they attempt to log in.
-        3.  Inspect the live tenant backend container logs () *at the exact moment* the user attempts a failed login to see what the backend receives.
-        4.  Verify that the  function in  is correctly adding all necessary user data (including ) to the JWT payload.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is the final and most critical blocker preventing the user from using the core functionality of the platform.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Both
-    -   **Blocked on other issue**: None
-
--   **Issue 2**:
-    -   **Description**: The user has to manually trigger deployment steps after a new company is created. The process should be fully automated: creating the stack, deploying the frontend code, deploying the backend code, configuring Nginx, and creating the admin user should all happen in a single Add Company action.
-    -   **Attempted fixes**: The agent started adding the necessary functions to  and  to handle backend/frontend deployment and user creation within the  endpoint.
-    -   **Next debug checklist**:
-        1.  Consolidate all deployment logic into the  endpoint.
-        2.  Ensure the sequence is correct: create stack -> deploy backend code -> restart backend -> deploy frontend code -> configure Nginx -> create admin user.
-        3.  Add robust error handling for each step.
-    -   **Why fix this issue and what will be achieved with the fix?**: Fulfills a key user requirement for a seamless, one-click tenant setup experience.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Both
-    -   **Blocked on other issue**: Issue 1. The automation is pointless if it deploys a non-functional tenant.
-
--   **Issue 3**:
-    -   **Description**: The frontend test suite has a ~90% success rate, which was noted in a previous handoff but never addressed.
+    -   **Description**: The frontend test suite has a long-standing low success rate (~90%) that has not been addressed. While not a blocker, it indicates potential underlying fragility.
     -   **Attempted fixes**: None.
-    -   **Next debug checklist**:
-        1.  Analyze  to identify the failing tests.
-        2.  Fix the corresponding React components or tests.
-        3.  Re-run the frontend testing agent to verify 100% success.
-    -   **Why fix this issue and what will be achieved with the fix?**: Improves code quality and ensures the stability of the frontend application.
+    -   **Next debug checklist**: Run the test suite, identify the consistently failing tests, and investigate the related components.
+    -   **Why fix this issue and what will be achieved with the fix?**: Improves code quality and reduces the risk of future regressions.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None
+
+-   **Issue 2**:
+    -   **Description**: The main backend file, , has become a large monolith containing all API logic for tenants, superadmin, public pages, subscriptions, tickets, and franchises. This makes maintenance difficult and increases the risk of conflicts.
+    -   **Next debug checklist**: Propose a refactoring plan to the user to split  into multiple  instances, organized by feature (e.g., , ).
+    -   **Why fix this issue and what will be achieved with the fix?**: Significantly improves maintainability, scalability, and code organization of the backend.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Backend
 
 **In progress Task List**:
--   **Task 1**: Complete the implementation of the fully automatic tenant provisioning system (Priority: P0)
-    -   **Where to resume**: Refactoring the  endpoint in  to orchestrate all the necessary deployment steps (stack creation, code deployment, user seeding) in a single, atomic operation.
-    -   **What will be achieved with this?**: A one-click system to deploy a new, fully functional tenant.
+-   **Task 1**: Complete Franchise (Bayilik) Management System (Priority: P0)
+    -   **Where to resume**:
+        1.  Integrate the new  page:
+            -   Import it in .
+            -   Add a new route for .
+            -   Add a link to the Franchises page in the  navigation menu.
+        2.  Create a Franchise Application section/form on the public  that submits to the  endpoint.
+        3.  Thoroughly test the end-to-end flow: submitting an application from the landing page and managing it (approve/reject) in the SuperAdmin panel.
+    -   **What will be achieved with this?**: A complete module for managing franchise applications, fulfilling a key user requirement.
     -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: Both
-    -   **Blocked on something**: Issue 1 (Invalid credentials error).
+    -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1: Implement Landing Page Content Management:** Implement the İçerik (Content) and Ayarlar (Settings) tabs in  for tenant landing pages.
+-   **P0: Implement Payment Gateway (iyzico):** Integrate iyzico to automate the subscription payment process. This is the next logical step after the subscription system.
+-   **P1: Integrate 3rd Party Services:**
+    -   **SMS Integration** (Provider: Netgsm).
+    -   **E-Invoice Integration** (Provider: EDM Bilişim).
+-   **P2: Implement Pending Approval Flow:** Ensure that new companies created via subscription purchases on the landing page appear in the SuperAdmin panel with a  status.
 
 **Future Tasks:**
--   **P1: Live Payment Integration (iyzico).**
--   **P1: Notification Services (SMS, Email).**
--   **P2: E-Invoice Integration (EDM).**
--   **P2: Advanced Workflows (HGS/OGS checks, etc.).**
--   **P3: Develop Customer Mobile App.**
+-   Advanced Integrations (GPS, HGS, WhatsApp, KABİS).
+-   Customer Mobile App.
+-   NFC integration (user requested to defer).
 
 **Completed work in this session**
--   Resolved the SuperAdmin New Company form bug, making the subdomain field optional.
--   Fixed the deployed SuperAdmin panel on the KVM server by configuring it to point to the correct backend URL ().
--   Implemented a hard delete feature for companies in the SuperAdmin panel, which removes the Portainer stack and all associated data.
--   Refactored the tenant URL structure to use three subdomains:  for the landing page,  for the admin panel, and  for the backend.
--   Configured Traefik and tenant Nginx services to support the new subdomain structure and SPA routing.
--   Successfully implemented and tested all core CRUD APIs (vehicles, customers, reservations) for tenant panels.
--   Resolved a critical  error by correctly associating  users with their respective company IDs in the database.
--   Debugged and resolved numerous complex KVM server deployment issues, including Docker networking, container entrypoints, environment variable propagation, and Python dependency conflicts ().
--   Implemented a live statistics dashboard for the SuperAdmin panel.
--   Cleaned up all test stacks and data from the user's Portainer instance and database.
+-   **Implemented Tenant Code Update Feature:** Added functionality to update existing tenant applications from the master template without data loss, including UI buttons for single and bulk updates.
+-   **Built SaaS Landing Page:** Developed a complete, multi-lingual, and modern landing page to market the platform, including pricing, features, and a demo request form.
+-   **Implemented Subscription System:** Created a full module in the SuperAdmin panel to manage company subscriptions, plans, and manual payment records.
+-   **Implemented Support/Ticket System:** Built a two-way helpdesk for tenants to submit tickets and SuperAdmins to manage them.
+-   **Resolved KVM Deployment/Connection Issues:**
+    -   Established a manual deployment workflow by creating downloadable  update packages for the user to apply on their KVM server.
+    -   Fixed the Portainer Disconnected bug by correcting the Portainer URL in the backend configuration.
+-   **Fixed Image Persistence:** Re-architected image uploads to use MongoDB for persistent storage, solving a critical blocker for the theme management feature.
+-   **Refined SuperAdmin UI:** Removed redundant deployment buttons from the companies page, simplifying the user interface.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Frontend Test Failures:** An 85-90% success rate was reported in test runs and has not been addressed.
+-   **Issue 1: Frontend Test Suite Failures:** An 85-90% success rate was reported in test runs and has not been addressed.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork**: Frontend test suite failures.
--   **Recurrence count**: 2
+-   **Recurrence count**: 5+
 -   **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Multi-tenancy via Containerization:** Using Portainer to dynamically provision separate, isolated full-stack applications for each tenant.
--   **Infrastructure as Code (IaC):** A Python service () defines and deploys Docker Compose stacks to Portainer.
--   **Reverse Proxy & SSL Automation:** Traefik manages routing for multiple custom domains and subdomains, with automated SSL.
--   **Portainer API:** The backend uses  to programmatically interact with the Portainer API for all infrastructure management.
--   **Docker Inter-Container Networking:** Resolved issues by connecting containers to a shared Docker network and using internal container hostnames/IPs for communication (e.g., backend connecting to Portainer).
--   **SPA Deployment & Routing:** React app is built and served by an Nginx container, which is configured with  to support client-side routing.
+-   **KVM-Native Orchestration:** Using the backend to call the Portainer API for all container management on the user's server.
+-   **Manual KVM Update Packages:** The established deployment method involves creating a  archive with updated code and a shell script () for the user to run on their server.
+-   **MongoDB for File Storage:** Storing user-uploaded images (logos, sliders) as data within MongoDB collections to ensure persistence across container restarts.
+-   **Multi-lingual Frontend:** A React Context-based solution for managing translations stored in a central JS object.
 
 **key DB schema**
--   ** collection**: Now contains a  field to link  users to their specific company, which is crucial for authorization.
--   ** collection**: Heavily used to track tenant status, domains, and Portainer stack details.
-
-**changes in tech stack**
--    and  versions were pinned to resolve hashing inconsistencies between the local environment and the deployment container.
+-   : Holds tenant information, including status and subscription details.
+-   : Stores uploaded image data.
+-   : Manages subscription plans, start/end dates, and status for each company.
+-   : Logs manual payment records.
+-    & : Manages the helpdesk system.
+-   : New collection to store applications from the landing page.
+-   : Stores leads from the landing page contact form.
 
 **All files of reference**
--   : **Critical file.** Contains all logic for creating, deploying, and deleting tenant infrastructure.
--   : **Critical file.** The main API monolith. Contains the  endpoint and all SuperAdmin/tenant logic.
--   : Contains the core routing logic, modified to differentiate between the landing page and the admin panel based on the .
--   : UI for listing and deleting companies.
--   : The form for creating new tenants.
+-   : Critical file, contains all new API logic for subscriptions, tickets, and franchises.
+-   : Contains KVM orchestration logic, including the tenant update function.
+-   : Contains routing for all new pages.
+-   : The new, partially integrated franchise management page.
+-   : The entry point for the new public-facing website.
+-   : The layout for the superadmin panel, needs a link to the new franchises page.
 
 **Areas that need refactoring**:
--   ** is a large monolith.** It urgently needs to be broken down into separate modules/routers (e.g., , , ) to improve maintainability.
--   The Docker Compose templates within  are large f-strings and should be extracted into separate  template files.
+-   ** is a monolith.** It should be broken down into separate FastAPI routers for maintainability. This is becoming critical as more features are added.
 
 **key api endpoints**
--   : The main endpoint for deploying/updating a tenant stack. (Currently being refactored for full automation).
--   : Deletes a company and its entire Portainer stack.
--   : Deploys the SuperAdmin's own frontend.
--   : Deploys the SuperAdmin's own backend.
--   : Provides live data for the SuperAdmin dashboard.
--   : The login endpoint for all users (both SuperAdmin and tenant admins).
+-   : (New) Public endpoint for submitting a franchise application.
+-   : (New) Endpoints for managing franchise applications.
+-   : Endpoints for the support ticket system.
+-   : Endpoints for the subscription management system.
+-   : Endpoint to trigger a code update for an existing tenant.
 
 **Critical Info for New Agent**
--   **Login Bug is Top Priority:** The Invalid Credentials error is the main blocker. The agent's  tests confirm the backend API is working. The issue is almost certainly a browser-side problem (caching, CORS, mixed content) or a subtle misconfiguration in the final deployed frontend build. Do not assume the backend is the problem; investigate the full path from the browser to the API.
--   **Automation is the Goal:** The user wants a one-click provisioning system. This task is intertwined with fixing the login bug, as the automated process must result in a working tenant.
--   **KVM Environment is Truth:** All work must be validated against the user's live KVM server (). Local testing is insufficient.
--   **Docker Networking:** The key to making the SuperAdmin backend communicate with Portainer was to connect the Portainer container to the  and use the internal Docker IP ( or similar, without SSL) for the . Public IPs with SSL from within Docker containers are unreliable due to certificate verification and firewall issues.
+-   **Language is Turkish:** All user-facing communication must be in Turkish.
+-   **KVM Deployment is Manual:** You cannot deploy directly to the user's server. The required workflow is: build the frontend, package the changed files (frontend build + backend code) into a , create an  script, and provide the user with a download link and / instructions to execute on their KVM server.
+-   **Resume the Franchise Task:** Your immediate priority is to complete the partially implemented Franchise Management system. This involves integrating the new frontend page into the router/menu and adding an application form to the public landing page.
+-   **Propose Refactoring:** After completing the franchise task, strongly consider proposing a refactor of  to the user. Explain that breaking it into smaller, feature-specific router files will make future development much faster and safer.
 
 **documents and test_reports created in this job**
--   
+-   : Contains the design system for the new landing page.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  Bunu artık otomatik yapabilir misin ? Otomatik db ve diğer ayarlar ve Nginix işlemleri.
-2.  Ve hala panele giriş yaparken Invalid credentials hatası var giriş yapılmıyor.
-3.  Şimdi yeni firma ekledim. Ekledikten sonra https://bitlisrentacar.com landing page yine Welcome to nginx! sayfasını açıyor. Konfigrasyonu tekrar gözden geçirir misin ?
-4.  pORTAİNER TEST STACK VE CONTAİNER LARI TEMİZLE.
-5.  Süperadmin Tarafında Eksiklik Varsa tamamla. Süperadmin tarafında Firma Silinirse Portainer ve Diğer tüm kayıtlı yerden silinsin. Firma Silindiği zaman Firma Listesinden de Silinsin. İstatistik ve diğer bilgiler Test verisinden çıkarılsın canlı veriler gelsin. SÜPERADMİN PANELİNİ TAMAMEN FİNAL AŞAMASINA GETİR.
-6.  Araç eklerken Company ID required for Firma Admin hatası veriyor. Araçlar ve Diğer DB bağlantılarını tamamen yap
-7.  https://panel.bitlisrentacar.com/ sayfası yeterli login yazmasına gerek yok. https://panel.bitlisrentacar.com adresi güncel Rent a CarYönetim Paneli Girişi olmalı
-8.  nerede hata yapıyorum (user provided screenshot of login failure)
-9.  bitlis rent a car firması için kullanıcı adı ve şifreye bakar mısın database den . Çünkü hatalı diyor
-10. Şimdi sen konuyu çok yanlış anladın. Tekrar hatırlatmak istiyorum. -Süperadmin Firma Ekleyecekti. - Süperadmin firma (domain) ekledikten sonra Deploy işlemi otomatik olacaktı ve - Landing Page (Önceden yapmıştın) -Rent a car Yönetim Paneli... Şimdi deploy ettiğin içerik hatalı. ... Admin paneli için de alanadi.com/admin olacak şekilde ayarla.
+-    (User confirming to proceed with the next task after the support system was completed)
+-    (User confirming to proceed with the next task from the list)
+-   (The rest are agent messages detailing the start of the Franchise Management feature)
 
 **Project Health Check:**
--   **Broken**:
-    -   The login functionality for newly provisioned tenants is non-functional from the user's browser, despite backend APIs working correctly via direct calls. This is the highest priority blocker.
--   **Mocked**: GPS tracking, Payment processing (iyzico), e-Fatura integration.
+-   **Broken**: The Franchise Management feature is incomplete. The UI is not yet connected.
+-   **Mocked**: Payment processing (iyzico), SMS (Netgsm), E-Invoice (EDM), and other 3rd party integrations are planned but not implemented.
 
 **3rd Party Integrations**
--   **Portainer**: Core of the architecture. Used for container orchestration on the user's KVM server. Requires URL and API Key.
--   **Traefik**: Used for reverse proxying and automated SSL on the KVM server.
--   **iyzipay**: Library installed, but implementation is a future task. Requires a user-provided API key.
+-   **Portainer**: Used for infrastructure orchestration via its REST API.
+-   **Traefik**: Used for reverse proxy and SSL (configured on the user's KVM, not by the agent).
+-   **iyzipay**: Planned for payment integration (library installed).
+-   **Netgsm**: Planned for SMS integration.
+-   **EDM Bilişim**: Planned for E-Invoice integration.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES (Achieved 90-95% success rates locally).
+-   **Testing agent used after significant changes**: YES, for the image upload fix.
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: Yes, by the testing agent.
--   **Known regressions**:
-    -   The login flow for new tenants is broken from the user's perspective.
-    -   The frontend test suite failure (~90% success) remains unresolved.
-
-**Credentials to test flow:**
--   **SuperAdmin Panel (KVM & Local)**:  / 
--   **Tenant Admin Panel (e.g., Bitlis)**:  / 
--   **Portainer Instance**: URL  (publicly) or  (internally), API Key 
+-   **Test files created**: None.
+-   **Known regressions**: None.
 
 **What agent forgot to execute**
--   The agent has consistently postponed addressing the frontend test suite failures (stuck at ~90% success) across multiple sessions, prioritizing new features and user-reported bugs.</analysis>
+-   The agent has not yet addressed the long-standing issue of failing frontend tests.
+-   The agent has continued to add features to the monolithic  file without proposing a necessary refactor.</analysis>
