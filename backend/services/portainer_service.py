@@ -1401,6 +1401,112 @@ class PortainerService:
                 'results': results
             }
 
+    async def update_master_template_from_local(self, frontend_build_path: str, backend_path: str) -> Dict[str, Any]:
+        """
+        Update master template container from local /app/template folder.
+        This is used when template is synced from GitHub.
+        
+        Args:
+            frontend_build_path: Path to frontend build folder (/app/frontend/build)
+            backend_path: Path to backend code (/app/template/backend)
+        """
+        results = {
+            'frontend_upload': None,
+            'backend_upload': None,
+            'template_restart': None
+        }
+        
+        try:
+            # Step 1: Find template container
+            containers = await self._request('GET', f"endpoints/{self.endpoint_id}/docker/containers/json")
+            template_frontend_id = None
+            template_backend_id = None
+            
+            for c in containers:
+                names = c.get('Names', [])
+                for name in names:
+                    if 'rentacar_template_frontend' in name:
+                        template_frontend_id = c.get('Id')
+                    elif 'rentacar_template_backend' in name:
+                        template_backend_id = c.get('Id')
+            
+            # Step 2: Upload frontend build if path exists
+            if os.path.exists(frontend_build_path) and template_frontend_id:
+                logger.info(f"[MASTER-TEMPLATE-LOCAL] Uploading frontend from {frontend_build_path}")
+                
+                # Create tar of build folder
+                tar_buffer = std_io.BytesIO()
+                with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+                    for root, dirs, files in os.walk(frontend_build_path):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, frontend_build_path)
+                            if not arcname.startswith('downloads/'):
+                                tar.add(file_path, arcname=arcname)
+                
+                tar_data = tar_buffer.getvalue()
+                logger.info(f"[MASTER-TEMPLATE-LOCAL] Frontend tar size: {len(tar_data)} bytes")
+                
+                # Clean and upload
+                await self.exec_in_container("rentacar_template_frontend", 
+                    "rm -rf /usr/share/nginx/html/* && mkdir -p /usr/share/nginx/html/static/js /usr/share/nginx/html/static/css")
+                
+                upload_result = await self.upload_to_container(
+                    container_name="rentacar_template_frontend",
+                    tar_data=tar_data,
+                    dest_path="/usr/share/nginx/html"
+                )
+                results['frontend_upload'] = upload_result
+            else:
+                logger.warning(f"[MASTER-TEMPLATE-LOCAL] Frontend build not found at {frontend_build_path}")
+                results['frontend_upload'] = {'skipped': True, 'reason': 'build not found'}
+            
+            # Step 3: Upload backend code if path exists
+            if os.path.exists(backend_path) and template_backend_id:
+                logger.info(f"[MASTER-TEMPLATE-LOCAL] Uploading backend from {backend_path}")
+                
+                # Create tar of backend folder
+                tar_buffer = std_io.BytesIO()
+                with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+                    server_py = os.path.join(backend_path, 'server.py')
+                    requirements = os.path.join(backend_path, 'requirements.txt')
+                    
+                    if os.path.exists(server_py):
+                        tar.add(server_py, arcname='server.py')
+                    if os.path.exists(requirements):
+                        tar.add(requirements, arcname='requirements.txt')
+                
+                tar_data = tar_buffer.getvalue()
+                
+                upload_result = await self.upload_to_container(
+                    container_name="rentacar_template_backend",
+                    tar_data=tar_data,
+                    dest_path="/app"
+                )
+                results['backend_upload'] = upload_result
+            else:
+                results['backend_upload'] = {'skipped': True, 'reason': 'backend not found'}
+            
+            # Step 4: Restart template containers
+            if template_frontend_id:
+                results['template_restart'] = await self.restart_container("rentacar_template_frontend")
+            
+            logger.info("[MASTER-TEMPLATE-LOCAL] Local template update complete!")
+            
+            return {
+                'success': True,
+                'message': 'Master template updated from local folder',
+                'results': results
+            }
+            
+        except Exception as e:
+            logger.error(f"[MASTER-TEMPLATE-LOCAL] Error: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'results': results
+            }
+
     async def update_tenant_from_template(self, company_code: str, domain: str) -> Dict[str, Any]:
         """
         Update existing tenant from template WITHOUT touching database.
