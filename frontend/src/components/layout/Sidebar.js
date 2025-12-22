@@ -22,6 +22,8 @@ import {
   Menu,
   Palette,
   HelpCircle,
+  Toll,
+  FileCheck,
 } from "lucide-react";
 
 // Check if we're on panel subdomain
