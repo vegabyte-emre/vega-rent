@@ -446,6 +446,21 @@ class PortainerService:
             ]
         return []
     
+    async def _get_container_port(self, container_name: str) -> Optional[int]:
+        """Get the public port of a container"""
+        endpoint = f"endpoints/{self.endpoint_id}/docker/containers/json?all=true"
+        result = await self._request('GET', endpoint)
+        if isinstance(result, list):
+            for c in result:
+                names = c.get('Names', [])
+                if f"/{container_name}" in names:
+                    ports = c.get('Ports', [])
+                    for p in ports:
+                        public_port = p.get('PublicPort')
+                        if public_port:
+                            return public_port
+        return None
+    
     async def delete_stack(self, stack_id: int) -> Dict[str, Any]:
         """Delete a stack by ID"""
         endpoint = f"stacks/{stack_id}?endpointId={self.endpoint_id}"
