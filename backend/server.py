@@ -1447,9 +1447,9 @@ async def get_portainer_status(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Only SuperAdmin can check Portainer status")
     
     try:
-        # Direct test to Portainer API
+        # Direct test to Portainer API with SSL disabled
         import httpx
-        async with httpx.AsyncClient(verify=False, timeout=10.0) as client:
+        async with httpx.AsyncClient(verify=False, timeout=10.0, http2=False) as client:
             url = f"{portainer_service.base_url}/api/system/status"
             response = await client.get(url, headers=portainer_service.headers)
             
@@ -1477,7 +1477,7 @@ async def get_portainer_status(user: dict = Depends(get_current_user)):
         return {
             "connected": False,
             "url": portainer_service.base_url,
-            "error": str(e)
+            "error": f"Hata: {str(e)}"
         }
 
 @api_router.post("/superadmin/deploy-superadmin-stack")
