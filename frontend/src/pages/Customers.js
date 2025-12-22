@@ -22,8 +22,21 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { formatDateTime } from "../lib/utils";
-import { Users, Plus, Search, RefreshCw, Loader2, Mail, Phone, CreditCard } from "lucide-react";
+import { Users, Plus, Search, RefreshCw, Loader2, Mail, Phone, CreditCard, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+
+// WhatsApp link helper
+const getWhatsAppLink = (phone, message = "") => {
+  let cleanPhone = phone.replace(/\s/g, "").replace(/-/g, "").replace(/\(/g, "").replace(/\)/g, "");
+  if (cleanPhone.startsWith("0")) {
+    cleanPhone = "90" + cleanPhone.substring(1);
+  } else if (!cleanPhone.startsWith("90") && !cleanPhone.startsWith("+90")) {
+    cleanPhone = "90" + cleanPhone;
+  }
+  cleanPhone = cleanPhone.replace("+", "");
+  const url = `https://wa.me/${cleanPhone}`;
+  return message ? `${url}?text=${encodeURIComponent(message)}` : url;
+};
 
 
 export function Customers() {
