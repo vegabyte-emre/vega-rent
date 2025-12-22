@@ -4917,6 +4917,63 @@ async def update_vehicle_status(
     
     return {"success": True, "message": "Araç durumu güncellendi"}
 
+# ============== COMPANY INFO ROUTES ==============
+@api_router.get("/company/info")
+async def get_company_info(user: dict = Depends(get_current_user)):
+    """Get company information for the logged-in user"""
+    company_id = user.get("company_id")
+    
+    # First try to get from company collection
+    company = await db.company.find_one({"id": company_id}, {"_id": 0})
+    
+    if not company:
+        # If not found, try companies collection (for SuperAdmin managed companies)
+        company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    
+    if not company:
+        # Return default company info from environment or settings
+        company_name = os.environ.get("COMPANY_NAME", "Rent A Car")
+        company_code = os.environ.get("COMPANY_CODE", "rentacar")
+        return {
+            "id": company_id,
+            "name": company_name,
+            "code": company_code,
+            "email": user.get("email"),
+            "phone": None,
+            "address": None,
+            "logo_url": None
+        }
+    
+    return company
+
+@api_router.put("/company/info")
+async def update_company_info(company_data: dict, user: dict = Depends(get_current_user)):
+    """Update company information"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, "firma_admin"]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    company_id = user.get("company_id")
+    
+    update_data = {
+        "id": company_id,
+        "name": company_data.get("name"),
+        "phone": company_data.get("phone"),
+        "address": company_data.get("address"),
+        "logo_url": company_data.get("logo_url"),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Remove None values
+    update_data = {k: v for k, v in update_data.items() if v is not None}
+    
+    await db.company.update_one(
+        {"id": company_id},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Firma bilgileri güncellendi"}
+
 # ============== INTEGRATIONS ROUTES ==============
 class IntegrationCreate(BaseModel):
     platform_id: str
