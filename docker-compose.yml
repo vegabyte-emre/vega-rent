@@ -36,6 +36,7 @@ services:
       - portainer_network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      - "portainer:172.17.0.2"
 
   superadmin_mongodb:
     image: mongo:6
