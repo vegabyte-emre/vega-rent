@@ -25,6 +25,7 @@ import {
   Wallet,
   FileCheck,
   CalendarDays,
+  Link2,
 } from "lucide-react";
 
 // Check if we're on panel subdomain
@@ -40,6 +41,7 @@ const menuItems = [
   { icon: MapPin, label: "GPS Takip", path: `${pathPrefix}/gps`, roles: ["firma_admin", "operasyon"] },
   { icon: Wallet, label: "HGS Takip", path: `${pathPrefix}/hgs`, roles: ["firma_admin", "operasyon"] },
   { icon: FileCheck, label: "KABİS", path: `${pathPrefix}/kabis`, roles: ["firma_admin", "operasyon"] },
+  { icon: Link2, label: "Entegrasyonlar", path: `${pathPrefix}/integrations`, roles: ["firma_admin"] },
   { icon: CreditCard, label: "Ödemeler", path: `${pathPrefix}/payments`, roles: ["firma_admin", "muhasebe"] },
   { icon: FileText, label: "Raporlar", path: `${pathPrefix}/reports`, roles: ["firma_admin", "muhasebe"] },
   { icon: Palette, label: "Tema Mağazası", path: `${pathPrefix}/theme-store`, roles: ["firma_admin"] },
