@@ -140,6 +140,7 @@ function AppRoutes() {
         <Route path="/integrations" element={<Integrations />} />
         <Route path="/payments" element={<Payments />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/locations" element={<Locations />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/theme-store" element={<ThemeStore />} />
         <Route path="/support" element={<Support />} />
