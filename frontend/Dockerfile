@@ -8,17 +8,17 @@ ENV NODE_OPTIONS=--max_old_space_size=4096
 ENV CI=false
 ENV GENERATE_SOURCEMAP=false
 
-# Copy package.json only (yarn.lock may not be in git)
+# Copy package.json
 COPY package.json ./
 
-# Install ALL dependencies (including devDependencies for craco build)
-RUN yarn install --network-timeout 600000
+# Install ALL dependencies using npm (more reliable in Docker)
+RUN npm install --legacy-peer-deps
 
 # Copy all source files
 COPY . .
 
 # Build the app with craco
-RUN yarn build
+RUN npm run build
 
 # Production stage - serve with nginx
 FROM nginx:alpine
