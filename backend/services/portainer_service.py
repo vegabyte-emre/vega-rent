@@ -1211,22 +1211,24 @@ class PortainerService:
         await asyncio.sleep(10)
         
         try:
-            # Step 1: Copy frontend from template
+            # Step 1: Copy frontend from template (config.js will be created separately with correct URL)
             logger.info(f"[FULL-DEPLOY] Step 1: Copying frontend...")
             results['frontend_copy'] = await self.copy_from_template(
                 template_container="rentacar_template_frontend",
                 target_container=frontend_container,
                 source_path="/usr/share/nginx/html",
-                dest_path="/usr/share/nginx"
+                dest_path="/usr/share/nginx",
+                exclude_files=["config.js"]
             )
             
-            # Step 2: Copy backend from template
+            # Step 2: Copy backend from template (exclude .env - will be created with tenant settings)
             logger.info(f"[FULL-DEPLOY] Step 2: Copying backend...")
             results['backend_copy'] = await self.copy_from_template(
                 template_container="rentacar_template_backend",
                 target_container=backend_container,
                 source_path="/app",
-                dest_path="/"
+                dest_path="/",
+                exclude_files=[".env"]
             )
             
             # Step 3: Install backend dependencies
