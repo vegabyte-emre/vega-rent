@@ -23,6 +23,9 @@ load_dotenv(ROOT_DIR / '.env')
 
 # Import Portainer service
 from services.portainer_service import portainer_service
+from services.arvento_service import ArventoService
+from services.kabis_service import KabisService, kabis_service
+from services.hgs_service import HGSService, hgs_service
 import subprocess
 import tarfile
 import io
