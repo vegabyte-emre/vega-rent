@@ -114,8 +114,12 @@ export function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Hoş Geldiniz, {user?.full_name}</h1>
-          <p className="text-muted-foreground mt-1">İşte bugünün özeti</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {company?.name || "Rent A Car"} 
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Hoş Geldiniz, {user?.full_name} • İşte bugünün özeti
+          </p>
         </div>
         <Button onClick={fetchDashboardData} variant="outline" size="sm" data-testid="refresh-dashboard">
           <RefreshCw className="h-4 w-4 mr-2" />
