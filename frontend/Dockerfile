@@ -8,17 +8,11 @@ ENV NODE_OPTIONS=--max_old_space_size=4096
 ENV CI=false
 ENV GENERATE_SOURCEMAP=false
 
-# Copy package files (yarn.lock is optional)
+# Copy package.json only (yarn.lock may not be in git)
 COPY package.json ./
-COPY yarn.lock* ./
 
 # Install ALL dependencies (including devDependencies for craco build)
-# Use --frozen-lockfile only if yarn.lock exists
-RUN if [ -f yarn.lock ]; then \
-      yarn install --frozen-lockfile --network-timeout 600000; \
-    else \
-      yarn install --network-timeout 600000; \
-    fi
+RUN yarn install --network-timeout 600000
 
 # Copy all source files
 COPY . .
