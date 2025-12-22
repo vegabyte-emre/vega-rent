@@ -441,6 +441,24 @@ async def list_reservations(status: Optional[ReservationStatus] = None, user: di
         result.append(ReservationResponse(**r))
     return result
 
+@app.get("/api/reservations/{reservation_id}")
+async def get_reservation_detail(reservation_id: str, user: dict = Depends(get_current_user)):
+    """Get single reservation detail with vehicle and customer info"""
+    reservation = await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Rezervasyon bulunamadı")
+    
+    # Get vehicle info
+    vehicle = await db.vehicles.find_one({"id": reservation.get("vehicle_id")}, {"_id": 0})
+    reservation["vehicle"] = vehicle
+    
+    # Get customer info if exists
+    if reservation.get("customer_id"):
+        customer = await db.customers.find_one({"id": reservation.get("customer_id")}, {"_id": 0})
+        reservation["customer"] = customer
+    
+    return reservation
+
 @app.patch("/api/reservations/{reservation_id}/status")
 async def update_reservation_status(reservation_id: str, status_update: dict, user: dict = Depends(get_current_user)):
     new_status = status_update.get("status")
@@ -469,6 +487,113 @@ async def update_reservation_status(reservation_id: str, status_update: dict, us
     )
     
     return {"success": True, "message": "Reservation status updated"}
+
+# ============== DELIVERY & RETURN (Mobil App) ==============
+
+class DeliveryCreate(BaseModel):
+    reservation_id: str
+    km_reading: int
+    fuel_level: int
+    photos: List[str] = []
+    notes: Optional[str] = None
+    kvkk_consent: bool = False
+
+@app.post("/api/deliveries")
+async def create_delivery(data: DeliveryCreate, user: dict = Depends(get_current_user)):
+    """Araç teslim işlemi - Operasyon Mobil App"""
+    reservation = await db.reservations.find_one({"id": data.reservation_id}, {"_id": 0})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Rezervasyon bulunamadı")
+    
+    delivery = {
+        "id": str(uuid.uuid4()),
+        "reservation_id": data.reservation_id,
+        "vehicle_id": reservation.get("vehicle_id"),
+        "km_reading": data.km_reading,
+        "fuel_level": data.fuel_level,
+        "photos": data.photos,
+        "notes": data.notes,
+        "kvkk_consent": data.kvkk_consent,
+        "delivered_by": user.get("id"),
+        "delivered_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.deliveries.insert_one(delivery)
+    
+    # Update reservation status to active
+    await db.reservations.update_one(
+        {"id": data.reservation_id},
+        {"$set": {"status": "active", "delivery_id": delivery["id"], "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Update vehicle status and km
+    await db.vehicles.update_one(
+        {"id": reservation.get("vehicle_id")},
+        {"$set": {"status": "rented", "current_km": data.km_reading, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "delivery_id": delivery["id"], "message": "Araç teslim edildi"}
+
+class ReturnCreate(BaseModel):
+    reservation_id: str
+    km_reading: int
+    fuel_level: int
+    photos: List[str] = []
+    damage_photos: List[str] = []
+    damage_notes: Optional[str] = None
+    extra_charges: Optional[float] = 0
+    notes: Optional[str] = None
+
+@app.post("/api/returns")
+async def create_return(data: ReturnCreate, user: dict = Depends(get_current_user)):
+    """Araç iade işlemi - Operasyon Mobil App"""
+    reservation = await db.reservations.find_one({"id": data.reservation_id}, {"_id": 0})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Rezervasyon bulunamadı")
+    
+    # Get delivery info to calculate km driven
+    delivery = await db.deliveries.find_one({"reservation_id": data.reservation_id}, {"_id": 0})
+    km_driven = data.km_reading - (delivery.get("km_reading", 0) if delivery else 0)
+    
+    return_record = {
+        "id": str(uuid.uuid4()),
+        "reservation_id": data.reservation_id,
+        "vehicle_id": reservation.get("vehicle_id"),
+        "km_reading": data.km_reading,
+        "km_driven": km_driven,
+        "fuel_level": data.fuel_level,
+        "photos": data.photos,
+        "damage_photos": data.damage_photos,
+        "damage_notes": data.damage_notes,
+        "extra_charges": data.extra_charges,
+        "notes": data.notes,
+        "has_damage": len(data.damage_photos) > 0 or bool(data.damage_notes),
+        "returned_by": user.get("id"),
+        "returned_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.returns.insert_one(return_record)
+    
+    # Update reservation status to completed
+    await db.reservations.update_one(
+        {"id": data.reservation_id},
+        {"$set": {
+            "status": "completed", 
+            "return_id": return_record["id"],
+            "extra_charges": data.extra_charges,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update vehicle status and km
+    await db.vehicles.update_one(
+        {"id": reservation.get("vehicle_id")},
+        {"$set": {"status": "available", "current_km": data.km_reading, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "return_id": return_record["id"], "km_driven": km_driven, "message": "Araç iade alındı"}
 
 # ============== PRICE RULES ROUTES ==============
 @app.post("/api/price-rules", response_model=PriceRuleResponse)
