@@ -90,11 +90,13 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    setCompany(null);
     delete axios.defaults.headers.common["Authorization"];
   };
 
   const value = {
     user,
+    company,
     token,
     loading,
     login,
