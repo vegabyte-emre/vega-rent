@@ -19,6 +19,7 @@ export function SuperAdminSettings() {
 
   useEffect(() => {
     checkTraefikStatus();
+    checkMasterTemplateStatus();
   }, []);
 
   const checkTraefikStatus = async () => {
@@ -30,6 +31,32 @@ export function SuperAdminSettings() {
       setTraefikStatus({ installed: false, status: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkMasterTemplateStatus = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/superadmin/template/status`);
+      setMasterTemplateStatus(response.data);
+    } catch (error) {
+      setMasterTemplateStatus({ status: 'unknown' });
+    }
+  };
+
+  const updateMasterTemplate = async () => {
+    setUpdatingMasterTemplate(true);
+    try {
+      const response = await axios.post(`${API_URL}/api/superadmin/template/update-master`);
+      if (response.data.success) {
+        toast.success("Master template başarıyla güncellendi!");
+        checkMasterTemplateStatus();
+      } else {
+        toast.error(response.data.error || "Template güncelleme başarısız");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Master template güncellenemedi");
+    } finally {
+      setUpdatingMasterTemplate(false);
     }
   };
 
