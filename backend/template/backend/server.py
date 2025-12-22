@@ -891,6 +891,209 @@ async def integration_webhook(webhook_data: dict):
     logger.info(f"Received webhook: {webhook_data}")
     return {"success": True, "message": "Webhook received"}
 
+# ============== PUBLIC API (Mobil Uygulama & Landing Page) ==============
+
+@app.get("/api/public/company")
+async def get_public_company_info():
+    """Public: Get company info for landing page"""
+    company = await db.company.find_one({}, {"_id": 0})
+    if not company:
+        return {
+            "name": os.environ.get("COMPANY_NAME", "Rent A Car"),
+            "phone": None,
+            "email": None,
+            "address": None,
+            "logo_url": None,
+            "working_hours": "09:00 - 18:00",
+            "description": "Güvenilir araç kiralama hizmeti"
+        }
+    return company
+
+@app.get("/api/public/vehicles")
+async def get_public_vehicles(
+    segment: Optional[str] = None,
+    transmission: Optional[str] = None,
+    fuel_type: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None
+):
+    """Public: Get available vehicles for customers"""
+    query = {"status": "available"}
+    
+    if segment:
+        query["segment"] = segment
+    if transmission:
+        query["transmission"] = transmission
+    if fuel_type:
+        query["fuel_type"] = fuel_type
+    
+    vehicles = await db.vehicles.find(query, {"_id": 0}).to_list(100)
+    
+    # Get price rules for daily rates
+    price_rules = await db.price_rules.find({}, {"_id": 0}).to_list(100)
+    price_map = {r.get("vehicle_id"): r.get("daily_rate", 0) for r in price_rules}
+    
+    result = []
+    for v in vehicles:
+        daily_rate = price_map.get(v.get("id"), v.get("daily_rate", 0))
+        if min_price and daily_rate < min_price:
+            continue
+        if max_price and daily_rate > max_price:
+            continue
+        v["daily_rate"] = daily_rate
+        result.append(v)
+    
+    return result
+
+@app.get("/api/public/vehicles/{vehicle_id}")
+async def get_public_vehicle_detail(vehicle_id: str):
+    """Public: Get vehicle detail"""
+    vehicle = await db.vehicles.find_one({"id": vehicle_id}, {"_id": 0})
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    # Get price info
+    price_rule = await db.price_rules.find_one({"vehicle_id": vehicle_id}, {"_id": 0})
+    if price_rule:
+        vehicle["daily_rate"] = price_rule.get("daily_rate", 0)
+        vehicle["weekly_rate"] = price_rule.get("weekly_rate", 0)
+        vehicle["monthly_rate"] = price_rule.get("monthly_rate", 0)
+    
+    return vehicle
+
+class PublicCustomerRegister(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    phone: str
+    tc_no: Optional[str] = None
+
+@app.post("/api/public/customer/register")
+async def register_public_customer(data: PublicCustomerRegister):
+    """Public: Customer registration"""
+    existing = await db.customers.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu email zaten kayıtlı")
+    
+    customer = {
+        "id": str(uuid.uuid4()),
+        "email": data.email,
+        "password_hash": pwd_context.hash(data.password),
+        "full_name": data.full_name,
+        "phone": data.phone,
+        "tc_no": data.tc_no,
+        "is_verified": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.customers.insert_one(customer)
+    
+    return {"success": True, "message": "Kayıt başarılı", "customer_id": customer["id"]}
+
+class PublicCustomerLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+@app.post("/api/public/customer/login")
+async def login_public_customer(data: PublicCustomerLogin):
+    """Public: Customer login"""
+    customer = await db.customers.find_one({"email": data.email})
+    if not customer:
+        raise HTTPException(status_code=401, detail="Geçersiz email veya şifre")
+    
+    if not pwd_context.verify(data.password, customer.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Geçersiz email veya şifre")
+    
+    token = jwt.encode(
+        {"sub": customer["id"], "role": "customer", "exp": datetime.now(timezone.utc) + timedelta(hours=24)},
+        JWT_SECRET, algorithm=JWT_ALGORITHM
+    )
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "customer": {
+            "id": customer["id"],
+            "email": customer["email"],
+            "full_name": customer["full_name"],
+            "phone": customer.get("phone")
+        }
+    }
+
+class PublicReservationCreate(BaseModel):
+    vehicle_id: str
+    customer_name: str
+    customer_email: EmailStr
+    customer_phone: str
+    start_date: str
+    end_date: str
+    pickup_location: Optional[str] = None
+    dropoff_location: Optional[str] = None
+    notes: Optional[str] = None
+
+@app.post("/api/public/reservations")
+async def create_public_reservation(data: PublicReservationCreate):
+    """Public: Create online reservation"""
+    # Check vehicle availability
+    vehicle = await db.vehicles.find_one({"id": data.vehicle_id, "status": "available"}, {"_id": 0})
+    if not vehicle:
+        raise HTTPException(status_code=400, detail="Araç müsait değil")
+    
+    # Calculate price
+    start = datetime.fromisoformat(data.start_date.replace("Z", "+00:00"))
+    end = datetime.fromisoformat(data.end_date.replace("Z", "+00:00"))
+    days = max(1, (end - start).days)
+    
+    price_rule = await db.price_rules.find_one({"vehicle_id": data.vehicle_id}, {"_id": 0})
+    daily_rate = price_rule.get("daily_rate", 500) if price_rule else 500
+    total_price = days * daily_rate
+    
+    reservation = {
+        "id": str(uuid.uuid4()),
+        "vehicle_id": data.vehicle_id,
+        "customer_name": data.customer_name,
+        "customer_email": data.customer_email,
+        "customer_phone": data.customer_phone,
+        "start_date": data.start_date,
+        "end_date": data.end_date,
+        "pickup_location": data.pickup_location,
+        "dropoff_location": data.dropoff_location,
+        "notes": data.notes,
+        "status": "pending",
+        "payment_status": "pending",
+        "total_price": total_price,
+        "source": "online",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.reservations.insert_one(reservation)
+    
+    # Update vehicle status
+    await db.vehicles.update_one({"id": data.vehicle_id}, {"$set": {"status": "reserved"}})
+    
+    return {
+        "success": True,
+        "message": "Rezervasyon oluşturuldu",
+        "reservation_id": reservation["id"],
+        "total_price": total_price,
+        "status": "pending"
+    }
+
+@app.get("/api/public/reservation/{reservation_id}")
+async def get_public_reservation(reservation_id: str, email: str):
+    """Public: Check reservation status"""
+    reservation = await db.reservations.find_one(
+        {"id": reservation_id, "customer_email": email}, 
+        {"_id": 0}
+    )
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Rezervasyon bulunamadı")
+    
+    vehicle = await db.vehicles.find_one({"id": reservation.get("vehicle_id")}, {"_id": 0})
+    reservation["vehicle"] = vehicle
+    
+    return reservation
+
 # ============== HEALTH CHECK ==============
 @app.get("/api/health")
 async def health_check():
