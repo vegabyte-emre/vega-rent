@@ -2151,6 +2151,7 @@ async def deploy_local_build_to_tenant(request: DeployBuildRequest, user: dict =
             "success": True,
             "message": f"Build deployed to {frontend_container}",
             "api_url": api_url,
+            "preserved_url": existing_url,
             "container": frontend_container,
             "tar_size": len(tar_data),
             "config_updated": config_result.get('success', False),
