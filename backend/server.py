@@ -2034,13 +2034,18 @@ async def deploy_local_build_to_tenant(request: DeployBuildRequest, user: dict =
         logger.info(f"[DEPLOY-BUILD] Updating config.js...")
         config_result = await portainer_service.create_config_js(frontend_container, api_url)
         
+        # Restart nginx container to pick up new files
+        logger.info(f"[DEPLOY-BUILD] Restarting {frontend_container}...")
+        restart_result = await portainer_service.restart_container(frontend_container)
+        
         return {
             "success": True,
             "message": f"Build deployed to {frontend_container}",
             "api_url": api_url,
             "container": frontend_container,
             "tar_size": len(tar_data),
-            "config_updated": config_result.get('success', False)
+            "config_updated": config_result.get('success', False),
+            "container_restarted": restart_result.get('success', False)
         }
         
     except Exception as e:
