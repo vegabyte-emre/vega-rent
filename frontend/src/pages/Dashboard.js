@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
@@ -35,9 +35,10 @@ export function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      const apiUrl = getApiUrl();
       const [statsRes, reservationsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/dashboard/stats`),
-        axios.get(`${API_URL}/api/reservations`),
+        axios.get(`${apiUrl}/api/dashboard/stats`),
+        axios.get(`${apiUrl}/api/reservations`),
       ]);
       setStats(statsRes.data);
       setRecentReservations(reservationsRes.data.slice(0, 5));
