@@ -8,134 +8,20 @@ __pycache__/
 .emergent/
 .vscode/
 .idea/
--e 
+
 # Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/1.pack
-frontend/node_modules/.cache/default-development/2.pack
-frontend/node_modules/.cache/default-development/4.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/6.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+*.env.local
+*.env.development
+*.env.production
+
+# Cache
+frontend/node_modules/.cache/
+
+# Build outputs (keep frontend/build for deployment)
+# !frontend/build/
+
+# Template node_modules (install on deploy)
+template/frontend/node_modules/
 frontend/node_modules/.cache/default-development/7.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/3.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+frontend/node_modules/.cache/default-development/4.pack
+frontend/node_modules/.cache/default-development/2.pack
