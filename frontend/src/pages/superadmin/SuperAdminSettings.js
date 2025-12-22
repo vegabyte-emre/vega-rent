@@ -1,16 +1,17 @@
-import { API_URL } from '../../config/api';
+import getApiUrl from '../../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { Settings, Server, Globe, Shield, Database, Loader2, CheckCircle, XCircle, ExternalLink, Upload, Monitor, RefreshCw, Package } from "lucide-react";
+import { Settings, Server, Globe, Shield, Database, Loader2, CheckCircle, XCircle, ExternalLink, Upload, Monitor, RefreshCw, Package, Github, FolderGit2 } from "lucide-react";
 import { toast } from "sonner";
 
 
 export function SuperAdminSettings() {
   const [traefikStatus, setTraefikStatus] = useState(null);
+  const [templateInfo, setTemplateInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [deployingFrontend, setDeployingFrontend] = useState(false);
@@ -20,12 +21,13 @@ export function SuperAdminSettings() {
   useEffect(() => {
     checkTraefikStatus();
     checkMasterTemplateStatus();
+    loadTemplateInfo();
   }, []);
 
   const checkTraefikStatus = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/superadmin/traefik/status`);
+      const response = await axios.get(`${getApiUrl()}/api/superadmin/traefik/status`);
       setTraefikStatus(response.data);
     } catch (error) {
       setTraefikStatus({ installed: false, status: 'error' });
@@ -36,20 +38,30 @@ export function SuperAdminSettings() {
 
   const checkMasterTemplateStatus = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/superadmin/template/status`);
+      const response = await axios.get(`${getApiUrl()}/api/superadmin/template/status`);
       setMasterTemplateStatus(response.data);
     } catch (error) {
       setMasterTemplateStatus({ status: 'unknown' });
     }
   };
 
+  const loadTemplateInfo = async () => {
+    try {
+      const response = await axios.get(`${getApiUrl()}/api/superadmin/template/info`);
+      setTemplateInfo(response.data);
+    } catch (error) {
+      console.error("Template info yüklenemedi:", error);
+    }
+  };
+
   const updateMasterTemplate = async () => {
     setUpdatingMasterTemplate(true);
     try {
-      const response = await axios.post(`${API_URL}/api/superadmin/template/update-master`);
+      const response = await axios.post(`${getApiUrl()}/api/superadmin/template/update-master`);
       if (response.data.success) {
         toast.success("Master template başarıyla güncellendi!");
         checkMasterTemplateStatus();
+        loadTemplateInfo();
       } else {
         toast.error(response.data.error || "Template güncelleme başarısız");
       }
