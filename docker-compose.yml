@@ -30,13 +30,15 @@ services:
     ports:
       - "8001:8001"
     working_dir: /app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./backend:/app
     environment:
       - MONGO_URL=mongodb://superadmin_mongodb:27017
       - DB_NAME=superadmin_db
       - JWT_SECRET=${JWT_SECRET:-fleetease_super_secret_key_2024}
-      - PORTAINER_URL=${PORTAINER_URL:-https://72.61.158.147:9443}
+      - PORTAINER_URL=${PORTAINER_URL:-https://host.docker.internal:9443}
       - PORTAINER_API_KEY=${PORTAINER_API_KEY}
       - PORTAINER_ENDPOINT_ID=${PORTAINER_ENDPOINT_ID:-3}
       - FRONTEND_URL=${FRONTEND_URL:-http://72.61.158.147:3000}
