@@ -1133,6 +1133,7 @@ async def provision_company(company_id: str, background_tasks: BackgroundTasks, 
             admin_email = company.get("admin_email", f"admin@{domain}")
             admin_password = company.get("admin_password", "admin123")
             mongo_port = result.get("ports", {}).get("mongodb")
+            backend_port = result.get("ports", {}).get("backend")
             
             # Run full deployment via Portainer API
             deploy_result = await portainer_service.full_tenant_deployment(
@@ -1140,7 +1141,8 @@ async def provision_company(company_id: str, background_tasks: BackgroundTasks, 
                 domain=domain,
                 admin_email=admin_email,
                 admin_password=admin_password,
-                mongo_port=mongo_port
+                mongo_port=mongo_port,
+                backend_port=backend_port
             )
             
             logger.info(f"[PROVISION] Full deployment result: {deploy_result.get('success')}")
