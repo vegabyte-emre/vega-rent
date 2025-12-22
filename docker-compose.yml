@@ -36,7 +36,7 @@ services:
       - MONGO_URL=mongodb://superadmin_mongodb:27017
       - DB_NAME=superadmin_db
       - JWT_SECRET=${JWT_SECRET:-fleetease_super_secret_key_2024}
-      - PORTAINER_URL=${PORTAINER_URL:-https://172.17.0.2:9443}
+      - PORTAINER_URL=${PORTAINER_URL:-https://172.17.0.1:9443}
       - PORTAINER_API_KEY=${PORTAINER_API_KEY}
       - PORTAINER_ENDPOINT_ID=${PORTAINER_ENDPOINT_ID:-3}
       - FRONTEND_URL=${FRONTEND_URL:-http://72.61.158.147:3000}
@@ -45,7 +45,8 @@ services:
       - superadmin_mongodb
     networks:
       - app_network
-      - bridge_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   superadmin_mongodb:
     image: mongo:6
@@ -59,9 +60,6 @@ services:
 networks:
   app_network:
     driver: bridge
-  bridge_network:
-    external: true
-    name: bridge
 
 volumes:
   mongo_data:
