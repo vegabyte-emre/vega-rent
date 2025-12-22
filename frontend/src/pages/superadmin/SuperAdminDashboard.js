@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 export function SuperAdminDashboard() {
   const [stats, setStats] = useState(null);
-  const [portainerStatus, setPortainerStatus] = useState(null);
+  const [portainerStatus, setPortainerStatus] = useState({ loading: true });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,12 +27,18 @@ export function SuperAdminDashboard() {
     }
   };
 
-  const fetchPortainerStatus = async () => {
+  const fetchPortainerStatus = async (retryCount = 0) => {
     try {
-      const response = await axios.get(`${API_URL}/api/superadmin/portainer/status`);
-      setPortainerStatus(response.data);
+      const response = await axios.get(`${API_URL}/api/superadmin/portainer/status`, {
+        timeout: 10000
+      });
+      setPortainerStatus({ ...response.data, loading: false });
     } catch (error) {
-      setPortainerStatus({ connected: false, error: "Bağlantı hatası" });
+      if (retryCount < 2) {
+        setTimeout(() => fetchPortainerStatus(retryCount + 1), 2000);
+      } else {
+        setPortainerStatus({ connected: false, error: "Bağlantı hatası", loading: false });
+      }
     }
   };
 
