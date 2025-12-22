@@ -7,6 +7,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [company, setCompany] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
 
@@ -23,11 +24,24 @@ export function AuthProvider({ children }) {
     try {
       const response = await axios.get(`${getApiUrl()}/api/auth/me`);
       setUser(response.data);
+      // Fetch company info if user has company_id
+      if (response.data.company_id) {
+        fetchCompany();
+      }
     } catch (error) {
       console.error("Error fetching user:", error);
       logout();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCompany = async () => {
+    try {
+      const response = await axios.get(`${getApiUrl()}/api/company/info`);
+      setCompany(response.data);
+    } catch (error) {
+      console.error("Error fetching company:", error);
     }
   };
 
@@ -42,6 +56,10 @@ export function AuthProvider({ children }) {
       setToken(access_token);
       setUser(userData);
       axios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
+      // Fetch company after login
+      if (userData.company_id) {
+        setTimeout(fetchCompany, 100);
+      }
       return { success: true };
     } catch (error) {
       return {
