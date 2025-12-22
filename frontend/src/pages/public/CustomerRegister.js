@@ -1,4 +1,4 @@
-import { API_URL } from '../../config/api';
+import getApiUrl from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
@@ -32,7 +32,7 @@ export function CustomerRegister() {
 
     try {
       // First register as user
-      const userResponse = await axios.post(`${API_URL}/api/auth/register`, {
+      const userResponse = await axios.post(`${getApiUrl()}/api/auth/register`, {
         email: formData.email,
         password: formData.password,
         full_name: formData.full_name,
@@ -44,7 +44,7 @@ export function CustomerRegister() {
       
       // Then create customer record
       axios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
-      await axios.post(`${API_URL}/api/customers`, {
+      await axios.post(`${getApiUrl()}/api/customers`, {
         tc_no: formData.tc_no,
         full_name: formData.full_name,
         email: formData.email,

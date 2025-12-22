@@ -1,4 +1,4 @@
-import { API_URL } from '../../config/api';
+import getApiUrl from '../../config/api';
 import React, { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -49,7 +49,7 @@ export function VehicleList() {
   const fetchVehicles = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/public/vehicles`);
+      const response = await axios.get(`${getApiUrl()}/api/public/vehicles`);
       setVehicles(response.data);
     } catch (error) {
       console.error("Error fetching vehicles:", error);

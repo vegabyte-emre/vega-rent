@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
@@ -75,7 +75,7 @@ export function Vehicles() {
     try {
       setLoading(true);
       const params = statusFilter !== "all" ? { status: statusFilter } : {};
-      const response = await axios.get(`${API_URL}/api/vehicles`, { params });
+      const response = await axios.get(`${getApiUrl()}/api/vehicles`, { params });
       setVehicles(response.data);
     } catch (error) {
       toast.error("Araçlar yüklenirken hata oluştu");
@@ -92,7 +92,7 @@ export function Vehicles() {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.post(`${API_URL}/api/vehicles`, formData);
+      await axios.post(`${getApiUrl()}/api/vehicles`, formData);
       toast.success("Araç başarıyla eklendi");
       setIsAddOpen(false);
       setFormData({

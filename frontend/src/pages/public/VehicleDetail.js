@@ -1,4 +1,4 @@
-import { API_URL } from '../../config/api';
+import getApiUrl from '../../config/api';
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -43,7 +43,7 @@ export function VehicleDetail() {
   const fetchVehicle = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/public/vehicles/${id}`);
+      const response = await axios.get(`${getApiUrl()}/api/public/vehicles/${id}`);
       setVehicle(response.data);
     } catch (error) {
       toast.error("Araç bilgileri yüklenirken hata oluştu");

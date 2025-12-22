@@ -1,4 +1,4 @@
-import { API_URL } from '../../config/api';
+import getApiUrl from '../../config/api';
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -45,7 +45,7 @@ export function CustomerDashboard() {
   const fetchReservations = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/reservations`);
+      const response = await axios.get(`${getApiUrl()}/api/reservations`);
       setReservations(response.data);
     } catch (error) {
       console.error("Error fetching reservations:", error);

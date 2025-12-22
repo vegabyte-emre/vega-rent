@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
@@ -69,8 +69,8 @@ export function ThemeStore() {
     try {
       setLoading(true);
       const [themesRes, settingsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/themes`),
-        axios.get(`${API_URL}/api/theme-settings`),
+        axios.get(`${getApiUrl()}/api/themes`),
+        axios.get(`${getApiUrl()}/api/theme-settings`),
       ]);
       setThemes(themesRes.data);
       // Ensure slider_images is always an array
@@ -93,7 +93,7 @@ export function ThemeStore() {
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API_URL}/api/theme-settings`, settings);
+      await axios.put(`${getApiUrl()}/api/theme-settings`, settings);
       toast.success("Ayarlar kaydedildi!");
     } catch (error) {
       toast.error("Ayarlar kaydedilirken hata oluştu");
@@ -108,7 +108,7 @@ export function ThemeStore() {
     
     setSaving(true);
     try {
-      await axios.put(`${API_URL}/api/theme-settings`, newSettings);
+      await axios.put(`${getApiUrl()}/api/theme-settings`, newSettings);
       toast.success("Tema aktifleştirildi!");
     } catch (error) {
       toast.error("Tema aktifleştirilemedi");
@@ -145,13 +145,13 @@ export function ThemeStore() {
       formData.append('file', file);
       formData.append('type', 'logo');
 
-      const response = await axios.post(`${API_URL}/api/upload/image`, formData, {
+      const response = await axios.post(`${getApiUrl()}/api/upload/image`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (response.data.success) {
         // Use data_uri for immediate display and persistent storage
-        const imageUrl = response.data.data_uri || `${API_URL}${response.data.url}`;
+        const imageUrl = response.data.data_uri || `${getApiUrl()}${response.data.url}`;
         handleSettingChange('logo_url', imageUrl);
         toast.success("Logo yüklendi!");
       }
@@ -185,13 +185,13 @@ export function ThemeStore() {
       formData.append('file', file);
       formData.append('type', 'slider');
 
-      const response = await axios.post(`${API_URL}/api/upload/image`, formData, {
+      const response = await axios.post(`${getApiUrl()}/api/upload/image`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (response.data.success) {
         // Use data_uri for immediate display and persistent storage
-        const imageUrl = response.data.data_uri || `${API_URL}${response.data.url}`;
+        const imageUrl = response.data.data_uri || `${getApiUrl()}${response.data.url}`;
         const newSlide = {
           url: imageUrl,
           title: "",

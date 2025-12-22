@@ -1,4 +1,4 @@
-import { API_URL } from '../../config/api';
+import getApiUrl from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
@@ -22,7 +22,7 @@ export function CustomerLogin() {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/api/auth/login`, {
+      const response = await axios.post(`${getApiUrl()}/api/auth/login`, {
         email,
         password,
       });

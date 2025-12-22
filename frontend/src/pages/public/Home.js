@@ -1,4 +1,4 @@
-import { API_URL } from '../../config/api';
+import getApiUrl from '../../config/api';
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -55,8 +55,8 @@ export function Home() {
     try {
       setLoading(true);
       const [vehiclesRes, themeRes] = await Promise.all([
-        axios.get(`${API_URL}/api/public/vehicles?limit=8`),
-        axios.get(`${API_URL}/api/public/theme-settings`),
+        axios.get(`${getApiUrl()}/api/public/vehicles?limit=8`),
+        axios.get(`${getApiUrl()}/api/public/theme-settings`),
       ]);
       setVehicles(vehiclesRes.data);
       setThemeData(themeRes.data);

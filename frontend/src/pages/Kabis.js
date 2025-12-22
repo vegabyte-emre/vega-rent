@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { API_URL } from "../config/api";
+import getApiUrl from '../config/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -88,10 +88,10 @@ export function Kabis() {
     setLoading(true);
     try {
       const [settingsRes, notificationsRes, vehiclesRes, customersRes] = await Promise.all([
-        axios.get(`${API_URL}/api/kabis/settings`),
-        axios.get(`${API_URL}/api/kabis/notifications`),
-        axios.get(`${API_URL}/api/vehicles`),
-        axios.get(`${API_URL}/api/customers`)
+        axios.get(`${getApiUrl()}/api/kabis/settings`),
+        axios.get(`${getApiUrl()}/api/kabis/notifications`),
+        axios.get(`${getApiUrl()}/api/vehicles`),
+        axios.get(`${getApiUrl()}/api/customers`)
       ]);
       
       setSettings(settingsRes.data);
@@ -123,7 +123,7 @@ export function Kabis() {
     }
     
     try {
-      const result = await axios.post(`${API_URL}/api/kabis/notifications`, newNotification);
+      const result = await axios.post(`${getApiUrl()}/api/kabis/notifications`, newNotification);
       
       if (result.data.success) {
         toast.success(result.data.message || "Bildirim olusturuldu");
@@ -152,7 +152,7 @@ export function Kabis() {
 
   const handleSaveSettings = async () => {
     try {
-      await axios.post(`${API_URL}/api/kabis/settings`, apiSettings);
+      await axios.post(`${getApiUrl()}/api/kabis/settings`, apiSettings);
       toast.success("KABIS ayarlari kaydedildi");
       setShowSettingsDialog(false);
       fetchData();
@@ -163,7 +163,7 @@ export function Kabis() {
 
   const handleCancelNotification = async (notificationId) => {
     try {
-      await axios.delete(`${API_URL}/api/kabis/notifications/${notificationId}`);
+      await axios.delete(`${getApiUrl()}/api/kabis/notifications/${notificationId}`);
       toast.success("Bildirim iptal edildi");
       fetchData();
     } catch (error) {

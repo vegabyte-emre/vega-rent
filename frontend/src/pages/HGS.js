@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { API_URL } from "../config/api";
+import getApiUrl from '../config/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -73,10 +73,10 @@ export function HGS() {
     setLoading(true);
     try {
       const [tagsRes, summaryRes, passagesRes, vehiclesRes] = await Promise.all([
-        axios.get(`${API_URL}/api/hgs/tags`),
-        axios.get(`${API_URL}/api/hgs/summary`),
-        axios.get(`${API_URL}/api/hgs/passages?limit=20`),
-        axios.get(`${API_URL}/api/vehicles`)
+        axios.get(`${getApiUrl()}/api/hgs/tags`),
+        axios.get(`${getApiUrl()}/api/hgs/summary`),
+        axios.get(`${getApiUrl()}/api/hgs/passages?limit=20`),
+        axios.get(`${getApiUrl()}/api/vehicles`)
       ]);
       setTags(tagsRes.data);
       setSummary(summaryRes.data);
@@ -91,7 +91,7 @@ export function HGS() {
 
   const handleAddTag = async () => {
     try {
-      await axios.post(`${API_URL}/api/hgs/tags`, newTag);
+      await axios.post(`${getApiUrl()}/api/hgs/tags`, newTag);
       toast.success("HGS etiketi eklendi");
       setShowAddDialog(false);
       setNewTag({ vehicle_id: "", vehicle_plate: "", tag_number: "", balance: 0, min_balance_alert: 50 });
@@ -104,7 +104,7 @@ export function HGS() {
   const handleUpdateBalance = async () => {
     if (!selectedTag) return;
     try {
-      const result = await axios.put(`${API_URL}/api/hgs/tags/${selectedTag.id}/balance`, newBalance);
+      const result = await axios.put(`${getApiUrl()}/api/hgs/tags/${selectedTag.id}/balance`, newBalance);
       toast.success("Bakiye guncellendi");
       if (result.data.alert) {
         toast.warning(result.data.alert.message);
@@ -119,7 +119,7 @@ export function HGS() {
   const handleAddPassage = async () => {
     if (!selectedTag) return;
     try {
-      await axios.post(`${API_URL}/api/hgs/tags/${selectedTag.id}/passages`, {
+      await axios.post(`${getApiUrl()}/api/hgs/tags/${selectedTag.id}/passages`, {
         ...newPassage,
         passage_time: new Date().toISOString()
       });
@@ -135,7 +135,7 @@ export function HGS() {
   const handleDeleteTag = async (tagId) => {
     if (!window.confirm("Bu HGS etiketini silmek istediginizden emin misiniz?")) return;
     try {
-      await axios.delete(`${API_URL}/api/hgs/tags/${tagId}`);
+      await axios.delete(`${getApiUrl()}/api/hgs/tags/${tagId}`);
       toast.success("HGS etiketi silindi");
       fetchData();
     } catch (error) {

@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -49,7 +49,7 @@ export function Reports() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/dashboard/stats`);
+      const response = await axios.get(`${getApiUrl()}/api/dashboard/stats`);
       setStats(response.data);
     } catch (error) {
       toast.error("Raporlar yüklenirken hata oluştu");

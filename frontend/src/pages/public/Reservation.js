@@ -1,4 +1,4 @@
-import { API_URL } from '../../config/api';
+import getApiUrl from '../../config/api';
 import React, { useState, useEffect } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -68,7 +68,7 @@ export function Reservation() {
   const fetchVehicle = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/public/vehicles/${vehicleId}`);
+      const response = await axios.get(`${getApiUrl()}/api/public/vehicles/${vehicleId}`);
       setVehicle(response.data);
     } catch (error) {
       toast.error("Araç bilgileri yüklenirken hata oluştu");
@@ -110,7 +110,7 @@ export function Reservation() {
       // Create customer if not exists
       let customerId;
       try {
-        const customerResponse = await axios.post(`${API_URL}/api/customers`, {
+        const customerResponse = await axios.post(`${getApiUrl()}/api/customers`, {
           tc_no: formData.tc_no,
           full_name: formData.full_name,
           email: formData.email,
@@ -119,7 +119,7 @@ export function Reservation() {
         customerId = customerResponse.data.id;
       } catch (err) {
         // Customer might already exist, try to find them
-        const customersResponse = await axios.get(`${API_URL}/api/customers`);
+        const customersResponse = await axios.get(`${getApiUrl()}/api/customers`);
         const existingCustomer = customersResponse.data.find((c) => c.email === formData.email);
         if (existingCustomer) {
           customerId = existingCustomer.id;
@@ -129,7 +129,7 @@ export function Reservation() {
       }
 
       // Create reservation
-      await axios.post(`${API_URL}/api/reservations`, {
+      await axios.post(`${getApiUrl()}/api/reservations`, {
         vehicle_id: vehicleId,
         customer_id: customerId,
         start_date: pickupDate.toISOString(),

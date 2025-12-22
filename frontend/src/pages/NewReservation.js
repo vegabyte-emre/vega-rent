@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -47,8 +47,8 @@ export function NewReservation() {
     try {
       setLoading(true);
       const [vehiclesRes, customersRes] = await Promise.all([
-        axios.get(`${API_URL}/api/vehicles`, { params: { status: "available" } }),
-        axios.get(`${API_URL}/api/customers`),
+        axios.get(`${getApiUrl()}/api/vehicles`, { params: { status: "available" } }),
+        axios.get(`${getApiUrl()}/api/customers`),
       ]);
       setVehicles(vehiclesRes.data);
       setCustomers(customersRes.data);
@@ -80,7 +80,7 @@ export function NewReservation() {
 
     setSaving(true);
     try {
-      await axios.post(`${API_URL}/api/reservations`, {
+      await axios.post(`${getApiUrl()}/api/reservations`, {
         ...formData,
         start_date: formData.start_date.toISOString(),
         end_date: formData.end_date.toISOString(),

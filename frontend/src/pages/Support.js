@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -82,7 +82,7 @@ export const Support = () => {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/support/tickets`);
+      const response = await axios.get(`${getApiUrl()}/api/support/tickets`);
       setTickets(response.data || []);
     } catch (error) {
       toast.error('Destek talepleri yüklenemedi');
@@ -98,7 +98,7 @@ export const Support = () => {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/api/support/tickets`, newTicket);
+      const response = await axios.post(`${getApiUrl()}/api/support/tickets`, newTicket);
       toast.success(`Destek talebi oluşturuldu: ${response.data.ticket_number}`);
       setIsNewTicketOpen(false);
       setNewTicket({ subject: '', message: '', category: 'general', priority: 'medium' });
@@ -110,7 +110,7 @@ export const Support = () => {
 
   const handleViewTicket = async (ticket) => {
     try {
-      const response = await axios.get(`${API_URL}/api/support/tickets/${ticket.id}`);
+      const response = await axios.get(`${getApiUrl()}/api/support/tickets/${ticket.id}`);
       setSelectedTicket(response.data);
       setIsDetailOpen(true);
     } catch (error) {
@@ -122,13 +122,13 @@ export const Support = () => {
     if (!replyText.trim()) return;
 
     try {
-      await axios.post(`${API_URL}/api/support/tickets/${selectedTicket.id}/reply`, {
+      await axios.post(`${getApiUrl()}/api/support/tickets/${selectedTicket.id}/reply`, {
         message: replyText
       });
       toast.success('Yanıt gönderildi');
       setReplyText('');
       // Refresh ticket
-      const response = await axios.get(`${API_URL}/api/support/tickets/${selectedTicket.id}`);
+      const response = await axios.get(`${getApiUrl()}/api/support/tickets/${selectedTicket.id}`);
       setSelectedTicket(response.data);
       fetchTickets();
     } catch (error) {

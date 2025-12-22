@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -30,7 +30,7 @@ export function Payments() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/payments`);
+      const response = await axios.get(`${getApiUrl()}/api/payments`);
       setPayments(response.data);
     } catch (error) {
       toast.error("Ödemeler yüklenirken hata oluştu");

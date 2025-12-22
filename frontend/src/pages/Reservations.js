@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
@@ -58,7 +58,7 @@ export function Reservations() {
     try {
       setLoading(true);
       const params = statusFilter !== "all" ? { status: statusFilter } : {};
-      const response = await axios.get(`${API_URL}/api/reservations`, { params });
+      const response = await axios.get(`${getApiUrl()}/api/reservations`, { params });
       setReservations(response.data);
     } catch (error) {
       toast.error("Rezervasyonlar yüklenirken hata oluştu");
@@ -69,7 +69,7 @@ export function Reservations() {
 
   const updateStatus = async (reservationId, newStatus) => {
     try {
-      await axios.patch(`${API_URL}/api/reservations/${reservationId}/status?status=${newStatus}`);
+      await axios.patch(`${getApiUrl()}/api/reservations/${reservationId}/status?status=${newStatus}`);
       toast.success("Rezervasyon durumu güncellendi");
       fetchReservations();
     } catch (error) {

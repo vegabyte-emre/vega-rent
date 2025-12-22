@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent } from "../components/ui/card";
@@ -49,7 +49,7 @@ export function Companies() {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/companies`);
+      const response = await axios.get(`${getApiUrl()}/api/companies`);
       setCompanies(response.data);
     } catch (error) {
       toast.error("Firmalar yüklenirken hata oluştu");
@@ -66,7 +66,7 @@ export function Companies() {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.post(`${API_URL}/api/companies`, formData);
+      await axios.post(`${getApiUrl()}/api/companies`, formData);
       toast.success("Firma başarıyla eklendi");
       setIsAddOpen(false);
       setFormData({

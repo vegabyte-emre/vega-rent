@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -104,9 +104,9 @@ export const PriceCalendar = () => {
     try {
       setLoading(true);
       const [vehiclesRes, reservationsRes, priceRulesRes] = await Promise.all([
-        axios.get(`${API_URL}/api/vehicles`),
-        axios.get(`${API_URL}/api/reservations`),
-        axios.get(`${API_URL}/api/price-rules`).catch(() => ({ data: [] }))
+        axios.get(`${getApiUrl()}/api/vehicles`),
+        axios.get(`${getApiUrl()}/api/reservations`),
+        axios.get(`${getApiUrl()}/api/price-rules`).catch(() => ({ data: [] }))
       ]);
       setVehicles(vehiclesRes.data);
       setReservations(reservationsRes.data);
@@ -251,7 +251,7 @@ export const PriceCalendar = () => {
         const startDate = new Date(Math.min(...dates.map(d => d.date.getTime())));
         const endDate = new Date(Math.max(...dates.map(d => d.date.getTime())));
         
-        await axios.post(`${API_URL}/api/price-rules`, {
+        await axios.post(`${getApiUrl()}/api/price-rules`, {
           vehicle_id: vehicleId,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
@@ -277,7 +277,7 @@ export const PriceCalendar = () => {
       const vehicleIds = [...new Set(selectedDates.map(d => d.vehicleId))];
       
       for (const vehicleId of vehicleIds) {
-        await axios.patch(`${API_URL}/api/vehicles/${vehicleId}/status`, {
+        await axios.patch(`${getApiUrl()}/api/vehicles/${vehicleId}/status`, {
           status: statusForm.status
         });
       }
