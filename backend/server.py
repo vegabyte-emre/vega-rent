@@ -152,41 +152,121 @@ SUBSCRIPTION_PLANS = {
         "price_monthly": 0,
         "price_yearly": 0,
         "trial_days": 14,
-        "features": ["online_booking", "basic_reports"],
-        "description": "14 gün ücretsiz deneme"
+        "features": {
+            "admin_panel": True,
+            "landing_page": False,
+            "customer_portal": False,
+            "mobile_ops_app": False,
+            "mobile_customer_app": False,
+            "online_booking": True,
+            "basic_reports": True,
+            "advanced_reports": False,
+            "customer_management": False,
+            "sms_notifications": False,
+            "whatsapp": False,
+            "e_invoice": False,
+            "gps_tracking": False,
+            "hgs_tracking": False,
+            "kabis_integration": False,
+            "api_access": False,
+            "white_label": False,
+            "price_calendar": False
+        },
+        "description": "14 gün ücretsiz deneme",
+        "description_en": "14 days free trial"
     },
     "starter": {
         "name": "Başlangıç",
         "name_en": "Starter",
-        "max_vehicles": 10,
+        "max_vehicles": 15,
         "max_users": 5,
-        "price_monthly": 999,
-        "price_yearly": 9590,  # 2 months free
+        "price_monthly": 1499,
+        "price_yearly": 14390,  # 2 months free
         "trial_days": 0,
-        "features": ["online_booking", "basic_reports", "customer_management", "email_support"],
-        "description": "Küçük filolar için ideal"
+        "features": {
+            "admin_panel": True,
+            "landing_page": False,
+            "customer_portal": False,
+            "mobile_ops_app": False,
+            "mobile_customer_app": False,
+            "online_booking": True,
+            "basic_reports": True,
+            "advanced_reports": False,
+            "customer_management": True,
+            "sms_notifications": False,
+            "whatsapp": False,
+            "e_invoice": False,
+            "gps_tracking": False,
+            "hgs_tracking": False,
+            "kabis_integration": False,
+            "api_access": False,
+            "white_label": False,
+            "price_calendar": True
+        },
+        "description": "Küçük filolar için ideal - Sadece Yönetim Paneli",
+        "description_en": "Ideal for small fleets - Admin Panel only"
     },
     "professional": {
         "name": "Profesyonel",
         "name_en": "Professional",
         "max_vehicles": 50,
         "max_users": 15,
-        "price_monthly": 2499,
-        "price_yearly": 23990,  # 2 months free
+        "price_monthly": 2999,
+        "price_yearly": 28790,  # 2 months free
         "trial_days": 0,
-        "features": ["online_booking", "advanced_reports", "customer_management", "sms_notifications", "e_invoice", "priority_support"],
-        "description": "Büyüyen işletmeler için"
+        "features": {
+            "admin_panel": True,
+            "landing_page": True,
+            "customer_portal": True,
+            "mobile_ops_app": False,
+            "mobile_customer_app": False,
+            "online_booking": True,
+            "basic_reports": True,
+            "advanced_reports": True,
+            "customer_management": True,
+            "sms_notifications": True,
+            "whatsapp": False,
+            "e_invoice": True,
+            "gps_tracking": False,
+            "hgs_tracking": True,
+            "kabis_integration": False,
+            "api_access": False,
+            "white_label": False,
+            "price_calendar": True
+        },
+        "description": "Büyüyen işletmeler - Yönetim + Landing + Müşteri Portali",
+        "description_en": "Growing businesses - Admin + Landing + Customer Portal"
     },
     "enterprise": {
         "name": "Kurumsal",
         "name_en": "Enterprise",
         "max_vehicles": -1,  # Unlimited
         "max_users": -1,     # Unlimited
-        "price_monthly": 4999,
-        "price_yearly": 47990,  # 2 months free
+        "price_monthly": 5999,
+        "price_yearly": 57590,  # 2 months free
         "trial_days": 0,
-        "features": ["online_booking", "advanced_reports", "customer_management", "sms_notifications", "whatsapp", "e_invoice", "gps_tracking", "api_access", "dedicated_support", "custom_training"],
-        "description": "Büyük filolar için"
+        "features": {
+            "admin_panel": True,
+            "landing_page": True,
+            "customer_portal": True,
+            "mobile_ops_app": True,
+            "mobile_customer_app": True,
+            "online_booking": True,
+            "basic_reports": True,
+            "advanced_reports": True,
+            "customer_management": True,
+            "sms_notifications": True,
+            "whatsapp": True,
+            "e_invoice": True,
+            "gps_tracking": True,
+            "hgs_tracking": True,
+            "kabis_integration": True,
+            "api_access": True,
+            "white_label": True,
+            "price_calendar": True
+        },
+        "description": "Büyük filolar - Tüm Özellikler + Mobil Uygulamalar",
+        "description_en": "Large fleets - All Features + Mobile Apps"
     }
 }
 
