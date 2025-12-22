@@ -1980,6 +1980,73 @@ async def fix_tenant_config(request: FixTenantConfigRequest, user: dict = Depend
         logger.error(f"[FIX-CONFIG] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+class DeployBuildRequest(BaseModel):
+    company_code: str
+    domain: str
+
+@api_router.post("/superadmin/deploy-local-build")
+async def deploy_local_build_to_tenant(request: DeployBuildRequest, user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Deploy local frontend build to a tenant's container.
+    Uses the /app/frontend/build directory from this container.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can deploy builds")
+    
+    import tarfile
+    import io as std_io
+    import os
+    
+    build_path = "/app/frontend/build"
+    if not os.path.exists(build_path):
+        raise HTTPException(status_code=400, detail="Build directory not found. Run 'yarn build' first.")
+    
+    try:
+        frontend_container = f"{request.company_code}_frontend"
+        api_url = f"https://api.{request.domain}"
+        
+        logger.info(f"[DEPLOY-BUILD] Creating tar archive from {build_path}...")
+        
+        # Create tar archive of build directory
+        tar_buffer = std_io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+            for root, dirs, files in os.walk(build_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, build_path)
+                    tar.add(file_path, arcname=arcname)
+        
+        tar_data = tar_buffer.getvalue()
+        logger.info(f"[DEPLOY-BUILD] Tar archive size: {len(tar_data)} bytes")
+        
+        # Upload to container
+        logger.info(f"[DEPLOY-BUILD] Uploading to {frontend_container}...")
+        result = await portainer_service.upload_to_container(
+            container_name=frontend_container,
+            tar_data=tar_data,
+            dest_path="/usr/share/nginx/html"
+        )
+        
+        if result.get('error'):
+            raise HTTPException(status_code=500, detail=f"Upload failed: {result.get('error')}")
+        
+        # Update config.js with correct API URL
+        logger.info(f"[DEPLOY-BUILD] Updating config.js...")
+        config_result = await portainer_service.create_config_js(frontend_container, api_url)
+        
+        return {
+            "success": True,
+            "message": f"Build deployed to {frontend_container}",
+            "api_url": api_url,
+            "container": frontend_container,
+            "tar_size": len(tar_data),
+            "config_updated": config_result.get('success', False)
+        }
+        
+    except Exception as e:
+        logger.error(f"[DEPLOY-BUILD] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============== TENANT DEPLOYMENT ENDPOINT ==============
 @api_router.post("/superadmin/companies/{company_id}/deploy-code")
 async def deploy_code_to_tenant(company_id: str, user: dict = Depends(get_current_user)):
