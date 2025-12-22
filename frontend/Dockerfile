@@ -11,11 +11,16 @@ ENV GENERATE_SOURCEMAP=false
 # Copy package.json
 COPY package.json ./
 
-# Install ALL dependencies using npm (more reliable in Docker)
+# Install ALL dependencies including devDependencies
+# NODE_ENV must NOT be production during install
+ENV NODE_ENV=development
 RUN npm install --legacy-peer-deps
 
 # Copy all source files
 COPY . .
+
+# Now set production for build optimization
+ENV NODE_ENV=production
 
 # Build the app with craco
 RUN npm run build
