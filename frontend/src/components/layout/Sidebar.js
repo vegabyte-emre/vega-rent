@@ -36,6 +36,8 @@ const menuItems = [
   { icon: Users, label: "Müşteriler", path: `${pathPrefix}/customers`, roles: ["superadmin", "firma_admin", "operasyon"] },
   { icon: Calendar, label: "Rezervasyonlar", path: `${pathPrefix}/reservations`, roles: ["superadmin", "firma_admin", "operasyon", "personel"] },
   { icon: MapPin, label: "GPS Takip", path: `${pathPrefix}/gps`, roles: ["superadmin", "firma_admin", "operasyon"] },
+  { icon: Toll, label: "HGS Takip", path: `${pathPrefix}/hgs`, roles: ["superadmin", "firma_admin", "operasyon"] },
+  { icon: FileCheck, label: "KABİS", path: `${pathPrefix}/kabis`, roles: ["superadmin", "firma_admin", "operasyon"] },
   { icon: CreditCard, label: "Ödemeler", path: `${pathPrefix}/payments`, roles: ["superadmin", "firma_admin", "muhasebe"] },
   { icon: FileText, label: "Raporlar", path: `${pathPrefix}/reports`, roles: ["superadmin", "firma_admin", "muhasebe"] },
   { icon: Palette, label: "Tema Mağazası", path: `${pathPrefix}/theme-store`, roles: ["superadmin", "firma_admin"] },
