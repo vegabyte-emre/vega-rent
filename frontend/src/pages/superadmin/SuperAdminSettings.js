@@ -97,6 +97,80 @@ export function SuperAdminSettings() {
         <p className="text-slate-400 mt-1">Genel platform yapılandırması</p>
       </div>
 
+      {/* Master Template Settings */}
+      <Card className="bg-gradient-to-r from-orange-900/30 to-red-900/30 border-orange-500/30">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Package className="h-5 w-5 text-orange-400" />
+            Master Template Yönetimi
+          </CardTitle>
+          <CardDescription className="text-slate-400">
+            Tüm firma panellerinin temel şablonunu güncelle
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+            <p className="text-sm text-slate-300 mb-3">ℹ️ Master Template Güncelleme Süreci:</p>
+            <ol className="text-sm text-slate-400 space-y-2 list-decimal list-inside">
+              <li><strong>1. Adım:</strong> GitHub'a "Save to GitHub" yapın (Emergent'ten)</li>
+              <li><strong>2. Adım:</strong> Aşağıdaki "Master Template Güncelle" butonuna tıklayın</li>
+              <li><strong>3. Adım:</strong> Firmalar sayfasından tek tek veya toplu güncelleme yapın</li>
+            </ol>
+          </div>
+          
+          {masterTemplateStatus && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-slate-900/50 rounded-lg">
+                <p className="text-sm text-slate-400">Template Durumu</p>
+                <p className={`font-medium ${masterTemplateStatus.status === 'active' ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {masterTemplateStatus.status === 'active' ? 'Aktif' : 'Bilinmiyor'}
+                </p>
+              </div>
+              <div className="p-3 bg-slate-900/50 rounded-lg">
+                <p className="text-sm text-slate-400">Son Güncelleme</p>
+                <p className="text-white text-sm">
+                  {masterTemplateStatus.last_updated || 'Bilgi yok'}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex gap-3">
+            <Button 
+              onClick={updateMasterTemplate} 
+              disabled={updatingMasterTemplate}
+              className="bg-orange-600 hover:bg-orange-700 flex-1"
+            >
+              {updatingMasterTemplate ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Güncelleniyor...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Master Template Güncelle
+                </>
+              )}
+            </Button>
+            <Button 
+              onClick={checkMasterTemplateStatus} 
+              variant="outline"
+              className="border-slate-600 text-slate-300"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <div className="p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+            <p className="text-sm text-yellow-400">
+              ⚠️ Master template güncellemesi, mevcut firmaları otomatik güncellemez. 
+              Her firmayı ayrıca güncellemeniz gerekir.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Traefik Settings */}
       <Card className={`border ${traefikStatus?.installed ? 'bg-green-900/20 border-green-500/30' : 'bg-yellow-900/20 border-yellow-500/30'}`}>
         <CardHeader>
