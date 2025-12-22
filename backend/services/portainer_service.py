@@ -997,12 +997,17 @@ class PortainerService:
                         return c.get('Id')
         return None
 
-    async def copy_from_template(self, template_container: str, target_container: str, source_path: str, dest_path: str) -> Dict[str, Any]:
+    async def copy_from_template(self, template_container: str, target_container: str, source_path: str, dest_path: str, exclude_files: list = None) -> Dict[str, Any]:
         """
         Copy files from template container to target container via Portainer API.
         This enables template-based deployment without external APIs.
+        
+        Args:
+            exclude_files: List of filenames to exclude (e.g., ['config.js'] to preserve tenant config)
         """
         logger.info(f"[TEMPLATE-COPY] {template_container}:{source_path} -> {target_container}:{dest_path}")
+        if exclude_files:
+            logger.info(f"[TEMPLATE-COPY] Excluding files: {exclude_files}")
         
         # Get container IDs
         template_id = await self.get_container_id(template_container)
@@ -1025,7 +1030,26 @@ class PortainerService:
                 tar_data = download_resp.content
                 logger.info(f"[TEMPLATE-COPY] Downloaded {len(tar_data)} bytes from template")
                 
-                # Step 2: Upload to target container
+                # Step 2: Filter out excluded files if specified
+                if exclude_files:
+                    filtered_tar = std_io.BytesIO()
+                    with tarfile.open(fileobj=std_io.BytesIO(tar_data), mode='r') as src_tar:
+                        with tarfile.open(fileobj=filtered_tar, mode='w') as dst_tar:
+                            for member in src_tar.getmembers():
+                                # Check if this file should be excluded
+                                filename = os.path.basename(member.name)
+                                if filename in exclude_files:
+                                    logger.info(f"[TEMPLATE-COPY] Excluding: {member.name}")
+                                    continue
+                                # Copy the member
+                                if member.isfile():
+                                    dst_tar.addfile(member, src_tar.extractfile(member))
+                                else:
+                                    dst_tar.addfile(member)
+                    tar_data = filtered_tar.getvalue()
+                    logger.info(f"[TEMPLATE-COPY] Filtered tar size: {len(tar_data)} bytes")
+                
+                # Step 3: Upload to target container
                 upload_url = f"{self.base_url}/api/endpoints/{self.endpoint_id}/docker/containers/{target_id}/archive?path={dest_path}"
                 upload_headers = {**self.headers, 'Content-Type': 'application/x-tar'}
                 upload_resp = await client.put(upload_url, headers=upload_headers, content=tar_data)
