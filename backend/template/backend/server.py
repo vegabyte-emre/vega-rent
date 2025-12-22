@@ -261,7 +261,53 @@ async def login(credentials: UserLogin):
         is_active=user.get("is_active", True),
         created_at=datetime.fromisoformat(user["created_at"]) if isinstance(user["created_at"], str) else user["created_at"]
     )
-    return TokenResponse(access_token=token, user=user_response)
+    return TokenResponse(access_token=token, user=user_response, session_token=token)
+
+class CustomerRegister(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    tc_kimlik: Optional[str] = None
+    password: str
+
+@app.post("/api/auth/register")
+async def register_customer(data: CustomerRegister):
+    """Müşteri kaydı - Customer App"""
+    existing = await db.users.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu email zaten kayıtlı")
+    
+    user = {
+        "id": str(uuid.uuid4()),
+        "email": data.email,
+        "password_hash": pwd_context.hash(data.password),
+        "full_name": data.name,
+        "phone": data.phone,
+        "tc_kimlik": data.tc_kimlik,
+        "role": "customer",
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(user)
+    
+    token = create_access_token({"sub": user["id"], "role": "customer"})
+    
+    return {
+        "success": True,
+        "session_token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "full_name": user["full_name"],
+            "phone": user["phone"]
+        }
+    }
+
+@app.post("/api/auth/logout")
+async def logout(user: dict = Depends(get_current_user)):
+    """Çıkış - token invalidation"""
+    return {"success": True, "message": "Çıkış yapıldı"}
 
 @app.get("/api/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
