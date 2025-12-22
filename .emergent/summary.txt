@@ -1,178 +1,156 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to build a SuperAdmin Panel as a multi-tenant corporate car rental SaaS platform. This central panel must provision, deploy, and manage isolated Rent A Car application stacks for different tenants on a KVM server managed by Portainer.
+The user's primary goal is to build a SuperAdmin Panel as a multi-tenant corporate car rental SaaS platform. This central panel must provision, deploy, and manage isolated Rent A Car application stacks for different tenants on a KVM server managed by Portainer. A new request was to create a centralized template system managed via GitHub to streamline updates for all tenants. Another request was to add an Integrations page for tenants to connect with 3rd-party vehicle listing platforms like O Bilet.
 
 **PRODUCT REQUIREMENTS:**
 -   **SuperAdmin SaaS Landing Page:** A modern, multi-lingual public website to market the platform and subscription plans.
--   **Subscription System:** Allow customers to sign up for different packages (Starter, Professional, Enterprise). The features available (e.g., Landing Page, Mobile Apps) will depend on the plan.
+-   **Subscription System:** Allow customers to sign up for different packages (Starter, Professional, Enterprise).
 -   **Payment Integration:** Integrate a payment gateway (user selected Iyzico).
 -   **Franchise Management:** A system for managing franchise/dealership applications.
 -   **Support/Ticket System:** An integrated helpdesk for tenants and SuperAdmins.
--   **3rd Party Integration Management:** Centralized management for Arvento GPS, HGS (Toll System), KABİS (Police Reporting System), and WhatsApp integrations.
--   **Tenant-Specific Features:**
-    -   A Price/Availability Calendar in the tenant's Rent A Car management panel.
-    -   A control panel for managing tenant-specific mobile apps (splash screen, logo, etc.).
--   **Deployment Architecture:**
-    -   Each tenant must have a completely separate and isolated stack of containers (frontend, backend, database).
-    -   Each tenant can have its own custom-branded mobile apps (for higher-tier plans).
-    -   The entire project codebase is managed in a single GitHub repository, with deployments to Portainer triggered from there.
+-   **3rd Party Integration Management:** Centralized management for Arvento GPS, HGS (Toll System), KABİS (Police Reporting System), and new platforms like O Bilet and Enuygun.
+-   **Deployment Architecture:** Each tenant must have a completely separate stack. The entire project codebase is managed in a single GitHub repository, with a new  folder acting as the source for all tenant deployments.
 
 **User's preferred language**: The user communicates in **Turkish**. The next agent MUST respond in Turkish only.
 
 **what currently exists?**
-A full-stack SaaS platform (React/FastAPI/MongoDB). The critical deployment failure from the previous session has been resolved. The agent abandoned the Docker-in-Docker build strategy and switched to a **pre-built frontend model**. The  directory is now committed to GitHub and simply copied into an Nginx container during deployment.
+A full-stack SaaS platform (React/FastAPI/MongoDB) with a SuperAdmin panel and tenant panels. A critical and recurring tenant login issue was the focus of this session. The root cause was identified as the tenant's  file being overwritten with an incorrect HTTP-based API URL during template updates, causing Mixed Content errors.
 
-The agent also fixed a critical, long-standing issue preventing the SuperAdmin panel from connecting to the Portainer API. This was achieved by placing the backend and Portainer containers on the same Docker network and using the container hostname () for the URL, while disabling SSL verification.
+A permanent fix for this has been implemented but awaits user verification. This fix involves defensively reading the existing  and preserving the correct HTTPS URL during updates. All hardcoded API URLs in the frontend have been replaced with a dynamic  function.
 
-Most recently, the agent began implementing Phase 1 of the user's development plan, which included creating a Price/Availability Calendar for tenant panels and setting up a user-managed template update system. However, this led to a persistent login issue for the  tenant.
+A new  directory has been created to hold the master source code for tenant applications, separating it from the SuperAdmin code. A new Integrations page has also been successfully added to the tenant panel UI.
 
 **Last working item**:
--   **Last item agent was working:** Debugging a persistent Giriş Başarısız (Login Failed) error for the  tenant panel.
--   **Status**: **USER VERIFICATION PENDING**
--   **Agent Testing Done**: Y
--   **Which testing method agent to use?**: Manual testing by the user. The agent has already verified via  that the backend API is working correctly and returning the user with a valid . The user should be instructed to perform a hard refresh (Ctrl+Shift+R) or test in an incognito/private browser window to rule out caching issues. If the problem persists, the next agent should inspect the browser's console logs (F12) for frontend errors.
+-   **Last item agent was working:** Implementing a permanent fix for the recurring issue where updating a tenant from the master template overwrites the  file with an incorrect API URL, breaking login. The agent modified the backend update logic to preserve the existing correct URL.
+-   **Status**: **IN PROGRESS**
+-   **Agent Testing Done**: Y (The agent coded the fix and performed unit-like tests on the new helper functions, correcting a bug in the process. However, the full, user-driven end-to-end update flow has not been tested since the final code change.)
+-   **Which testing method agent to use?**: manual testing by curl
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Tenant Login Failure on  (Priority: P0)
--   **Issue 2**: SuperAdmin Redeployment Resets  Environment Variable (Priority: P1)
--   **Issue 3**: Complete iyzico Payment Gateway Integration (Priority: P2)
--   **Issue 4**: Monolithic Backend Codebase () (Priority: P3)
+-   **Issue 1**: Tenant  is overwritten on updates, breaking login. (Priority: P0)
+-   **Issue 2**: Tenant Dashboard shows default company name, not the real one. (Priority: P1)
+-   **Issue 3**: SuperAdmin Redeployment Resets  Environment Variable. (Priority: P2)
+-   **Issue 4**: Monolithic Backend Codebase (). (Priority: P3)
+-   **Issue 5**: Complete iyzico Payment Gateway Integration. (Priority: P4)
 
 **Issues Detail**:
 -   **Issue 1**:
-    -   **Description**: The user is unable to log into  with correct credentials ( / ), receiving a Giriş Başarısız error.
-    -   **Attempted fixes**: The agent identified and fixed several root causes:
-        1.  The tenant's frontend  was pointing to the wrong backend port. (Fixed)
-        2.  The  document was missing in the tenant's MongoDB database. (Fixed by manually creating it)
-        3.  The frontend  had a potential issue with how it read the API URL from . (Fixed)
+    -   **Description**: The user has repeatedly reported that after using the Template Güncelle feature, they can no longer log into the tenant panel (), receiving a Giriş Başarısız error. This happens because the update process incorrectly replaces the tenant's  URL () with a generic, IP-based HTTP URL, causing a  security error in the browser.
+    -   **Attempted fixes**: The agent implemented a permanent fix in . The  function now includes logic to first read the existing  from the tenant's container. If it finds a valid HTTPS URL, it preserves it instead of generating a new one.
     -   **Next debug checklist**:
-        1.  Confirm with the user if they have cleared their browser cache or tried an incognito window.
-        2.  Ask the user to open the browser's developer tools (F12), go to the Console tab, attempt to log in, and provide a screenshot of any red error messages.
-        3.  The agent's own API tests () were successful, indicating the backend is likely functioning correctly. The issue is almost certainly on the client-side (frontend code or browser cache).
-    -   **Why fix this issue and what will be achieved with the fix?**: This blocks the user from verifying any new features deployed to tenant panels.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: Y (Login and config issues have appeared multiple times).
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-
--   **Issue 2**:
-    -   **Description**: When the user redeploys the  stack in Portainer, the  environment variable gets reset or cleared, breaking the connection status in the SuperAdmin UI. The  has the correct default (), but Portainer's UI override seems to be the problem.
-    -   **Attempted fixes**: The agent manually fixed the connection multiple times by re-updating the stack with the correct environment variable. A permanent fix is needed.
-    -   **Next debug checklist**:
-        1.  Investigate if Portainer has a setting to prevent environment variables from being cleared on redeployment from Git.
-        2.  Consider making the API key and URL part of a persistent configuration file instead of a stack environment variable.
-    -   **Why fix this issue and what will be achieved with the fix?**: It will remove a recurring annoyance for the user and make deployments more reliable.
-    -   **Status**: NOT STARTED
+        1.  Instruct the user to perform the full update flow again:  ->  -> .
+        2.  After the update, check the content of  via .
+        3.  Verify that the URL is the correct .
+        4.  Confirm login still works using the  tool.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical, recurring blocker that makes the platform's core update functionality unusable and frustrating for the user. A permanent solution is essential for stability.
+    -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on other issue**: None
 
--   **Issue 3**:
-    -   **Description**: The iyzico payment gateway integration is incomplete. Backend endpoints exist, but frontend logic and callback handling are needed.
-    -   **Status**: BLOCKED
-    -   **Blocked on other issue**: User needs to provide API keys.
-
--   **Issue 4**:
-    -   **Description**: The main backend file, , is extremely large and contains all API logic, making it difficult to maintain.
-    -   **Status**: NOT STARTED
+-   **Issue 2**:
+    -   **Description**: The tenant dashboard displays a generic welcome message (Hoş Geldiniz, Firma Admin) and a default company name (Rent A Car) instead of the tenant's actual company name.
+    -   **Attempted fixes**: The agent updated the frontend  and  to fetch company information from a new  endpoint. The agent also added this endpoint to the backend code. However, it was discovered that the tenant's database () was missing the  document needed to store this information.
+    -   **Next debug checklist**:
+        1.  The tenant provisioning process must be updated to create a default  document in the tenant's MongoDB upon creation.
+        2.  The backend for the tenant (from ) needs to be deployed to ensure the  endpoint is live.
+        3.  Verify the frontend successfully calls this endpoint and displays the correct name.
+    -   **Why fix this issue and what will be achieved with the fix?**: Provides a personalized and professional user experience, which is crucial for a multi-tenant SaaS platform.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Both
+    -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1**: Finalize User-Managed Template Update System
-    -   **Where to resume**: The agent added a Master Template Update button to the SuperAdmin settings page and created the corresponding backend API. The logic for updating individual tenants from this master template was also improved to correctly set the backend API port.
-    -   **What will be achieved with this?**: The user will be able to update the  from the latest committed code and then push those updates to all existing tenants in a controlled manner, without manual intervention from the agent.
-    -   **Status**: IN PROGRESS (Needs user testing and verification).
-    -   **Should Test frontend/backend/both after fix?**: Both. The user needs to test the full flow:  ->  -> .
-
--   **Task 2**: Implement Price/Availability Calendar
-    -   **Where to resume**: The basic frontend component () and backend API endpoints () have been created. The component is routed in the  and a link has been added to the tenant .
-    -   **What will be achieved with this?**: Provides a core feature for the Rent A Car management panel.
+-   **Task 1**: Stabilize and Finalize the GitHub-based Template System
+    -   **Where to resume**: The file structure in  is complete. The backend logic in  has been updated to use this template directory for master updates and to (theoretically) prevent  overwrites.
+    -   **What will be achieved with this?**: A reliable, centralized system for managing and deploying updates to all tenants from a single source of truth in the Git repository.
     -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Both (once login is fixed).
+    -   **Should Test frontend/backend/both after fix?**: Both
+    -   **Blocked on something**: Issue #1 must be fully resolved for this task to be considered stable.
 
 **Upcoming and Future Tasks**
-**Upcoming Tasks (Phase 1 & 2):**
+**Upcoming Tasks:**
 -   **P1**: Finalize SuperAdmin Subscription Plans page and link it to tenant provisioning logic.
--   **P1**: Test the new 3rd party integrations (Arvento, HGS, KABIS) once API keys are provided.
+-   **P1**: Begin backend implementation for the Integrations page (O Bilet, etc.).
 -   **P2**: Build the Tenant Customer-Facing Landing Page template.
 -   **P2**: Build the Tenant Customer Portal (Login, Online Reservation, Dashboard).
 
-**Future Tasks (Phase 3):**
--   **P3**: Develop the tenant-specific Operations Mobile App (React Native).
--   **P3**: Develop the tenant-specific Customer Mobile App (React Native).
--   **P3**: Implement the Mobile App Control Panel in the tenant's admin dashboard for real-time customization (splash screen, logo, etc.).
+**Future Tasks:**
+-   **P3**: Develop the tenant-specific Operations and Customer Mobile Apps (React Native).
+-   **P3**: Implement the Mobile App Control Panel in the tenant's admin dashboard.
 
 **Completed work in this session**
--   **Resolved Critical Deployment Failure**: Switched the frontend deployment from a  build to a pre-built static file copy ( is now in Git).
--   **Fixed Portainer API Connection**: Successfully established a stable connection from the SuperAdmin backend to the Portainer API by using Docker networking () and disabling SSL verification.
--   **Fixed SuperAdmin Login**: Added a startup script to  to auto-create the default admin user if it doesn't exist.
--   **Architectural Planning**: Collaborated with the user to define and document a comprehensive multi-level SaaS architecture, including plans for future mobile applications.
--   **Initiated Tenant Feature Development**: Created the initial components and APIs for the Price/Availability Calendar.
--   **Created User-Managed Template System**: Implemented the backend APIs and frontend UI for the user to manage and deploy updates to the tenant template.
+-   **Resolved Critical Tenant Routing**: Fixed navigation errors for Fiyat Takvimi, HGS, and KABIS pages by adding the missing routes to .
+-   **Created Integrations Page**: Successfully designed and implemented a new page in the tenant UI for managing 3rd-party platform integrations.
+-   **Established Centralized Template Architecture**: Created a new  directory to hold the master code for tenant applications, separating it from the SuperAdmin code.
+-   **Fixed Widespread Hardcoded API URLs**: Refactored numerous frontend components to use a dynamic  function instead of a build-time constant, making the UI more resilient to configuration changes.
+-   **Registered Orphan Tenant**: Manually added the  company to the SuperAdmin database, allowing it to be managed by the system's update logic.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Pre-built Frontend Deployment**: The new strategy. Developers must run yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. locally and commit the  directory. The CI/CD process (Portainer Git deployment) no longer builds the frontend.
--   **Docker Networking for Service Discovery**: The key to the Portainer connection fix. The  service was attached to the same network as the  service, allowing it to resolve the hostname .
--   **Dynamic API URL via **: A persistent source of issues. This file is created dynamically for each tenant to point its frontend to the correct backend port. It was the cause of several login failures during this session.
--   **User-Managed Template Updates**: A new flow where the SuperAdmin can trigger an API call to update a master template container from the latest  directory in the  container, and then propagate those updates to individual tenant containers.
+-   **Defensive Configuration Update**: The primary strategy to fix the recurring login issue. The system now reads the existing  from a tenant's container and preserves a valid HTTPS URL, rather than blindly overwriting it during updates.
+-   **Code Templating**: The introduction of the  directory is a major architectural shift to separate the SuperAdmin code from the deployable tenant code, aiming for more stable and manageable updates.
+-   **Runtime API Configuration**: The frontend has been fully shifted to determine the backend URL at runtime via a  file, instead of a build-time environment variable.
+-   **On-the-fly Deployment**: The agent created a custom backend endpoint () to directly push a new frontend  to a tenant container, which proved invaluable for rapid debugging and hotfixes.
 
 **key DB schema**
--   : {email, password_hash, role, company_id}
--   : {name, code, domain, admin_email, ports}
--   : {company_id, start_date, end_date, vehicle_id, price_multiplier} (New)
--   And others: , , , etc.
+-   **superadmin_db**:
+    -   : {id, name, code, domain, admin_email, ports, portainer_stack_id}
+-   **tenant_db** (e.g., ):
+    -   : {name, address, phone, ...} - *Document needs to be created on provisioning.*
+    -   : {company_id, provider, api_key, enabled, settings}
 
 **All files of reference**
--   : Defines the critical  and  configuration for the Portainer connection.
--   : Defines the new, simplified static-copy deployment strategy.
--   : Contains all the complex logic for creating stacks, updating templates, and generating . It was heavily modified.
--   : Contains the new Master Template Update UI.
--   : The entry point for all tenant panels, now includes the Price Calendar.
--   : Manages authentication state and API calls for login.
+-   : Contains the core logic for the permanent fix of the  overwrite issue. The  and  functions are most critical.
+-   : Contains helper endpoints created for debugging (, ) and the main API routes that trigger the update logic.
+-   : The main routing file where routes for new and previously broken tenant pages were added.
+-    (directory): The new source of truth for all tenant-related code. Any changes for tenants should be made here.
 
 **Critical Info for New Agent**
 -   **LANGUAGE IS TURKISH.** All user communication must be in Turkish.
--   **THE IMMEDIATE PRIORITY IS THE TENANT LOGIN FAILURE.** The user cannot log into . API tests show the backend is working. The problem is client-side. Guide the user to clear their browser cache or use an incognito window.
--   **NEW DEPLOYMENT WORKFLOW:** The frontend is **pre-built**. Any changes to frontend code require running yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. locally and **committing the  directory to GitHub**. The build does *not* happen on the server anymore.
--   **PORTAINER CONNECTION IS FRAGILE:** When the user redeploys the  stack, Portainer may overwrite the  env var. If the connection status shows an error, this is the first place to check in the Portainer UI for the  stack. It must be .
--   **TEMPLATE UPDATES:** The user now has a button in the SuperAdmin panel (Settings page) to update the master template. This copies the  from the  container to the  container. After that, individual tenants can be updated.
-
-**documents and test_reports created in this job**
-None.
+-   **VERIFY THE PERMANENT LOGIN FIX.** The highest priority is to test the Template Güncelle flow to confirm it no longer breaks tenant login. The logic to preserve  in  is the key.
+-   **USE THE NEW TEMPLATE FOLDER.** All future features or fixes intended for tenant panels should be implemented in the  directory. The SuperAdmin Master Template Update feature is now powered by this folder.
+-   **Orphan Tenants Exist**: The  tenant was created outside the SuperAdmin system and had to be manually added to the DB. Be aware that other such tenants might exist and fail during updates.
 
 **Last 10 User Messages and any pending HUMAN messages**
--   hala aynı Giriş Başarısız hatası alıyorum
--   şimdi gördüm. Ama yine https://panel.bitlisrentacar.com/login sayfasına info@bitlisrentacar.com 12346 ile giriş yapamıyorum.
--   Save to github yaptım. Portainerde Süperadmin redeploy ettim: Environment variables da doğru overrride edildiği için değişiklik yapmadım. Süperadmin panelinde Firmalar bölümünde hala  Master Template Güncelle butonu yok.
--   env güncel değil mi githubda ?
--   Şimdi özet ve test:
--   Master Template Güncelle butonu yok. İlk önce Save To Github yapıp Superadmin snack mi redeploy yapmalıyım ? yoksa farklı bir işlem mi?
--   Tamam dediğin gibi yaptım. Şimdi Süperadmine gidip Template güncellemesi yaptım. Sonuç başarılı çıktısı verdi ama Fiyat Takvimi görünmüyor. Uyguladığım firma : bitlisrentacar.com (bitlis)
--   Zaten A seçeneğini kullanıyoruz. Hatta Süperadmin panelinde Template Güncelle özelliği var. 2. Sorun Sen save to github yap deyince ben yaptım sonra portainer de süperadmin snack ini redeploy yapınca Süperadmin Portainer Bağlantısı Kontrol edilip Başarısız statüsüne geçiyor. Sana buraya dokunma demiştim. Portainer Urlsi şu şekilde görünüyor URL: -. -Süperadminde Araç Müsaitlik sistemine ihtiyacımız yok sadece Rent A Car Yönetim Panelinde olmalı
--   Soru : Fiyat Takvimi https://panel.bitlisrentacar.com eklenmedi mi ? Eğer öyle ise redeploy değil de template güncellenmesi gerekmez mi ?
--   Local API çalışıyor. Şimdi Save to GitHub yapıp sunucuya deploy ederek gerçek ortamda test edelim.
+-   Kalıcı Çözüm uygula
+-   SuperAdmin → Ayarlar → Master Template Güncelle
+Firmalar → Firma seç → Template Güncelle
+
+Yaptım ama yine https://panel.bitlisrentacar.com/login paneline giriş yapamıyorum
+-   Tamam şimdi Rent A Car Yönetim Panelinde İlk Girişte Test verisi var. Firma Admin yazıyor. bu veriyi sen Firma ismiyle değiştirir misin? Template dosyası değişsin. Ben güncelleyeceğim.
+-   Save To Github yaptım ; Süperadminden Master Template güncelledim. Firma sayfasına gelip dropdown alanından Template güncelle seçtim. https://panel.bitlisrentacar.com/login sayfasına giriş yapamıyorum. Giriş Başarısız hatası alıyorum. Sana kişisel verileri ve konfigrasyonları bozmaman gerektiğini söylemiştim.
+-   template güncelledin mi? Soru
+-   entegrasyonlar diye bir sayfa oluştur. bu sayfada en uygun o bilet gibi alanlar ile entegrasyon yapılarak araçların otomatik olarak aktarılması için ayarları yapılsın.
+-   template dosyasını githuba bağlayalım . güncellemelerde bu dosya üzerinden beslensin. tüm konfigasrasyonlarıda buraya ekle.
+süperadminde bulunan master template güncelleme alanıda buradan beslensin.
+kişisel verilere karışmadan sadece işlev ve görünüm yapısını değiştirsin.
+-   Sadece Takvim değil HGS ve Kabis gibi sayfalar da hatalı routing yapıyor. Artık kalıcı çöz
+-   Giriş yaptı ama Veriler yüklenirken bir hata oluştu diyor panele giriş yapabildik ama
+-   Öncelikli Görevler (Hemen Yapılacak)
+Tenant Giriş Sorunu (P0) hemen başla test et ve düzelt
 
 **Project Health Check:**
--   **Broken**: Tenant login is not working for the user on , blocking verification of new features.
--   **Mocked**: iyzico, Arvento, HGS, KABIS integrations are still pending API keys and are not functional.
+-   **Broken**: The tenant update process () is extremely fragile. The user has repeatedly experienced login failures after using it. The latest permanent fix is unverified and the process cannot be considered stable.
+-   **Mocked**: All 3rd-party integrations (iyzico, O Bilet, Enuygun, etc.) are UI placeholders. The backend endpoints exist but contain no actual integration logic.
 
 **3rd Party Integrations**
--   **Portainer**: Used for infrastructure orchestration via its REST API. Connection is now working but can be fragile upon SuperAdmin stack redeployment.
+-   **Portainer**: Used for infrastructure orchestration via its REST API.
 -   **Traefik**: Used for reverse proxy and domain routing.
--   **iyzipay**: Planned for payment integration.
--   **Hostinger API**: Available for VPS management.
--   **Arvento / HGS / KABIS**: New integrations, code written but not deployed or configured.
+-   **iyzipay**: Planned for payment integration. API keys not provided.
+-   **O Bilet / Enuygun / etc.**: Planned for vehicle syndication. UI and placeholder endpoints created.
 
 **Testing status**
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: None.
 -   **Known regressions**:
-    -   Redeploying the SuperAdmin stack in Portainer can reset the  environment variable.
+    -   The  file being overwritten on tenant updates is the most severe and recurring regression.
+    -   Session timeout on the tenant panel seems unusually short, which frequently interrupted testing with the  tool. This could be a usability issue for the end-user.
 
 **What agent forgot to execute**
--   The agent initially added the Price Calendar feature to the SuperAdmin panel instead of only the Tenant panel, requiring rework.
--   The agent's manual update of the tenant frontend initially overwrote the  file, breaking the tenant's API connection and requiring a hotfix.
--   Multiple small bugs were introduced (e.g., missing FastAPI  import, wrong backend port in ) that caused service crashes or login failures, requiring several debug cycles.</analysis>
+-   The agent did not investigate the short session timeout duration, which repeatedly caused test failures and might indicate a bug in the token handling or expiry logic.
+-   While identifying that the tenant's database was missing a  document, the agent did not implement a permanent fix in the provisioning logic to create this document automatically for new tenants.</analysis>
