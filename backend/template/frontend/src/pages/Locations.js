@@ -38,8 +38,7 @@ export default function Locations() {
     is_pickup: true,
     is_dropoff: true,
     is_active: true
-  );
-  
+  });
 
   const API_URL = getApiUrl();
 
@@ -52,7 +51,7 @@ export default function Locations() {
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/locations/admin`, {
         headers: { Authorization: `Bearer ${token}` }
-      );
+      });
       if (response.ok) {
         const data = await response.json();
         setLocations(data);
@@ -79,19 +78,16 @@ export default function Locations() {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(formData)
-      );
+      });
 
       if (response.ok) {
-        toast.success(
-          
-          editingLocation ? "Lokasyon güncellendi" : "Lokasyon eklendi"
-        );
+        toast.success(editingLocation ? "Lokasyon güncellendi" : "Lokasyon eklendi");
         setDialogOpen(false);
         resetForm();
         fetchLocations();
       }
     } catch (error) {
-      toast.success(  "İşlem başarısız");
+      toast.error("İşlem başarısız");
     }
   };
 
@@ -103,14 +99,14 @@ export default function Locations() {
       const response = await fetch(`${API_URL}/api/locations/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
-      );
+      });
 
       if (response.ok) {
-        toast.success(  "Lokasyon silindi" );
+        toast.success("Lokasyon silindi");
         fetchLocations();
       }
     } catch (error) {
-      toast.success(  "Silme başarısız");
+      toast.error("Silme başarısız");
     }
   };
 
@@ -125,7 +121,7 @@ export default function Locations() {
       is_pickup: location.is_pickup ?? true,
       is_dropoff: location.is_dropoff ?? true,
       is_active: location.is_active ?? true
-    );
+    });
     setDialogOpen(true);
   };
 
@@ -140,7 +136,7 @@ export default function Locations() {
       is_pickup: true,
       is_dropoff: true,
       is_active: true
-    );
+    });
   };
 
   return (
@@ -181,7 +177,7 @@ export default function Locations() {
                   <Input
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="Örn: İstanbul"
+                    placeholder="Örn: Bitlis"
                     required
                   />
                 </div>
@@ -199,7 +195,7 @@ export default function Locations() {
                     <Input
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="0212 xxx xx xx"
+                      placeholder="0434 xxx xx xx"
                     />
                   </div>
                   <div className="space-y-2">
