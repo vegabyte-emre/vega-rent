@@ -33,7 +33,6 @@ services:
       - superadmin_mongodb
     networks:
       - app_network
-      - portainer_network
     extra_hosts:
       - "host.docker.internal:host-gateway"
       - "portainer:172.17.0.2"
