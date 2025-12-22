@@ -1498,27 +1498,6 @@ async def update_master_template(user: dict = Depends(get_current_user)):
             "success": False,
             "error": str(e)
         }
-                "updated_by": user["email"],
-                "status": "active",
-                "version": template_config.get("version", "1.0.0") if results["config"] else "1.0.0",
-                "source": "local_template"
-            }},
-            upsert=True
-        )
-        
-        return {
-            "success": True,
-            "message": "Master template başarıyla güncellendi",
-            "results": results,
-            "note": "Template GitHub'dan güncellendi. Şimdi firmaları güncelleyebilirsiniz."
-        }
-    
-    except Exception as e:
-        logger.error(f"[MASTER-TEMPLATE] Error: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
 
 @api_router.get("/superadmin/template/info")
 async def get_template_info(user: dict = Depends(get_current_user)):
