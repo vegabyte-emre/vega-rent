@@ -4323,6 +4323,34 @@ async def create_ticket(ticket: TicketCreate, user: dict = Depends(get_current_u
         "message": "Destek talebiniz oluşturuldu"
     }
 
+# SuperAdmin: Receive incoming tickets from tenants
+@api_router.post("/superadmin/support/tickets/incoming")
+async def receive_tenant_ticket(ticket_data: dict):
+    """Receive support tickets from tenant panels"""
+    # Add to superadmin database
+    ticket_data["received_at"] = datetime.now(timezone.utc).isoformat()
+    ticket_data["source"] = "tenant_panel"
+    
+    # Check if ticket already exists
+    existing = await db.support_tickets.find_one({"id": ticket_data.get("id")})
+    if existing:
+        return {"success": True, "message": "Ticket already exists"}
+    
+    await db.support_tickets.insert_one(ticket_data)
+    logger.info(f"Received ticket from tenant: {ticket_data.get('company_name')} - {ticket_data.get('subject')}")
+    
+    return {"success": True, "message": "Ticket received"}
+
+# SuperAdmin: Get all tickets (including from tenants)
+@api_router.get("/superadmin/support/tickets")
+async def get_all_tickets(user: dict = Depends(get_current_user)):
+    """SuperAdmin: Get all support tickets from all tenants"""
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can view all tickets")
+    
+    tickets = await db.support_tickets.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return tickets
+
 # Tenant: Get my tickets
 @api_router.get("/support/tickets")
 async def get_my_tickets(user: dict = Depends(get_current_user)):
