@@ -2005,6 +2005,14 @@ async def deploy_local_build_to_tenant(request: DeployBuildRequest, user: dict =
         frontend_container = f"{request.company_code}_frontend"
         api_url = f"https://api.{request.domain}"
         
+        # First, clean the nginx html directory
+        logger.info(f"[DEPLOY-BUILD] Cleaning {frontend_container} html directory...")
+        clean_result = await portainer_service.exec_in_container(
+            frontend_container,
+            "rm -rf /usr/share/nginx/html/* && mkdir -p /usr/share/nginx/html/static/js /usr/share/nginx/html/static/css"
+        )
+        logger.info(f"[DEPLOY-BUILD] Clean result: {clean_result}")
+        
         logger.info(f"[DEPLOY-BUILD] Creating tar archive from {build_path}...")
         
         # Create tar archive of build directory
@@ -2014,6 +2022,9 @@ async def deploy_local_build_to_tenant(request: DeployBuildRequest, user: dict =
                 for file in files:
                     file_path = os.path.join(root, file)
                     arcname = os.path.relpath(file_path, build_path)
+                    # Skip downloads folder
+                    if arcname.startswith('downloads/'):
+                        continue
                     tar.add(file_path, arcname=arcname)
         
         tar_data = tar_buffer.getvalue()
