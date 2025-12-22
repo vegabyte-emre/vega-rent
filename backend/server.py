@@ -4538,6 +4538,22 @@ async def startup():
     await db.vehicles.create_index("plate")
     await db.customers.create_index("tc_no")
     await db.reservations.create_index("status")
+    
+    # Create default superadmin if not exists
+    existing_admin = await db.users.find_one({"role": "superadmin"})
+    if not existing_admin:
+        admin_user = {
+            "id": str(uuid.uuid4()),
+            "email": "admin@admin.com",
+            "password_hash": pwd_context.hash("admin123"),
+            "full_name": "Super Admin",
+            "role": "superadmin",
+            "is_active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(admin_user)
+        logger.info("✅ Default superadmin created: admin@admin.com / admin123")
+    
     logger.info("FleetEase API started")
 
 @app.on_event("shutdown")
