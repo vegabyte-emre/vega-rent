@@ -18,16 +18,23 @@ services:
       dockerfile: Dockerfile
     container_name: superadmin_backend
     restart: always
-    network_mode: host
+    ports:
+      - "8001:8001"
     environment:
-      - MONGO_URL=mongodb://localhost:27017
+      - MONGO_URL=mongodb://superadmin_mongodb:27017
       - DB_NAME=superadmin_db
       - JWT_SECRET=${JWT_SECRET:-fleetease_super_secret_key_2024}
-      - PORTAINER_URL=${PORTAINER_URL:-https://localhost:9443}
+      - PORTAINER_URL=${PORTAINER_URL:-https://72.61.158.147:9443}
       - PORTAINER_API_KEY=${PORTAINER_API_KEY:-ptr_XwtYmxpR0KCkqMLsPLGMM4mHQS5Q75gupgBcCGqRUEY=}
       - PORTAINER_ENDPOINT_ID=${PORTAINER_ENDPOINT_ID:-3}
       - FRONTEND_URL=${FRONTEND_URL:-http://72.61.158.147:3000}
       - HOSTINGER_API_KEY=${HOSTINGER_API_KEY:-3zPAgUc4UEraxSljLuK7TvHD0sAmLaULtZ5cbXLb7c576163}
+    depends_on:
+      - superadmin_mongodb
+    networks:
+      - app_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   superadmin_mongodb:
     image: mongo:6
