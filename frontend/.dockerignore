@@ -1,5 +1,4 @@
 node_modules
-build
 .git
 .gitignore
 *.md
@@ -7,3 +6,8 @@ build
 .env.*
 Dockerfile
 .dockerignore
+src
+public
+*.json
+*.js
+*.lock
