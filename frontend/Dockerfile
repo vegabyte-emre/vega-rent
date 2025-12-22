@@ -6,17 +6,17 @@ WORKDIR /app
 # Increase Node memory limit
 ENV NODE_OPTIONS=--max_old_space_size=4096
 
-# Copy package files first
-COPY package.json ./
+# Copy package files
+COPY package.json yarn.lock* ./
 
-# Install dependencies with npm (more reliable)
-RUN npm install --legacy-peer-deps
+# Install ALL dependencies (including devDependencies for build)
+RUN yarn install --frozen-lockfile || yarn install
 
 # Copy all source files
 COPY . .
 
 # Build the app
-RUN npm run build
+RUN yarn build
 
 # Production stage - serve with nginx
 FROM nginx:alpine
