@@ -216,7 +216,6 @@ function AppRoutes() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/theme-store" element={<ThemeStore />} />
-        <Route path="/price-calendar" element={<PriceCalendar />} />
       </Route>
 
       {/* ============== COMPANY ADMIN PROTECTED ROUTES (main domain - with /admin prefix) ============== */}
