@@ -1314,6 +1314,93 @@ class PortainerService:
             logger.error(f"[DB-SETUP] Error: {str(e)}")
             return {'success': False, 'error': str(e)}
 
+    async def update_master_template_from_superadmin(self) -> Dict[str, Any]:
+        """
+        Update the master template containers by copying from superadmin frontend.
+        This ensures the template has the latest code from the current deployment.
+        """
+        results = {
+            'frontend_copy': None,
+            'template_restart': None
+        }
+        
+        logger.info("[MASTER-TEMPLATE] Starting master template update from superadmin...")
+        
+        try:
+            # Step 1: Copy frontend files from superadmin_frontend to rentacar_template_frontend
+            logger.info("[MASTER-TEMPLATE] Step 1: Copying frontend from superadmin to template...")
+            
+            # Get superadmin frontend container ID
+            superadmin_frontend_id = await self.get_container_id("superadmin_frontend")
+            template_frontend_id = await self.get_container_id("rentacar_template_frontend")
+            
+            if not superadmin_frontend_id:
+                return {
+                    'success': False,
+                    'error': 'superadmin_frontend container bulunamadı'
+                }
+            
+            if not template_frontend_id:
+                return {
+                    'success': False,
+                    'error': 'rentacar_template_frontend container bulunamadı'
+                }
+            
+            # Download from superadmin
+            download_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{superadmin_frontend_id}/archive?path=/usr/share/nginx/html"
+            
+            async with httpx.AsyncClient(verify=False, timeout=120.0) as client:
+                # Download from superadmin
+                download_response = await client.get(
+                    f"{self.base_url}/api/{download_endpoint}",
+                    headers=self.headers
+                )
+                
+                if download_response.status_code != 200:
+                    return {
+                        'success': False,
+                        'error': f'Superadmin frontend dosyaları alınamadı: {download_response.status_code}'
+                    }
+                
+                tar_content = download_response.content
+                logger.info(f"[MASTER-TEMPLATE] Downloaded {len(tar_content)} bytes from superadmin")
+                
+                # Upload to template
+                upload_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{template_frontend_id}/archive?path=/usr/share/nginx"
+                upload_response = await client.put(
+                    f"{self.base_url}/api/{upload_endpoint}",
+                    headers={'X-API-Key': self.api_key, 'Content-Type': 'application/x-tar'},
+                    content=tar_content
+                )
+                
+                if upload_response.status_code in [200, 204]:
+                    results['frontend_copy'] = {'success': True, 'size': len(tar_content)}
+                    logger.info("[MASTER-TEMPLATE] Frontend files copied to template")
+                else:
+                    results['frontend_copy'] = {'success': False, 'error': upload_response.text}
+            
+            # Step 2: Restart template container
+            logger.info("[MASTER-TEMPLATE] Step 2: Restarting template container...")
+            results['template_restart'] = await self.restart_container("rentacar_template_frontend")
+            
+            logger.info("[MASTER-TEMPLATE] Master template update complete!")
+            
+            return {
+                'success': True,
+                'message': 'Master template güncellendi',
+                'results': results
+            }
+            
+        except Exception as e:
+            logger.error(f"[MASTER-TEMPLATE] Error: {str(e)}")
+            import traceback
+            logger.error(f"[MASTER-TEMPLATE] Traceback: {traceback.format_exc()}")
+            return {
+                'success': False,
+                'error': str(e),
+                'results': results
+            }
+
     async def update_tenant_from_template(self, company_code: str, domain: str) -> Dict[str, Any]:
         """
         Update existing tenant from template WITHOUT touching database.
