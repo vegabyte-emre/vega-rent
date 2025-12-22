@@ -384,6 +384,15 @@ async def get_vehicle(vehicle_id: str, user: dict = Depends(get_current_user)):
     vehicle["created_at"] = datetime.fromisoformat(vehicle["created_at"]) if isinstance(vehicle["created_at"], str) else vehicle["created_at"]
     return VehicleResponse(**vehicle)
 
+@app.get("/api/vehicles/popular")
+async def get_popular_vehicles():
+    """Popüler araçlar - Customer App"""
+    vehicles = await db.vehicles.find(
+        {"status": "available"}, 
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    return vehicles
+
 @app.patch("/api/vehicles/{vehicle_id}/status")
 async def update_vehicle_status(vehicle_id: str, status_update: dict, user: dict = Depends(get_current_user)):
     if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.OPERASYON.value]:
