@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import getApiUrl from '../config/api';
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 
