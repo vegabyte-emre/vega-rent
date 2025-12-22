@@ -1942,6 +1942,44 @@ async def seed_kvm_database(user: dict = Depends(get_current_user)):
             "error": str(e)
         }
 
+# ============== FIX TENANT CONFIG.JS ==============
+class FixTenantConfigRequest(BaseModel):
+    company_code: str
+    domain: str
+
+@api_router.post("/superadmin/fix-tenant-config")
+async def fix_tenant_config(request: FixTenantConfigRequest, user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Fix tenant config.js with correct HTTPS API URL.
+    Use this for tenants that were created before domain-aware config generation.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can fix tenant configs")
+    
+    try:
+        frontend_container = f"{request.company_code}_frontend"
+        api_url = f"https://api.{request.domain}"
+        
+        logger.info(f"[FIX-CONFIG] Fixing config.js for {frontend_container} with API_URL={api_url}")
+        
+        result = await portainer_service.create_config_js(frontend_container, api_url)
+        
+        if result.get("success"):
+            return {
+                "success": True,
+                "message": f"Config.js güncellendi: {frontend_container}",
+                "api_url": api_url,
+                "container": frontend_container
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Config güncelleme başarısız: {result.get('error')}"
+            )
+    except Exception as e:
+        logger.error(f"[FIX-CONFIG] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============== TENANT DEPLOYMENT ENDPOINT ==============
 @api_router.post("/superadmin/companies/{company_id}/deploy-code")
 async def deploy_code_to_tenant(company_id: str, user: dict = Depends(get_current_user)):
