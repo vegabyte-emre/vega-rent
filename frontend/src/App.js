@@ -239,6 +239,7 @@ function AppRoutes() {
         <Route path="/admin/settings" element={<Settings />} />
         <Route path="/admin/theme-store" element={<ThemeStore />} />
         <Route path="/admin/support" element={<Support />} />
+        <Route path="/admin/price-calendar" element={<PriceCalendar />} />
       </Route>
 
       {/* Catch-all redirect */}
