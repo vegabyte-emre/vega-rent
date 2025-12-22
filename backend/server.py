@@ -311,7 +311,7 @@ class CompanyResponse(BaseModel):
     vehicle_count: int = 0
     customer_count: int = 0
     admin_email: Optional[str] = None
-    portainer_stack_id: Optional[int] = None  # Portainer returns integer ID
+    portainer_stack_id: Optional[Union[int, str]] = None  # Portainer returns integer ID or "existing" string
     stack_name: Optional[str] = None
     ports: Optional[PortainerPorts] = None
     urls: Optional[PortainerUrls] = None
