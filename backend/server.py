@@ -4471,32 +4471,61 @@ async def get_all_tickets(
     priority: Optional[str] = None,
     limit: int = 100
 ):
-    """SuperAdmin: Get all support tickets"""
+    """SuperAdmin: Get all support tickets including from tenants"""
     if user["role"] != UserRole.SUPERADMIN.value:
         raise HTTPException(status_code=403, detail="Only SuperAdmin can view all tickets")
     
+    all_tickets = []
+    
+    # Get local tickets
     query = {}
     if status:
         query["status"] = status
     if priority:
         query["priority"] = priority
     
-    tickets = await db.support_tickets.find(
-        query,
-        {"_id": 0}
-    ).sort("updated_at", -1).limit(limit).to_list(limit)
+    local_tickets = await db.support_tickets.find(query, {"_id": 0}).sort("updated_at", -1).limit(limit).to_list(limit)
+    all_tickets.extend(local_tickets)
+    
+    # Get tickets from all tenant databases
+    try:
+        companies = await db.companies.find({"is_active": True}, {"_id": 0}).to_list(100)
+        for company in companies:
+            try:
+                company_code = company.get("code", "").lower().replace(" ", "").replace("-", "")
+                if not company_code:
+                    continue
+                    
+                tenant_tickets = await portainer_service.get_tenant_support_tickets(company_code)
+                for ticket in tenant_tickets:
+                    ticket["company_name"] = company.get("name", company_code)
+                    ticket["company_code"] = company_code
+                    ticket["source"] = "tenant"
+                    # Apply filters
+                    if status and ticket.get("status") != status:
+                        continue
+                    if priority and ticket.get("priority") != priority:
+                        continue
+                    all_tickets.append(ticket)
+            except Exception as e:
+                logger.warning(f"Could not fetch tickets from {company.get('name')}: {e}")
+    except Exception as e:
+        logger.error(f"Error fetching tenant tickets: {e}")
+    
+    # Sort by created_at
+    all_tickets.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     
     # Get ticket stats
     stats = {
-        "total": await db.support_tickets.count_documents({}),
-        "open": await db.support_tickets.count_documents({"status": "open"}),
-        "in_progress": await db.support_tickets.count_documents({"status": "in_progress"}),
-        "waiting_customer": await db.support_tickets.count_documents({"status": "waiting_customer"}),
-        "resolved": await db.support_tickets.count_documents({"status": "resolved"}),
-        "closed": await db.support_tickets.count_documents({"status": "closed"})
+        "total": len(all_tickets),
+        "open": len([t for t in all_tickets if t.get("status") == "open"]),
+        "in_progress": len([t for t in all_tickets if t.get("status") == "in_progress"]),
+        "waiting_customer": len([t for t in all_tickets if t.get("status") == "waiting_customer"]),
+        "resolved": len([t for t in all_tickets if t.get("status") == "resolved"]),
+        "closed": len([t for t in all_tickets if t.get("status") == "closed"])
     }
     
-    return {"tickets": tickets, "stats": stats}
+    return {"tickets": all_tickets[:limit], "stats": stats}
 
 # SuperAdmin: Update ticket status
 @api_router.patch("/superadmin/tickets/{ticket_id}/status")
