@@ -1801,6 +1801,9 @@ portainer_service = PortainerService()
 
     async def get_tenant_support_tickets(self, company_code: str) -> list:
         """Get support tickets from tenant's database via container exec"""
+
+    async def get_tenant_support_tickets(self, company_code: str) -> list:
+        """Get support tickets from tenant's database via container exec"""
         try:
             backend_container = f"{company_code}_backend"
             
@@ -1822,7 +1825,6 @@ asyncio.run(get_tickets())
             result = await self.exec_in_container(backend_container, cmd)
             if result.get("success"):
                 output = result.get("output", {}).get("text", "[]")
-                # Clean output
                 output = output.replace("\x01", "").strip()
                 if output.startswith("["):
                     import json
