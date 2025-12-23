@@ -57,12 +57,12 @@ export function Home() {
     try {
       setLoading(true);
       const [vehiclesRes, themeRes, locationsRes] = await Promise.all([
-        axios.get(`${getApiUrl()}/api/public/vehicles?limit=8`),
-        axios.get(`${getApiUrl()}/api/public/theme-settings`),
+        axios.get(`${getApiUrl()}/api/public/vehicles?limit=8`).catch(() => ({ data: [] })),
+        axios.get(`${getApiUrl()}/api/public/theme-settings`).catch(() => ({ data: {} })),
         axios.get(`${getApiUrl()}/api/locations`).catch(() => ({ data: [] })),
       ]);
-      setVehicles(vehiclesRes.data);
-      setThemeData(themeRes.data);
+      setVehicles(vehiclesRes.data || []);
+      setThemeData(themeRes.data || {});
       setLocations(locationsRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
