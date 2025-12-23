@@ -1799,16 +1799,17 @@ class PortainerService:
         """Get support tickets from tenant's database via container exec"""
         try:
             backend_container = f"{company_code}_backend"
-            mongo_container = f"{company_code}_mongodb"
+            mongo_host = f"{company_code}_mongodb"
+            db_name = f"{company_code}_db"
             
-            cmd = '''python3 -c "
+            cmd = f'''python3 -c "
 from motor.motor_asyncio import AsyncIOMotorClient
 import asyncio, json
 
 async def get():
-    c = AsyncIOMotorClient('mongodb://''' + mongo_container + ''':27017')
-    db = c['''' + company_code + '''_db']
-    tickets = await db.support_tickets.find({}, {'_id': 0}).to_list(50)
+    c = AsyncIOMotorClient('mongodb://{mongo_host}:27017')
+    db = c['{db_name}']
+    tickets = await db.support_tickets.find({{}}, {{'_id': 0}}).to_list(50)
     print(json.dumps(tickets, default=str))
 
 asyncio.run(get())
