@@ -150,3 +150,38 @@
 ### Kullanıcı İçin URL'ler
 - **SuperAdmin Panel**: http://72.61.158.147:9000
 - **SuperAdmin API**: http://72.61.158.147:9001/api
+
+---
+## 2025-12-24 - Portainer Bağlantısı KALICI ÇÖZÜM ✅
+
+### Problem
+- SuperAdmin backend container'dan Portainer'a HTTPS bağlantısı yapılamıyordu
+- Docker bridge network içinden dış IP'ye SSL bağlantısı timeout alıyordu
+
+### Çözüm
+Backend container için `network_mode: host` kullanıldı:
+- Container doğrudan host network'ünü kullanıyor
+- Portainer'a (72.61.158.147:9443) direkt erişim sağlandı
+- MongoDB bağlantısı `localhost:27017` olarak güncellendi
+- PORT=9001 environment variable'ı eklendi
+
+### Güncellenmiş Compose Template
+```yaml
+superadmin_backend:
+  network_mode: host
+  environment:
+    - MONGO_URL=mongodb://localhost:27017
+    - PORTAINER_URL=https://72.61.158.147:9443
+    - PORT=9001
+```
+
+### Test Sonuçları ✅
+- Frontend: http://72.61.158.147:9000 ✅
+- Backend: http://72.61.158.147:9001/api/health ✅
+- config.js: Doğru URL ✅
+- Login: Çalışıyor ✅
+- **Portainer Status: connected=true, stack_count=4** ✅
+- Firmalar API: Çalışıyor ✅
+
+### Değişen Dosyalar
+- `/app/backend/services/portainer_service.py` - get_superadmin_compose_template() güncellendi
