@@ -1,1 +1,0 @@
-window.REACT_APP_BACKEND_URL = 'http://72.61.158.147:8001';
