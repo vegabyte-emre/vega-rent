@@ -2251,7 +2251,7 @@ fi
             
             # Step 2b: Create eas.json for EAS build with Node 22 to avoid engine compatibility issues
             # Use Node.js to write valid JSON (avoids shell/tar escaping issues)
-            eas_write_cmd = '''node -e "require('fs').writeFileSync('/app/eas.json', JSON.stringify({cli:{version:'>=3.0.0'},build:{preview:{distribution:'internal',node:'22.12.0',env:{npm_config_engine_strict:'false'},android:{buildType:'apk',credentialsSource:'local'}},production:{node:'22.12.0',env:{npm_config_engine_strict:'false'},android:{credentialsSource:'local'}}}}, null, 2))"'''
+            eas_write_cmd = '''node -e "require('fs').writeFileSync('/app/eas.json', JSON.stringify({cli:{version:'>=3.0.0'},build:{preview:{distribution:'internal',node:'22.12.0',env:{npm_config_engine_strict:'false',EXPO_NO_DOCTOR:'1'},android:{buildType:'apk',credentialsSource:'local'}},production:{node:'22.12.0',env:{npm_config_engine_strict:'false',EXPO_NO_DOCTOR:'1'},android:{credentialsSource:'local'}}}}, null, 2))"'''
             eas_result = await self.exec_in_container(tenant_container, eas_write_cmd)
             results['eas_json_write'] = {'success': eas_result.get('success', False)}
             
