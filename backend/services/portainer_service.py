@@ -2388,9 +2388,9 @@ fi
 }}'''
                 await self.write_file_to_container(container_name, "/app/eas.json", eas_config)
             
-            # Step 4: Run EAS build with token
+            # Step 4: Run EAS build with token (EAS_NO_VCS=1 since containers don't have git)
             logger.info(f"[EAS-BUILD] Starting build...")
-            build_cmd = f"""cd /app && EXPO_TOKEN={expo_token} eas build --platform android --profile production --non-interactive --no-wait 2>&1"""
+            build_cmd = f"""cd /app && EAS_NO_VCS=1 EXPO_TOKEN={expo_token} eas build --platform android --profile production --non-interactive --no-wait 2>&1"""
             
             result = await self.exec_in_container(container_name, build_cmd)
             
@@ -2404,7 +2404,7 @@ fi
                 if 'Error:' in output and 'Must configure EAS project' in output:
                     # Try eas init first
                     logger.info(f"[EAS-BUILD] Running eas init...")
-                    init_cmd = f"cd /app && EXPO_TOKEN={expo_token} eas init --id {expo_project_id} --non-interactive 2>&1"
+                    init_cmd = f"cd /app && EAS_NO_VCS=1 EXPO_TOKEN={expo_token} eas init --id {expo_project_id} --non-interactive 2>&1"
                     init_result = await self.exec_in_container(container_name, init_cmd)
                     
                     # Retry build
