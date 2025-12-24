@@ -228,6 +228,7 @@ def get_template_stack_compose() -> str:
     """
     Generate Docker Compose for template volumes - contains pre-built frontend and backend code
     This stack creates shared volumes that all tenant stacks will use
+    Now includes mobile app templates for Customer and Operation apps
     """
     return """version: '3.8'
 
@@ -254,11 +255,41 @@ services:
     networks:
       - template_network
 
+  template_customer_app:
+    image: node:18-alpine
+    container_name: rentacar_template_customer_app
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - rentacar_template_customer_app:/app
+    environment:
+      - EXPO_TOKEN=${EXPO_TOKEN:-}
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - template_network
+
+  template_operation_app:
+    image: node:18-alpine
+    container_name: rentacar_template_operation_app
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - rentacar_template_operation_app:/app
+    environment:
+      - EXPO_TOKEN=${EXPO_TOKEN:-}
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - template_network
+
 volumes:
   rentacar_template_frontend:
     name: rentacar_template_frontend
   rentacar_template_backend:
     name: rentacar_template_backend
+  rentacar_template_customer_app:
+    name: rentacar_template_customer_app
+  rentacar_template_operation_app:
+    name: rentacar_template_operation_app
 
 networks:
   template_network:
