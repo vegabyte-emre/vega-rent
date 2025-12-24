@@ -2405,7 +2405,10 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
     async def deploy_code_to_superadmin(self, frontend_build_path: str = None, backend_path: str = None) -> Dict[str, Any]:
         """
         Deploy code to SuperAdmin stack containers.
-        This should be called after a GitHub sync/redeploy to update the running containers.
+        
+        YENİ YAPI:
+        - Backend: Sadece container restart (git pull yapacak)
+        - Frontend: Build'i superadmin_nginx container'ına yükle
         
         Args:
             frontend_build_path: Path to frontend build folder (default: /app/frontend/build)
@@ -2418,13 +2421,11 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
         
         results = {
             'frontend_upload': None,
-            'backend_upload': None,
             'config_js': None,
-            'nginx_config': None,
             'backend_restart': None
         }
         
-        superadmin_frontend = "superadmin_frontend"
+        superadmin_nginx = "superadmin_nginx"
         superadmin_backend = "superadmin_backend"
         
         # SuperAdmin API URL - always use IP:9001 for the Portainer stack
