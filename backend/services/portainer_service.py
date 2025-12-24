@@ -2238,6 +2238,35 @@ fi
             )
             results['config_write'] = config_result
             
+            # Step 2b: Create eas.json for EAS build
+            project_id = os.environ.get(f'EXPO_{app_type.upper()}_PROJECT_ID', '')
+            eas_json_content = f'''{{
+  "cli": {{
+    "version": ">= 3.0.0"
+  }},
+  "build": {{
+    "development": {{
+      "developmentClient": true,
+      "distribution": "internal"
+    }},
+    "preview": {{
+      "distribution": "internal"
+    }},
+    "production": {{
+      "autoIncrement": true
+    }}
+  }},
+  "submit": {{
+    "production": {{}}
+  }}
+}}'''
+            eas_result = await self.write_file_to_container(
+                tenant_container,
+                "/app/eas.json",
+                eas_json_content
+            )
+            results['eas_json_write'] = eas_result
+            
             # Step 3: Install dependencies in tenant container
             logger.info(f"[MOBILE-COPY] Installing dependencies in {tenant_container}...")
             deps_result = await self.exec_in_container(
