@@ -2315,24 +2315,28 @@ fi
             keystore_result = await self.exec_in_container(tenant_container, keystore_cmd)
             results['keystore_gen'] = {'success': keystore_result.get('success', False)}
             
-            # Step 2g: Ensure react-native and reanimated versions are compatible with Expo SDK
-            logger.info(f"[MOBILE-COPY] Ensuring correct package versions...")
-            fix_versions_cmd = '''
-sed -i 's/"react-native": "0.79.[0-9]*"/"react-native": "0.81.5"/g' /app/package.json
-sed -i 's/"react-native-reanimated": "[^"]*"/"react-native-reanimated": "~3.17.4"/g' /app/package.json
-echo "Versions fixed"
-'''
-            await self.exec_in_container(tenant_container, fix_versions_cmd)
+            # Step 2g: Clean install and fix all package versions using expo install --fix
+            logger.info(f"[MOBILE-COPY] Installing dependencies and fixing versions...")
             
-            # Step 3: Install dependencies in tenant container (clean install)
-            logger.info(f"[MOBILE-COPY] Installing dependencies in {tenant_container}...")
+            # Clean install
             deps_result = await self.exec_in_container(
                 tenant_container, 
-                "cd /app && rm -rf node_modules yarn.lock package-lock.json && yarn install --ignore-engines 2>&1 || npm install --legacy-peer-deps 2>&1"
+                "cd /app && rm -rf node_modules yarn.lock package-lock.json .expo .metro-cache android ios && yarn cache clean && yarn install --ignore-engines 2>&1"
             )
             results['deps_install'] = {'success': deps_result.get('success', False)}
             
-            # Step 4: Install EAS CLI
+            # Fix Expo package versions
+            logger.info(f"[MOBILE-COPY] Running expo install --fix...")
+            await self.exec_in_container(tenant_container, "cd /app && npx expo install --fix 2>&1")
+            
+            # Install missing peer dependencies
+            logger.info(f"[MOBILE-COPY] Installing peer dependencies...")
+            await self.exec_in_container(
+                tenant_container,
+                "cd /app && yarn add react-native-worklets@latest @expo/metro-runtime@^6.1.2 @babel/runtime --ignore-engines 2>&1"
+            )
+            
+            # Step 3: Install EAS CLI
             await self.exec_in_container(tenant_container, "npm install -g eas-cli@latest 2>&1")
             
             logger.info(f"[MOBILE-COPY] {app_type} app copied to {company_code} successfully")
