@@ -1830,7 +1830,7 @@ async def get_mobile_template_status(user: dict = Depends(get_current_user)):
         "operation_app": None
     }
     
-    containers = await portainer_service.list_containers()
+    containers = await portainer_service.get_containers()
     
     for container in containers:
         name = container.get('Names', [''])[0].replace('/', '')
