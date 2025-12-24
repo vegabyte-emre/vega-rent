@@ -1758,7 +1758,7 @@ class PortainerService:
             
             # Step 10: Optional - Update mobile apps if containers exist
             try:
-                containers = await self.list_containers()
+                containers = await self.get_containers()
                 container_names = [c.get('Names', [''])[0].replace('/', '') for c in containers]
                 
                 customer_app_container = f"{safe_code}_customer_app"
