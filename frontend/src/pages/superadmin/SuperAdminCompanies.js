@@ -40,7 +40,8 @@ import {
   Server,
   XCircle,
   Download,
-  RefreshCcw
+  RefreshCcw,
+  Smartphone
 } from "lucide-react";
 import { toast } from "sonner";
 
