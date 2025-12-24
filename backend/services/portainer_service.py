@@ -140,12 +140,16 @@ def get_full_company_stack_template(company_code: str, company_name: str, domain
     """
     Generate Docker Compose for a complete company stack with Traefik SSL.
     Template files will be copied via Portainer API after stack creation.
+    Includes mobile app containers for Customer and Operation apps.
     """
     safe_code = company_code.replace('-', '').replace('_', '')
     
     frontend_port = BASE_FRONTEND_PORT + port_offset
     backend_port = BASE_BACKEND_PORT + port_offset
     mongo_port = BASE_MONGO_PORT + port_offset
+    
+    # Expo token from environment
+    expo_token = os.environ.get("EXPO_TOKEN", "")
     
     return f"""version: '3.8'
 
@@ -174,6 +178,8 @@ services:
       - JWT_SECRET={safe_code}_jwt_secret_2024
       - COMPANY_CODE={company_code}
       - COMPANY_NAME={company_name}
+      - API_URL=https://api.{domain}
+      - DOMAIN={domain}
       - MODULE_NAME=server
       - VARIABLE_NAME=app
     ports:
@@ -212,6 +218,36 @@ services:
       - "traefik.http.routers.{safe_code}-panel.tls.certresolver=letsencrypt"
       - "traefik.http.routers.{safe_code}-panel.service={safe_code}-frontend"
       - "traefik.http.services.{safe_code}-frontend.loadbalancer.server.port=80"
+
+  {safe_code}_customer_app:
+    image: node:18-alpine
+    container_name: {safe_code}_customer_app
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      - EXPO_TOKEN={expo_token}
+      - COMPANY_CODE={company_code}
+      - COMPANY_NAME={company_name}
+      - API_URL=https://api.{domain}
+      - DOMAIN={domain}
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - {safe_code}_network
+
+  {safe_code}_operation_app:
+    image: node:18-alpine
+    container_name: {safe_code}_operation_app
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      - EXPO_TOKEN={expo_token}
+      - COMPANY_CODE={company_code}
+      - COMPANY_NAME={company_name}
+      - API_URL=https://api.{domain}
+      - DOMAIN={domain}
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - {safe_code}_network
 
 volumes:
   {safe_code}_mongo_data:
