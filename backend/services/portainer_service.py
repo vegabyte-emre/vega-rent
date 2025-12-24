@@ -2315,48 +2315,88 @@ fi
         """
         Trigger EAS build in tenant's mobile container.
         Returns build ID for status tracking.
+        
+        Steps:
+        1. Install EAS CLI if not present
+        2. Login to Expo with token
+        3. Initialize EAS project if not configured
+        4. Run eas build
         """
         safe_code = company_code.replace('-', '').replace('_', '')
         container_name = f"{safe_code}_{app_type}_app"
         
+        # Get Expo credentials from environment
+        expo_token = os.environ.get("EXPO_TOKEN", "vIg74dANrrkDXdDtOl6jSOmGRkKld9EKBhBxfKM3")
+        expo_project_id = os.environ.get(f"EXPO_{app_type.upper()}_PROJECT_ID", "")
+        
         try:
             logger.info(f"[EAS-BUILD] Triggering build for {company_code} {app_type} app")
             
-            # Check if EAS CLI is available
+            # Step 1: Install EAS CLI if needed
             check_result = await self.exec_in_container(container_name, "which eas || echo 'not found'")
             if 'not found' in str(check_result.get('output', {})):
-                # Install EAS CLI first
-                await self.exec_in_container(container_name, "npm install -g eas-cli@latest")
+                logger.info(f"[EAS-BUILD] Installing EAS CLI...")
+                await self.exec_in_container(container_name, "npm install -g eas-cli@latest 2>&1")
             
-            # Run EAS build (non-blocking with --no-wait)
-            build_cmd = """cd /app && eas build --platform android --profile production --non-interactive --no-wait --json 2>&1"""
+            # Step 2: Login to Expo with token (non-interactive)
+            logger.info(f"[EAS-BUILD] Logging in to Expo...")
+            login_cmd = f"EXPO_TOKEN={expo_token} eas whoami 2>&1"
+            login_result = await self.exec_in_container(container_name, login_cmd)
+            logger.info(f"[EAS-BUILD] Login result: {login_result}")
+            
+            # Step 3: Initialize EAS project if not configured
+            # Check if eas.json already has projectId configured
+            eas_check = await self.exec_in_container(container_name, "cat /app/eas.json 2>/dev/null || echo 'NOT_FOUND'")
+            
+            if expo_project_id and 'NOT_FOUND' not in str(eas_check.get('output', {})):
+                # Write proper eas.json with project ID
+                eas_config = f'''{{
+  "cli": {{
+    "version": ">= 3.0.0",
+    "appVersionSource": "remote"
+  }},
+  "build": {{
+    "development": {{
+      "developmentClient": true,
+      "distribution": "internal"
+    }},
+    "preview": {{
+      "distribution": "internal"
+    }},
+    "production": {{
+      "autoIncrement": true
+    }}
+  }},
+  "submit": {{
+    "production": {{}}
+  }}
+}}'''
+                await self.write_file_to_container(container_name, "/app/eas.json", eas_config)
+            
+            # Step 4: Run EAS build with token
+            logger.info(f"[EAS-BUILD] Starting build...")
+            build_cmd = f"""cd /app && EXPO_TOKEN={expo_token} eas build --platform android --profile production --non-interactive --no-wait 2>&1"""
             
             result = await self.exec_in_container(container_name, build_cmd)
             
             if result.get('success'):
-                output = result.get('output', {}).get('text', '')
+                output = result.get('output', {}).get('text', '') if isinstance(result.get('output'), dict) else str(result.get('output', ''))
                 
                 # Parse build ID from output
                 import re
-                import json
                 
-                # Try to parse JSON output
-                try:
-                    # Find JSON in output
-                    json_match = re.search(r'\{[^{}]*"id"[^{}]*\}', output)
-                    if json_match:
-                        build_data = json.loads(json_match.group())
-                        build_id = build_data.get('id')
-                        return {
-                            'success': True,
-                            'build_id': build_id,
-                            'message': 'EAS build started successfully',
-                            'raw_output': output[:500]
-                        }
-                except:
-                    pass
+                # Check for errors first
+                if 'Error:' in output and 'Must configure EAS project' in output:
+                    # Try eas init first
+                    logger.info(f"[EAS-BUILD] Running eas init...")
+                    init_cmd = f"cd /app && EXPO_TOKEN={expo_token} eas init --id {expo_project_id} --non-interactive 2>&1"
+                    init_result = await self.exec_in_container(container_name, init_cmd)
+                    
+                    # Retry build
+                    result = await self.exec_in_container(container_name, build_cmd)
+                    output = result.get('output', {}).get('text', '') if isinstance(result.get('output'), dict) else str(result.get('output', ''))
                 
-                # Try to find build ID in plain text
+                # Try to find build ID in output
                 id_match = re.search(r'Build ID:\s*([a-f0-9-]+)', output, re.IGNORECASE)
                 if id_match:
                     return {
@@ -2375,6 +2415,15 @@ fi
                         'build_url': link_match.group(0),
                         'message': 'EAS build started',
                         'raw_output': output[:500]
+                    }
+                
+                # Check if build was submitted
+                if 'Build details' in output or 'Submitted' in output or 'queued' in output.lower():
+                    return {
+                        'success': True,
+                        'build_id': None,
+                        'message': 'Build submitted to Expo, check dashboard for status',
+                        'raw_output': output[:1000]
                     }
                 
                 return {
