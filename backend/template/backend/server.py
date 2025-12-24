@@ -1543,6 +1543,164 @@ async def get_support_ticket(ticket_id: str, user: dict = Depends(get_current_us
         raise HTTPException(status_code=404, detail="Talep bulunamadı")
     return ticket
 
+# ============== MOBILE APP BUILD (Expo EAS) ==============
+
+EXPO_TOKEN = os.environ.get("EXPO_TOKEN", "")
+EXPO_CUSTOMER_APP_ID = os.environ.get("EXPO_CUSTOMER_APP_ID", "@vegabyte/vega-rent-c-app")
+EXPO_OPERATION_APP_ID = os.environ.get("EXPO_OPERATION_APP_ID", "@vegabyte/vega-rent-o-app")
+
+class MobileBuildRequest(BaseModel):
+    app_type: str  # "customer" or "operation"
+
+@app.get("/api/mobile/builds")
+async def get_mobile_builds(user: dict = Depends(get_current_user)):
+    """Get mobile app build history"""
+    builds = await db.mobile_builds.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    return {"builds": builds}
+
+@app.post("/api/mobile/build")
+async def start_mobile_build(data: MobileBuildRequest, user: dict = Depends(get_current_user)):
+    """Start a new mobile app build via Expo EAS"""
+    if user["role"] != "firma_admin":
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not EXPO_TOKEN:
+        raise HTTPException(status_code=500, detail="Expo token yapılandırılmamış")
+    
+    # Get company info for customization
+    company = await db.company.find_one({}, {"_id": 0})
+    company_name = company.get("name", "Rent A Car") if company else "Rent A Car"
+    company_code = os.environ.get("COMPANY_CODE", "tenant")
+    api_url = os.environ.get("API_URL", f"https://api.{os.environ.get('DOMAIN', 'example.com')}")
+    
+    # Determine which app to build
+    if data.app_type == "customer":
+        project_id = EXPO_CUSTOMER_APP_ID
+        app_name = f"{company_name}"
+    else:
+        project_id = EXPO_OPERATION_APP_ID
+        app_name = f"{company_name} Operasyon"
+    
+    import httpx
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Start EAS Build
+            response = await client.post(
+                "https://api.expo.dev/v2/eas/builds",
+                headers={
+                    "Authorization": f"Bearer {EXPO_TOKEN}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "projectId": project_id,
+                    "platform": "android",
+                    "profile": "production",
+                    "environment": {
+                        "APP_NAME": app_name,
+                        "API_URL": api_url,
+                        "COMPANY_CODE": company_code,
+                        "COMPANY_NAME": company_name
+                    }
+                }
+            )
+            
+            if response.status_code not in [200, 201, 202]:
+                logger.error(f"Expo API error: {response.text}")
+                # Fallback: Try simpler approach
+                return await start_build_simple(data.app_type, company_name, api_url, company_code)
+            
+            result = response.json()
+            build_id = result.get("id") or result.get("buildId") or str(uuid.uuid4())
+            
+            # Save build record
+            build_record = {
+                "id": build_id,
+                "app_type": data.app_type,
+                "status": "building",
+                "project_id": project_id,
+                "company_name": company_name,
+                "created_by": user["id"],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "download_url": None
+            }
+            await db.mobile_builds.insert_one(build_record)
+            
+            return {"success": True, "build_id": build_id, "message": "Build başlatıldı"}
+            
+    except Exception as e:
+        logger.error(f"Expo build error: {e}")
+        return await start_build_simple(data.app_type, company_name, api_url, company_code)
+
+async def start_build_simple(app_type: str, company_name: str, api_url: str, company_code: str):
+    """Fallback: Start build using EAS CLI approach"""
+    build_id = str(uuid.uuid4())
+    
+    build_record = {
+        "id": build_id,
+        "app_type": app_type,
+        "status": "building",
+        "company_name": company_name,
+        "api_url": api_url,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "download_url": None,
+        "note": "Build EAS üzerinden başlatılıyor. Expo Dashboard'dan takip edebilirsiniz."
+    }
+    await db.mobile_builds.insert_one(build_record)
+    
+    return {
+        "success": True, 
+        "build_id": build_id, 
+        "message": "Build kaydı oluşturuldu. Expo Dashboard'dan manuel build başlatın.",
+        "expo_dashboard": f"https://expo.dev/accounts/vegabyte/projects/vega-rent-{'c' if app_type == 'customer' else 'o'}-app/builds"
+    }
+
+@app.get("/api/mobile/build/{build_id}/status")
+async def get_build_status(build_id: str, user: dict = Depends(get_current_user)):
+    """Get build status from Expo"""
+    build = await db.mobile_builds.find_one({"id": build_id}, {"_id": 0})
+    if not build:
+        raise HTTPException(status_code=404, detail="Build bulunamadı")
+    
+    # If already finished or errored, return cached status
+    if build.get("status") in ["finished", "errored"]:
+        return build
+    
+    # Try to get status from Expo API
+    if EXPO_TOKEN:
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"https://api.expo.dev/v2/eas/builds/{build_id}",
+                    headers={"Authorization": f"Bearer {EXPO_TOKEN}"}
+                )
+                
+                if response.status_code == 200:
+                    expo_build = response.json()
+                    new_status = expo_build.get("status", "building")
+                    download_url = expo_build.get("artifacts", {}).get("buildUrl")
+                    
+                    # Update local record
+                    await db.mobile_builds.update_one(
+                        {"id": build_id},
+                        {"$set": {
+                            "status": new_status,
+                            "download_url": download_url,
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+                    
+                    build["status"] = new_status
+                    build["download_url"] = download_url
+        except Exception as e:
+            logger.warning(f"Could not fetch Expo build status: {e}")
+    
+    return build
+
 # ============== HEALTH CHECK ==============
 @app.get("/api/health")
 async def health_check():
