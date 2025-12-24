@@ -2409,34 +2409,14 @@ fi
             login_result = await self.exec_in_container(container_name, login_cmd)
             logger.info(f"[EAS-BUILD] Login result: {login_result}")
             
-            # Step 3: Initialize EAS project if not configured
-            # Check if eas.json already has projectId configured
-            eas_check = await self.exec_in_container(container_name, "cat /app/eas.json 2>/dev/null || echo 'NOT_FOUND'")
+            # Step 3: Ensure eas.json has correct config with node version
+            # Use Node.js to write valid JSON (avoids shell escaping issues)
+            eas_write_cmd = '''node -e "require('fs').writeFileSync('/app/eas.json', JSON.stringify({cli:{version:'>=3.0.0'},build:{preview:{distribution:'internal',node:'22.12.0',env:{npm_config_engine_strict:'false'},android:{buildType:'apk',credentialsSource:'local'}},production:{node:'22.12.0',env:{npm_config_engine_strict:'false'},android:{credentialsSource:'local'}}}}, null, 2))"'''
+            await self.exec_in_container(container_name, eas_write_cmd)
             
-            if expo_project_id and 'NOT_FOUND' not in str(eas_check.get('output', {})):
-                # Write proper eas.json with project ID
-                eas_config = f'''{{
-  "cli": {{
-    "version": ">= 3.0.0",
-    "appVersionSource": "remote"
-  }},
-  "build": {{
-    "development": {{
-      "developmentClient": true,
-      "distribution": "internal"
-    }},
-    "preview": {{
-      "distribution": "internal"
-    }},
-    "production": {{
-      "autoIncrement": true
-    }}
-  }},
-  "submit": {{
-    "production": {{}}
-  }}
-}}'''
-                await self.write_file_to_container(container_name, "/app/eas.json", eas_config)
+            # Also ensure .npmrc exists
+            npmrc_cmd = '''echo -e "engine-strict=false\nignore-engines=true" > /app/.npmrc'''
+            await self.exec_in_container(container_name, npmrc_cmd)
             
             # Step 4: Run EAS build with token (EAS_NO_VCS=1 since containers don't have git)
             # Use preview profile to generate APK with local credentials
