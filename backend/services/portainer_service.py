@@ -2516,12 +2516,3 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
 
 # Singleton instance
 portainer_service = PortainerService()
-            return {
-                'success': False,
-                'error': str(e),
-                'results': results
-            }
-
-
-# Singleton instance
-portainer_service = PortainerService()
