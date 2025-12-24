@@ -1719,10 +1719,14 @@ class PortainerService:
     async def update_tenant_from_template(self, company_code: str, domain: str) -> Dict[str, Any]:
         """
         Update existing tenant from template WITHOUT touching database.
-        Only updates:
-        1. Frontend code (new features, UI updates)
-        2. Backend code (new API endpoints, bug fixes)
-        3. Nginx configuration
+        
+        SAFE UPDATE FLOW (prevents crash loops):
+        1. STOP backend container first
+        2. Copy backend code to volume
+        3. Install dependencies
+        4. START backend container
+        5. Update frontend (Nginx stays running)
+        6. Reload Nginx
         
         DOES NOT TOUCH:
         - MongoDB data (customers, vehicles, reservations, etc.)
@@ -1755,33 +1759,34 @@ class PortainerService:
             logger.warning(f"[UPDATE-TEMPLATE] WARNING: No domain, using HTTP fallback: {api_url}")
         
         results = {
-            'frontend_copy': None,
+            'backend_stop': None,
             'backend_copy': None,
             'deps_install': None,
+            'backend_start': None,
+            'frontend_copy': None,
             'config_js': None,
             'nginx_config': None,
-            'frontend_restart': None,
-            'backend_restart': None,
+            'nginx_reload': None,
             'preserved_url': existing_api_url
         }
         
-        logger.info(f"[UPDATE-TEMPLATE] Starting template update for {company_code} ({domain})")
+        logger.info(f"[UPDATE-TEMPLATE] Starting SAFE template update for {company_code} ({domain})")
         
         try:
             import asyncio
             
-            # Step 1: Copy frontend from template (EXCLUDE config.js to preserve tenant API URL)
-            logger.info(f"[UPDATE-TEMPLATE] Step 1: Copying frontend code (excluding config.js)...")
-            results['frontend_copy'] = await self.copy_from_template(
-                template_container="rentacar_template_frontend",
-                target_container=frontend_container,
-                source_path="/usr/share/nginx/html",
-                dest_path="/usr/share/nginx",
-                exclude_files=["config.js"]
-            )
+            # ===== BACKEND UPDATE (STOP -> COPY -> INSTALL -> START) =====
             
-            # Step 2: Copy backend from template (EXCLUDE .env to preserve tenant DB config)
-            logger.info(f"[UPDATE-TEMPLATE] Step 2: Copying backend code (excluding .env)...")
+            # Step 1: STOP backend container FIRST to prevent crash loops
+            logger.info(f"[UPDATE-TEMPLATE] Step 1: STOPPING backend container...")
+            results['backend_stop'] = await self.stop_container(backend_container)
+            
+            # Wait for container to fully stop
+            await self.wait_for_container_state(backend_container, 'exited', timeout=30)
+            await asyncio.sleep(2)
+            
+            # Step 2: Copy backend code while container is STOPPED
+            logger.info(f"[UPDATE-TEMPLATE] Step 2: Copying backend code (container stopped)...")
             results['backend_copy'] = await self.copy_from_template(
                 template_container="rentacar_template_backend",
                 target_container=backend_container,
@@ -1790,38 +1795,42 @@ class PortainerService:
                 exclude_files=[".env"]
             )
             
-            # Step 3: Install/Update backend dependencies
-            logger.info(f"[UPDATE-TEMPLATE] Step 3: Installing dependencies...")
+            # Step 3: START backend container (it will install deps on startup via compose command)
+            logger.info(f"[UPDATE-TEMPLATE] Step 3: STARTING backend container...")
+            results['backend_start'] = await self.start_container(backend_container)
+            
+            # Wait for backend to be running
+            await self.wait_for_container_state(backend_container, 'running', timeout=30)
+            await asyncio.sleep(5)  # Extra wait for pip install in compose command
+            
+            # Step 4: Install/Update dependencies (if needed - belt and suspenders approach)
+            logger.info(f"[UPDATE-TEMPLATE] Step 4: Ensuring dependencies installed...")
             results['deps_install'] = await self.install_backend_dependencies(backend_container)
             
-            # Step 4: Re-configure Nginx for SPA
-            logger.info(f"[UPDATE-TEMPLATE] Step 4: Updating Nginx config...")
-            results['nginx_config'] = await self.configure_nginx_spa(frontend_container)
+            # ===== FRONTEND UPDATE (NO STOP NEEDED - Nginx handles gracefully) =====
             
-            # Step 5: Restart backend container
-            logger.info(f"[UPDATE-TEMPLATE] Step 5: Restarting backend...")
-            results['backend_restart'] = await self.restart_container(backend_container)
-            await asyncio.sleep(3)
+            # Step 5: Copy frontend files (EXCLUDE config.js to preserve tenant API URL)
+            logger.info(f"[UPDATE-TEMPLATE] Step 5: Copying frontend code (excluding config.js)...")
+            results['frontend_copy'] = await self.copy_from_template(
+                template_container="rentacar_template_frontend",
+                target_container=frontend_container,
+                source_path="/usr/share/nginx/html",
+                dest_path="/usr/share/nginx",
+                exclude_files=["config.js"]
+            )
             
-            # Step 6: CRITICAL - Write config.js with correct HTTPS URL BEFORE frontend restart
-            # This must happen AFTER frontend copy but BEFORE restart to ensure it persists
+            # Step 6: Write config.js with correct URL
             logger.info(f"[UPDATE-TEMPLATE] Step 6: Writing config.js with URL: {api_url}")
             results['config_js'] = await self.create_config_js(frontend_container, api_url)
             
-            # Step 7: Verify config.js was written correctly
-            verify_url = await self._get_existing_config_url(frontend_container)
-            if verify_url != api_url:
-                logger.error(f"[UPDATE-TEMPLATE] Config.js verification FAILED! Expected: {api_url}, Got: {verify_url}")
-                # Try writing again
-                await self.create_config_js(frontend_container, api_url)
-                logger.info(f"[UPDATE-TEMPLATE] Retried config.js write")
-            else:
-                logger.info(f"[UPDATE-TEMPLATE] Config.js verified: {verify_url}")
+            # Step 7: Configure Nginx for SPA routing
+            logger.info(f"[UPDATE-TEMPLATE] Step 7: Updating Nginx config...")
+            results['nginx_config'] = await self.configure_nginx_spa(frontend_container)
             
-            # Step 8: Reload nginx to pick up new config (don't restart, just reload)
+            # Step 8: Reload nginx to pick up new config
             logger.info(f"[UPDATE-TEMPLATE] Step 8: Reloading Nginx...")
             await self.exec_in_container(frontend_container, "nginx -s reload")
-            results['frontend_restart'] = {'success': True, 'method': 'nginx_reload'}
+            results['nginx_reload'] = {'success': True}
             
             # Step 9: Final verification
             await asyncio.sleep(2)
@@ -1829,10 +1838,11 @@ class PortainerService:
             results['final_config_url'] = final_url
             logger.info(f"[UPDATE-TEMPLATE] Final config.js URL: {final_url}")
             
-            if final_url and final_url.startswith("https://"):
-                logger.info(f"[UPDATE-TEMPLATE] Template update complete for {company_code} - URL preserved!")
+            # Step 10: Verify backend is healthy
+            backend_health = await self._check_backend_health(backend_container)
+            results['backend_health'] = backend_health
             
-            # Step 10: Optional - Update mobile apps if containers exist
+            # Step 11: Optional - Update mobile apps if containers exist
             try:
                 containers = await self.get_containers()
                 container_names = [c.get('Names', [''])[0].replace('/', '') for c in containers]
@@ -1841,8 +1851,7 @@ class PortainerService:
                 operation_app_container = f"{safe_code}_operation_app"
                 
                 if customer_app_container in container_names:
-                    logger.info(f"[UPDATE-TEMPLATE] Step 10a: Updating customer mobile app...")
-                    # Get company name from environment or use default
+                    logger.info(f"[UPDATE-TEMPLATE] Step 11a: Updating customer mobile app...")
                     company_name = os.environ.get('COMPANY_NAME', company_code.replace('_', ' ').title())
                     results['customer_app_copy'] = await self.copy_mobile_app_to_tenant(
                         company_code=company_code,
@@ -1852,7 +1861,7 @@ class PortainerService:
                     )
                 
                 if operation_app_container in container_names:
-                    logger.info(f"[UPDATE-TEMPLATE] Step 10b: Updating operation mobile app...")
+                    logger.info(f"[UPDATE-TEMPLATE] Step 11b: Updating operation mobile app...")
                     company_name = os.environ.get('COMPANY_NAME', company_code.replace('_', ' ').title())
                     results['operation_app_copy'] = await self.copy_mobile_app_to_tenant(
                         company_code=company_code,
@@ -1863,23 +1872,59 @@ class PortainerService:
             except Exception as mobile_error:
                 logger.warning(f"[UPDATE-TEMPLATE] Mobile app update skipped: {mobile_error}")
             
+            logger.info(f"[UPDATE-TEMPLATE] ✓ Template update COMPLETE for {company_code}")
+            
             return {
                 'success': True,
                 'message': f'Tenant {company_code} updated from template successfully',
                 'company_code': company_code,
                 'domain': domain,
                 'results': results,
-                'note': 'Database verileri korundu. Sadece kod güncellendi.'
+                'note': 'Database verileri korundu. Sadece kod güncellendi. Backend güvenli şekilde güncellendi (stop->copy->start).'
             }
             
         except Exception as e:
             logger.error(f"[UPDATE-TEMPLATE] Error: {str(e)}")
+            
+            # Emergency recovery: try to start backend if it was stopped
+            try:
+                logger.info(f"[UPDATE-TEMPLATE] Emergency recovery: ensuring backend is running...")
+                await self.start_container(backend_container)
+            except:
+                pass
+            
             return {
                 'success': False,
                 'error': str(e),
                 'company_code': company_code,
-                'results': results
+                'results': results,
+                'recovery_attempted': True
             }
+
+    async def _check_backend_health(self, container_name: str) -> Dict[str, Any]:
+        """
+        Check if backend container is healthy and responding
+        """
+        try:
+            # Check container state
+            containers_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/json"
+            containers = await self._request('GET', containers_endpoint)
+            
+            for c in containers:
+                names = c.get('Names', [])
+                for name in names:
+                    if container_name in name:
+                        state = c.get('State', '')
+                        status = c.get('Status', '')
+                        return {
+                            'running': state == 'running',
+                            'state': state,
+                            'status': status
+                        }
+            
+            return {'running': False, 'error': 'Container not found'}
+        except Exception as e:
+            return {'running': False, 'error': str(e)}
 
     async def update_master_template(self, frontend_tar_path: str = None, backend_files: dict = None) -> Dict[str, Any]:
         """
