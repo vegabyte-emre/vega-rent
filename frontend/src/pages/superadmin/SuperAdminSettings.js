@@ -23,6 +23,7 @@ export function SuperAdminSettings() {
   useEffect(() => {
     checkTraefikStatus();
     checkMasterTemplateStatus();
+    checkMobileTemplateStatus();
     loadTemplateInfo();
   }, []);
 
@@ -44,6 +45,34 @@ export function SuperAdminSettings() {
       setMasterTemplateStatus(response.data);
     } catch (error) {
       setMasterTemplateStatus({ status: 'unknown' });
+    }
+  };
+
+  const checkMobileTemplateStatus = async () => {
+    try {
+      const response = await axios.get(`${getApiUrl()}/api/superadmin/template/mobile/status`);
+      setMobileTemplateStatus(response.data);
+    } catch (error) {
+      setMobileTemplateStatus({ templates: {} });
+    }
+  };
+
+  const updateMobileTemplate = async (appType) => {
+    setUpdatingMobileTemplate(true);
+    try {
+      const response = await axios.post(`${getApiUrl()}/api/superadmin/template/mobile/update`, {
+        app_type: appType
+      });
+      if (response.data.success) {
+        toast.success(`Mobil ${appType} template başarıyla güncellendi!`);
+        checkMobileTemplateStatus();
+      } else {
+        toast.error(response.data.error || "Mobil template güncelleme başarısız");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Mobil template güncellenemedi");
+    } finally {
+      setUpdatingMobileTemplate(false);
     }
   };
 
