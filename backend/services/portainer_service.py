@@ -2332,9 +2332,13 @@ fi
         safe_code = company_code.replace('-', '').replace('_', '')
         container_name = f"{safe_code}_{app_type}_app"
         
-        # Get Expo credentials from environment
+        # Get Expo credentials - use hardcoded values for reliability
         expo_token = os.environ.get("EXPO_TOKEN", "vIg74dANrrkDXdDtOl6jSOmGRkKld9EKBhBxfKM3")
-        expo_project_id = os.environ.get(f"EXPO_{app_type.upper()}_PROJECT_ID", "")
+        EXPO_PROJECT_IDS = {
+            "customer": "11d08a0d-b759-4489-9e3f-fca7161a7029",
+            "operation": "af4db31d-9d07-4872-9649-6743df13ba1e"
+        }
+        expo_project_id = EXPO_PROJECT_IDS.get(app_type, "")
         
         try:
             logger.info(f"[EAS-BUILD] Triggering build for {company_code} {app_type} app")
