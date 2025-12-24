@@ -4216,7 +4216,7 @@ async def initialize_iyzico_checkout(
     ]
     
     # Get callback URL from environment
-    frontend_url = os.environ.get("FRONTEND_URL", "https://saascaradmin.preview.emergentagent.com")
+    frontend_url = os.environ.get("FRONTEND_URL", "https://rentadmin.preview.emergentagent.com")
     callback_url = f"{frontend_url}/superadmin/payment/callback"
     
     result = await iyzico_service.create_checkout_form(
