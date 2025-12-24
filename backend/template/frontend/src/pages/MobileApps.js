@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -15,21 +15,127 @@ const statusConfig = {
   errored: { label: "Hata", color: "destructive", icon: XCircle },
 };
 
+// AppCard component moved outside to avoid re-creation on each render
+function AppCard({ title, description, appType, appState, icon, mobileConfig, onStartBuild, onCopy }) {
+  const StatusIcon = statusConfig[appState.status]?.icon || Smartphone;
+  const isBuilding = appState.status === "building";
+  const isPending = appState.status === "pending";
+  const config = mobileConfig?.[appType === "customer" ? "customer_app" : "operation_app"]?.config;
+  
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {icon}
+            <div>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </div>
+          </div>
+          <Badge variant={statusConfig[appState.status]?.color}>
+            <StatusIcon className={`h-3 w-3 mr-1 ${isBuilding ? "animate-spin" : ""}`} />
+            {statusConfig[appState.status]?.label}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => onStartBuild(appType)} 
+            disabled={isBuilding}
+            className="flex-1"
+          >
+            {isBuilding ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Oluşturuluyor...
+              </>
+            ) : (
+              <>
+                <Smartphone className="h-4 w-4 mr-2" />
+                APK Üret
+              </>
+            )}
+          </Button>
+          
+          {appState.downloadUrl && (
+            <Button variant="outline" asChild>
+              <a href={appState.downloadUrl} target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4 mr-2" />
+                İndir
+              </a>
+            </Button>
+          )}
+        </div>
+        
+        {(isBuilding || isPending) && (
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-800 flex items-center mb-2">
+              <Info className="h-4 w-4 mr-2" />
+              {isBuilding ? "Build işlemi devam ediyor..." : "Build talebi oluşturuldu"}
+            </p>
+            {appState.expoDashboard && (
+              <Button variant="outline" size="sm" asChild className="w-full">
+                <a href={appState.expoDashboard} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Expo Dashboard&#39;da Takip Et
+                </a>
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {isPending && appState.instructions && appState.instructions.length > 0 && (
+          <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <p className="text-sm font-medium text-amber-800 mb-2">Manuel Build Adımları:</p>
+            <ol className="text-xs text-amber-700 space-y-1 list-decimal list-inside">
+              {appState.instructions.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {config && (
+          <div className="p-3 bg-gray-50 rounded-lg border">
+            <p className="text-xs font-medium text-gray-600 mb-2">Uygulama Yapılandırması:</p>
+            <div className="space-y-1">
+              {Object.entries(config).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500">{key}:</span>
+                  <div className="flex items-center gap-1">
+                    <code className="bg-white px-1 py-0.5 rounded border text-gray-700">{value}</code>
+                    <button onClick={() => onCopy(value)} className="p-0.5 hover:bg-gray-200 rounded">
+                      <Copy className="h-3 w-3 text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {(isBuilding || isPending) && (
+          <p className="text-sm text-muted-foreground">
+            <Clock className="h-3 w-3 inline mr-1" />
+            Build süresi yaklaşık 10-20 dakika sürebilir
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function MobileApps() {
   const [customerApp, setCustomerApp] = useState({ status: "idle", buildId: null, downloadUrl: null, expoDashboard: null, instructions: [] });
   const [operationApp, setOperationApp] = useState({ status: "idle", buildId: null, downloadUrl: null, expoDashboard: null, instructions: [] });
   const [builds, setBuilds] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [mobileConfig, setMobileConfig] = useState(null);
 
   const API_URL = getApiUrl();
 
-  useEffect(() => {
-    fetchBuilds();
-    fetchMobileConfig();
-  }, []);
-
-  const fetchMobileConfig = async () => {
+  const fetchMobileConfig = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/mobile/config`, {
@@ -42,9 +148,9 @@ export default function MobileApps() {
     } catch (error) {
       console.error("Error fetching mobile config:", error);
     }
-  };
+  }, [API_URL]);
 
-  const fetchBuilds = async () => {
+  const fetchBuilds = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/mobile/builds`, {
@@ -57,9 +163,43 @@ export default function MobileApps() {
     } catch (error) {
       console.error("Error fetching builds:", error);
     }
-  };
+  }, [API_URL]);
 
-  const startBuild = async (appType) => {
+  useEffect(() => {
+    fetchBuilds();
+    fetchMobileConfig();
+  }, [fetchBuilds, fetchMobileConfig]);
+
+  const pollBuildStatus = useCallback(async (appType, buildId) => {
+    const setApp = appType === "customer" ? setCustomerApp : setOperationApp;
+    
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/api/mobile/build/${buildId}/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        if (data.status === "finished") {
+          clearInterval(interval);
+          setApp({ status: "finished", buildId, downloadUrl: data.download_url, expoDashboard: null, instructions: [] });
+          toast.success("APK hazır!");
+          fetchBuilds();
+        } else if (data.status === "errored") {
+          clearInterval(interval);
+          setApp({ status: "errored", buildId, downloadUrl: null, expoDashboard: null, instructions: [] });
+          toast.error("Build başarısız oldu");
+        }
+      } catch (error) {
+        console.error("Poll error:", error);
+      }
+    }, 15000);
+    
+    setTimeout(() => clearInterval(interval), 30 * 60 * 1000);
+  }, [API_URL, fetchBuilds]);
+
+  const startBuild = useCallback(async (appType) => {
     const setApp = appType === "customer" ? setCustomerApp : setOperationApp;
     setApp(prev => ({ ...prev, status: "building" }));
     
@@ -86,7 +226,6 @@ export default function MobileApps() {
           instructions: data.instructions || []
         }));
         
-        // If we got an expo_build_id, poll for status
         if (data.expo_build_id) {
           pollBuildStatus(appType, data.build_id);
         }
@@ -100,153 +239,12 @@ export default function MobileApps() {
       toast.error("Build başlatılırken hata oluştu");
       setApp(prev => ({ ...prev, status: "errored" }));
     }
-  };
+  }, [API_URL, fetchBuilds, pollBuildStatus]);
 
-  const pollBuildStatus = async (appType, buildId) => {
-    const setApp = appType === "customer" ? setCustomerApp : setOperationApp;
-    
-    const interval = setInterval(async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${API_URL}/api/mobile/build/${buildId}/status`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await response.json();
-        
-        if (data.status === "finished") {
-          clearInterval(interval);
-          setApp({ status: "finished", buildId, downloadUrl: data.download_url });
-          toast.success("APK hazır!");
-          fetchBuilds();
-        } else if (data.status === "errored") {
-          clearInterval(interval);
-          setApp({ status: "errored", buildId, downloadUrl: null });
-          toast.error("Build başarısız oldu");
-        }
-      } catch (error) {
-        console.error("Poll error:", error);
-      }
-    }, 15000); // Her 15 saniyede kontrol
-    
-    // 30 dakika sonra durdur
-    setTimeout(() => clearInterval(interval), 30 * 60 * 1000);
-  };
-
-  const copyToClipboard = (text) => {
+  const copyToClipboard = useCallback((text) => {
     navigator.clipboard.writeText(text);
     toast.success("Kopyalandı!");
-  };
-
-  const AppCard = ({ title, description, appType, appState, icon, dashboardUrl }) => {
-    const StatusIcon = statusConfig[appState.status]?.icon || Smartphone;
-    const isBuilding = appState.status === "building";
-    const isPending = appState.status === "pending";
-    const config = mobileConfig?.[appType === "customer" ? "customer_app" : "operation_app"]?.config;
-    
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {icon}
-              <div>
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
-              </div>
-            </div>
-            <Badge variant={statusConfig[appState.status]?.color}>
-              <StatusIcon className={`h-3 w-3 mr-1 ${isBuilding ? "animate-spin" : ""}`} />
-              {statusConfig[appState.status]?.label}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => startBuild(appType)} 
-              disabled={isBuilding}
-              className="flex-1"
-            >
-              {isBuilding ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Oluşturuluyor...
-                </>
-              ) : (
-                <>
-                  <Smartphone className="h-4 w-4 mr-2" />
-                  APK Üret
-                </>
-              )}
-            </Button>
-            
-            {appState.downloadUrl && (
-              <Button variant="outline" asChild>
-                <a href={appState.downloadUrl} target="_blank" rel="noopener noreferrer">
-                  <Download className="h-4 w-4 mr-2" />
-                  İndir
-                </a>
-              </Button>
-            )}
-          </div>
-          
-          {(isBuilding || isPending) && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800 flex items-center mb-2">
-                <Info className="h-4 w-4 mr-2" />
-                {isBuilding ? "Build işlemi devam ediyor..." : "Build talebi oluşturuldu"}
-              </p>
-              {appState.expoDashboard && (
-                <Button variant="outline" size="sm" asChild className="w-full">
-                  <a href={appState.expoDashboard} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Expo Dashboard'da Takip Et
-                  </a>
-                </Button>
-              )}
-            </div>
-          )}
-          
-          {isPending && appState.instructions && appState.instructions.length > 0 && (
-            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-              <p className="text-sm font-medium text-amber-800 mb-2">Manuel Build Adımları:</p>
-              <ol className="text-xs text-amber-700 space-y-1 list-decimal list-inside">
-                {appState.instructions.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          {config && (
-            <div className="p-3 bg-gray-50 rounded-lg border">
-              <p className="text-xs font-medium text-gray-600 mb-2">Uygulama Yapılandırması:</p>
-              <div className="space-y-1">
-                {Object.entries(config).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">{key}:</span>
-                    <div className="flex items-center gap-1">
-                      <code className="bg-white px-1 py-0.5 rounded border text-gray-700">{value}</code>
-                      <button onClick={() => copyToClipboard(value)} className="p-0.5 hover:bg-gray-200 rounded">
-                        <Copy className="h-3 w-3 text-gray-400" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {(isBuilding || isPending) && (
-            <p className="text-sm text-muted-foreground">
-              <Clock className="h-3 w-3 inline mr-1" />
-              Build süresi yaklaşık 10-20 dakika sürebilir
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -275,7 +273,9 @@ export default function MobileApps() {
             appType="customer"
             appState={customerApp}
             icon={<Smartphone className="h-8 w-8 text-blue-500" />}
-            dashboardUrl={mobileConfig?.customer_app?.dashboard_url}
+            mobileConfig={mobileConfig}
+            onStartBuild={startBuild}
+            onCopy={copyToClipboard}
           />
         </TabsContent>
 
@@ -286,7 +286,9 @@ export default function MobileApps() {
             appType="operation"
             appState={operationApp}
             icon={<Smartphone className="h-8 w-8 text-green-500" />}
-            dashboardUrl={mobileConfig?.operation_app?.dashboard_url}
+            mobileConfig={mobileConfig}
+            onStartBuild={startBuild}
+            onCopy={copyToClipboard}
           />
         </TabsContent>
 
