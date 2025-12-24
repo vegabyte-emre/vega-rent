@@ -2185,22 +2185,26 @@ fi
             package_name = f"com.{safe_code}.rentacar"
             
             # Expo project IDs (hardcoded for reliability)
+            # Note: We use the master project's slug but customize display name and package
             EXPO_PROJECT_IDS = {
                 "customer": "11d08a0d-b759-4489-9e3f-fca7161a7029",
                 "operation": "af4db31d-9d07-4872-9649-6743df13ba1e"
             }
+            EXPO_SLUGS = {
+                "customer": "vega-rent",
+                "operation": "vega-rent-o-app"
+            }
             project_id = EXPO_PROJECT_IDS.get(app_type, "")
+            expo_slug = EXPO_SLUGS.get(app_type, f"{safe_code}-{app_type}")
             
             if app_type == "customer":
                 app_name = company_name
-                slug = f"{safe_code}-customer"
             else:
                 app_name = f"{company_name} Operasyon"
-                slug = f"{safe_code}-operation"
             
             config_content = f'''export default {{
   name: "{app_name}",
-  slug: "{slug}",
+  slug: "{expo_slug}",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
