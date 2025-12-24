@@ -292,7 +292,7 @@ services:
       - template_network
 
   template_customer_app:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: rentacar_template_customer_app
     restart: unless-stopped
     working_dir: /app
@@ -305,7 +305,7 @@ services:
       - template_network
 
   template_operation_app:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: rentacar_template_operation_app
     restart: unless-stopped
     working_dir: /app
