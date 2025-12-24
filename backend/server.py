@@ -1621,6 +1621,80 @@ async def get_portainer_status(user: dict = Depends(get_current_user)):
             "error": f"Hata: {type(e).__name__}: {str(e)}"
         }
 
+@api_router.post("/superadmin/deploy-code-to-superadmin")
+async def deploy_code_to_superadmin_stack(
+    user: dict = Depends(get_current_user),
+    background_tasks: BackgroundTasks = None
+):
+    """
+    SuperAdmin: Deploy code from this Emergent environment to the Portainer SuperAdmin stack.
+    
+    This should be called after:
+    1. Save to GitHub
+    2. Portainer SuperAdmin stack redeploy
+    
+    It will:
+    1. Build the frontend
+    2. Upload frontend build to superadmin_frontend container
+    3. Upload backend code to superadmin_backend container
+    4. Create config.js with correct API URL
+    5. Restart services
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can deploy code")
+    
+    try:
+        # Step 1: Build frontend first
+        logger.info("[SUPERADMIN-DEPLOY] Building frontend...")
+        
+        frontend_dir = "/app/frontend"
+        build_dir = "/app/frontend/build"
+        
+        # Run yarn build
+        import subprocess
+        build_process = subprocess.run(
+            ["yarn", "build"],
+            cwd=frontend_dir,
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minute timeout
+        )
+        
+        if build_process.returncode != 0:
+            logger.error(f"[SUPERADMIN-DEPLOY] Frontend build failed: {build_process.stderr}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Frontend build failed: {build_process.stderr[:500]}"
+            )
+        
+        logger.info("[SUPERADMIN-DEPLOY] Frontend build complete, deploying to Portainer...")
+        
+        # Step 2: Deploy to Portainer
+        result = await portainer_service.deploy_code_to_superadmin(
+            frontend_build_path=build_dir,
+            backend_path="/app/backend"
+        )
+        
+        if result.get("success"):
+            return {
+                "success": True,
+                "message": "SuperAdmin stack code deployed successfully",
+                "results": result.get("results"),
+                "urls": result.get("urls"),
+                "note": "Frontend build edildi ve Portainer SuperAdmin container'larına deploy edildi."
+            }
+        else:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Deployment failed: {result.get('error')}"
+            )
+            
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="Frontend build timed out (5 minutes)")
+    except Exception as e:
+        logger.error(f"[SUPERADMIN-DEPLOY] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/superadmin/deploy-superadmin-stack")
 async def deploy_superadmin_stack(user: dict = Depends(get_current_user)):
     """SuperAdmin: Deploy SuperAdmin stack to Portainer"""
