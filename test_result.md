@@ -185,3 +185,48 @@ superadmin_backend:
 
 ### Değişen Dosyalar
 - `/app/backend/services/portainer_service.py` - get_superadmin_compose_template() güncellendi
+
+---
+## 2025-12-24 - SuperAdmin Stack BAĞIMSIZ YAPI (KALICI ÇÖZÜM)
+
+### Yeni Mimari
+SuperAdmin stack artık Emergent'tan BAĞIMSIZ çalışıyor:
+
+1. **Backend**: 
+   - `python:3.11-slim` image
+   - Başlangıçta GitHub'dan kod çeker (git clone)
+   - Varsa git pull ile günceller
+   - `network_mode: host` (Portainer'a erişim için)
+   - Dependencies otomatik kurulur
+
+2. **Nginx (Frontend)**:
+   - `nginx:alpine` image
+   - Static dosyalar serve eder
+   - SPA routing yapılandırılmış
+   - Deploy script ile güncellenebilir
+
+3. **MongoDB**:
+   - Persistent volume ile veri korunur
+   - Redeploy'da veriler silinmez
+
+### Çalışma Akışı
+```
+Save to GitHub → Portainer Redeploy → Backend otomatik git pull yapar
+```
+
+### Test Sonuçları ✅
+- Frontend: http://72.61.158.147:9000 ✅
+- Backend: http://72.61.158.147:9001/api/health ✅
+- config.js: http://72.61.158.147:9001 ✅
+- Portainer Status: connected=true ✅
+- Firmalar: 2 firma listeleniyor ✅
+
+### Değişen Dosyalar
+- `/app/backend/services/portainer_service.py`:
+  - `get_superadmin_compose_template()` tamamen yeniden yazıldı
+  - `deploy_code_to_superadmin()` güncellendi - artık nginx'e yüklüyor
+
+### Önemli Notlar
+- Backend GitHub'dan her restart'ta kod çeker
+- Frontend için manuel deploy gerekebilir (Ayarlar > "Kodu Portainer'a Deploy Et")
+- MongoDB verileri persistent
