@@ -1585,11 +1585,11 @@ async def start_mobile_build(data: MobileBuildRequest, user: dict = Depends(get_
     if data.app_type == "customer":
         project_id = EXPO_CUSTOMER_PROJECT_ID
         app_name = f"{company_name}"
-        dashboard_url = "https://expo.dev/accounts/vegabyte/projects/vega-rent-c-app/builds"
+        dashboard_url = "https://expo.dev/accounts/emrenasir/projects/vega-rent/builds"
     else:
         project_id = EXPO_OPERATION_PROJECT_ID
         app_name = f"{company_name} Operasyon"
-        dashboard_url = "https://expo.dev/accounts/vegabyte/projects/vega-rent-o-app/builds"
+        dashboard_url = "https://expo.dev/accounts/emrenasir/projects/vega-rent-o-app/builds"
     
     build_id = str(uuid.uuid4())
     
@@ -1779,7 +1779,7 @@ async def get_mobile_config(user: dict = Depends(get_current_user)):
     return {
         "customer_app": {
             "project_id": EXPO_CUSTOMER_PROJECT_ID,
-            "dashboard_url": "https://expo.dev/accounts/vegabyte/projects/vega-rent-c-app/builds",
+            "dashboard_url": "https://expo.dev/accounts/emrenasir/projects/vega-rent/builds",
             "config": {
                 "APP_NAME": company_name,
                 "API_URL": api_url,
@@ -1788,7 +1788,7 @@ async def get_mobile_config(user: dict = Depends(get_current_user)):
         },
         "operation_app": {
             "project_id": EXPO_OPERATION_PROJECT_ID,
-            "dashboard_url": "https://expo.dev/accounts/vegabyte/projects/vega-rent-o-app/builds",
+            "dashboard_url": "https://expo.dev/accounts/emrenasir/projects/vega-rent-o-app/builds",
             "config": {
                 "APP_NAME": f"{company_name} Operasyon",
                 "API_URL": api_url,
