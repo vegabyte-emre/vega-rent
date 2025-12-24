@@ -2256,19 +2256,18 @@ fi
     "version": ">= 3.0.0"
   }},
   "build": {{
-    "development": {{
-      "developmentClient": true,
-      "distribution": "internal"
-    }},
     "preview": {{
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {{
+        "buildType": "apk",
+        "credentialsSource": "local"
+      }}
     }},
     "production": {{
-      "autoIncrement": true
+      "android": {{
+        "credentialsSource": "local"
+      }}
     }}
-  }},
-  "submit": {{
-    "production": {{}}
   }}
 }}'''
             eas_result = await self.write_file_to_container(
@@ -2277,6 +2276,38 @@ fi
                 eas_json_content
             )
             results['eas_json_write'] = eas_result
+            
+            # Step 2c: Create credentials.json for local signing
+            credentials_json = '''{
+  "android": {
+    "keystore": {
+      "keystorePath": "keystore.jks",
+      "keystorePassword": "vegarent123",
+      "keyAlias": "key0",
+      "keyPassword": "vegarent123"
+    }
+  }
+}'''
+            creds_result = await self.write_file_to_container(
+                tenant_container,
+                "/app/credentials.json",
+                credentials_json
+            )
+            results['credentials_write'] = creds_result
+            
+            # Step 2d: Generate Android keystore if not exists
+            logger.info(f"[MOBILE-COPY] Generating Android keystore...")
+            keystore_cmd = f'''
+if [ ! -f /app/keystore.jks ]; then
+    apk add --no-cache openjdk17-jre-headless 2>/dev/null || true
+    keytool -genkeypair -v -keystore /app/keystore.jks -alias key0 -keyalg RSA -keysize 2048 -validity 10000 -storepass vegarent123 -keypass vegarent123 -dname "CN={company_name}, OU=Mobile, O=Vega Byte, L=Istanbul, ST=Istanbul, C=TR" 2>&1
+    echo "Keystore generated"
+else
+    echo "Keystore already exists"
+fi
+'''
+            keystore_result = await self.exec_in_container(tenant_container, keystore_cmd)
+            results['keystore_gen'] = {'success': keystore_result.get('success', False)}
             
             # Step 3: Install dependencies in tenant container
             logger.info(f"[MOBILE-COPY] Installing dependencies in {tenant_container}...")
