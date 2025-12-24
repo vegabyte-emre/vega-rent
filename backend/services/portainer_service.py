@@ -2437,18 +2437,18 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
             import asyncio
             
             # Step 1: Check if containers exist
-            frontend_id = await self.get_container_id(superadmin_frontend)
+            nginx_id = await self.get_container_id(superadmin_nginx)
             backend_id = await self.get_container_id(superadmin_backend)
             
-            if not frontend_id or not backend_id:
+            if not nginx_id:
                 return {
                     'success': False,
-                    'error': 'SuperAdmin containers not found. Create the stack first.',
-                    'frontend_found': bool(frontend_id),
+                    'error': 'SuperAdmin nginx container not found. Create the stack first.',
+                    'nginx_found': bool(nginx_id),
                     'backend_found': bool(backend_id)
                 }
             
-            # Step 2: Upload frontend build
+            # Step 2: Upload frontend build to Nginx
             if os.path.exists(frontend_build_path):
                 logger.info(f"[SUPERADMIN-DEPLOY] Step 1: Uploading frontend build from {frontend_build_path}")
                 
@@ -2456,7 +2456,6 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
                 tar_buffer = std_io.BytesIO()
                 with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
                     for root, dirs, files in os.walk(frontend_build_path):
-                        # Skip node_modules and other unnecessary folders
                         dirs[:] = [d for d in dirs if d not in ['node_modules', '.git', '__pycache__']]
                         for file in files:
                             file_path = os.path.join(root, file)
@@ -2469,12 +2468,9 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
                 tar_data = tar_buffer.getvalue()
                 logger.info(f"[SUPERADMIN-DEPLOY] Frontend tar size: {len(tar_data)} bytes")
                 
-                # Clean target directory first
-                await self.exec_in_container(superadmin_frontend, "rm -rf /usr/share/nginx/html/*")
-                
-                # Upload
+                # Upload to nginx
                 results['frontend_upload'] = await self.upload_to_container(
-                    container_name=superadmin_frontend,
+                    container_name=superadmin_nginx,
                     tar_data=tar_data,
                     dest_path="/usr/share/nginx/html"
                 )
@@ -2484,39 +2480,38 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
             
             # Step 3: Create config.js for SuperAdmin
             logger.info(f"[SUPERADMIN-DEPLOY] Step 2: Creating config.js with API URL: {api_url}")
-            results['config_js'] = await self.create_config_js(superadmin_frontend, api_url)
+            results['config_js'] = await self.create_config_js(superadmin_nginx, api_url)
             
-            # Step 4: Configure Nginx for SPA
-            logger.info(f"[SUPERADMIN-DEPLOY] Step 3: Configuring Nginx for SPA routing")
-            results['nginx_config'] = await self.configure_nginx_spa(superadmin_frontend)
+            # Step 4: Restart backend to pull latest code from GitHub
+            if backend_id:
+                logger.info(f"[SUPERADMIN-DEPLOY] Step 3: Restarting backend (will pull from GitHub)...")
+                results['backend_restart'] = await self.restart_container(superadmin_backend)
+                await asyncio.sleep(5)
             
-            # Step 5: Upload backend code
-            if os.path.exists(backend_path):
-                logger.info(f"[SUPERADMIN-DEPLOY] Step 4: Uploading backend code from {backend_path}")
-                
-                # STOP backend first to prevent issues
-                await self.stop_container(superadmin_backend)
-                await self.wait_for_container_state(superadmin_backend, 'exited', timeout=30)
-                await asyncio.sleep(2)
-                
-                # Create tar of backend folder (only essential files)
-                tar_buffer = std_io.BytesIO()
-                with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
-                    # Add prestart.sh for dependency installation
-                    prestart_content = '''#!/bin/bash
-pip install motor python-jose passlib[bcrypt] python-dotenv httpx bcrypt==4.0.1 -q
-'''
-                    prestart_info = tarfile.TarInfo(name="prestart.sh")
-                    prestart_data = prestart_content.encode()
-                    prestart_info.size = len(prestart_data)
-                    prestart_info.mode = 0o755
-                    tar.addfile(prestart_info, std_io.BytesIO(prestart_data))
-                    
-                    for item in ['server.py', 'requirements.txt', 'services', 'models', 'routes', 'utils']:
-                        item_path = os.path.join(backend_path, item)
-                        if os.path.exists(item_path):
-                            if os.path.isfile(item_path):
-                                tar.add(item_path, arcname=item)
+            logger.info(f"[SUPERADMIN-DEPLOY] ✓ Code deployment complete!")
+            
+            return {
+                'success': True,
+                'message': 'SuperAdmin stack code deployed successfully',
+                'results': results,
+                'urls': {
+                    'frontend': f'http://{SERVER_IP}:9000',
+                    'backend': f'http://{SERVER_IP}:9001',
+                    'api': f'http://{SERVER_IP}:9001/api'
+                },
+                'note': 'Backend GitHub\'dan kod çeker. Frontend build yüklendi.'
+            }
+            
+        except Exception as e:
+            logger.error(f"[SUPERADMIN-DEPLOY] Error: {str(e)}")
+            import traceback
+            logger.error(f"[SUPERADMIN-DEPLOY] Traceback: {traceback.format_exc()}")
+            
+            return {
+                'success': False,
+                'error': str(e),
+                'results': results
+            }
                             else:
                                 for root, dirs, files in os.walk(item_path):
                                     # Skip __pycache__
