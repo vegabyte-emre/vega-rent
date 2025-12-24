@@ -230,3 +230,58 @@ Save to GitHub → Portainer Redeploy → Backend otomatik git pull yapar
 - Backend GitHub'dan her restart'ta kod çeker
 - Frontend için manuel deploy gerekebilir (Ayarlar > "Kodu Portainer'a Deploy Et")
 - MongoDB verileri persistent
+
+---
+## 2025-12-24 - Mobil Uygulama Build Sistemi (P0 - IN PROGRESS)
+
+### Yapılan İşlemler
+
+1. **Template GitHub Klonlama Düzeltildi**
+   - `update_mobile_template_from_github` fonksiyonu güncellendi
+   - Git repo varsa pull, yoksa fresh clone yapıyor
+   - Template containerlarına kaynak kod başarıyla klonlandı
+
+2. **Tenant Mobil App Kopyalama Düzeltildi**
+   - `copy_from_template` fonksiyonuna `flatten_source` parametresi eklendi
+   - `/app/frontend` klasöründeki Expo uygulaması `/app`'e düzgün kopyalanıyor
+   - Tenant-specific `app.config.js` doğru projectId ile oluşturuluyor
+
+3. **EAS Build Trigger Sistemi Oluşturuldu**
+   - `/api/superadmin/companies/{id}/trigger-mobile-build` endpoint eklendi
+   - `trigger_eas_build` fonksiyonu Expo token ile login yapıyor
+   - Build komutu containerda çalıştırılıyor
+
+4. **Expo Yapılandırması Düzeltildi**
+   - `owner: "emrenasir"` olarak düzeltildi (vegabyte'dan)
+   - Project ID'ler sabit olarak kodda tanımlandı
+   - Slug değerleri master Expo projeleriyle eşleştirildi
+
+### Kalan Sorunlar
+
+1. **Node.js Versiyon Sorunu**
+   - Mevcut containerlar Node 18 kullanıyor
+   - Metro config `toReversed()` metodu Node 20+ gerektiriyor
+   - Docker template'ler `node:20-alpine` olarak güncellendi
+   - **Çözüm**: Portainer'da stack'ler yeniden deploy edilmeli
+
+### Test Edilen API'ler
+- `POST /api/superadmin/template/mobile/update` - ✅ Çalışıyor
+- `POST /api/superadmin/companies/{id}/update-mobile-apps` - ✅ Çalışıyor
+- `POST /api/superadmin/companies/{id}/trigger-mobile-build` - ⚠️ Node versiyon sorunu
+
+### Değişen Dosyalar
+- `/app/backend/services/portainer_service.py`:
+  - `update_mobile_template_from_github()` - git pull/clone logic
+  - `copy_from_template()` - flatten_source parameter
+  - `copy_mobile_app_to_tenant()` - proper projectId and slug
+  - `trigger_eas_build()` - Expo login and init
+  - Docker templates - node:18 → node:20
+
+- `/app/backend/server.py`:
+  - `trigger_company_mobile_build()` endpoint eklendi
+
+### Sonraki Adımlar
+1. Portainer'da rentacar_template stack'ini redeploy (node:20)
+2. Portainer'da rentacar_bitlis stack'ini redeploy (node:20)
+3. EAS build tekrar test et
+
