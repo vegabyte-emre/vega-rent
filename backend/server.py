@@ -2031,6 +2031,51 @@ async def trigger_company_mobile_build(company_id: str, data: TriggerBuildReques
     }
 
 
+# Public endpoint for tenant panels to trigger builds
+@api_router.post("/tenant/{company_code}/trigger-mobile-build")
+async def trigger_tenant_mobile_build(company_code: str, data: TriggerBuildRequest):
+    """
+    Public endpoint for tenant panels to trigger mobile builds.
+    Uses company_code for identification.
+    """
+    company = await db.companies.find_one({"code": company_code}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    company_name = company.get("name")
+    company_id = company.get("id")
+    
+    # Trigger EAS build
+    result = await portainer_service.trigger_eas_build(
+        company_code=company_code,
+        app_type=data.app_type
+    )
+    
+    # Log build request
+    if result.get('success'):
+        build_log = {
+            "id": str(uuid.uuid4()),
+            "company_id": company_id,
+            "company_code": company_code,
+            "company_name": company_name,
+            "app_type": data.app_type,
+            "build_id": result.get('build_id'),
+            "build_url": result.get('build_url'),
+            "status": "building",
+            "triggered_by": "tenant_panel",
+            "triggered_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.mobile_build_logs.insert_one(build_log)
+    
+    return {
+        "success": result.get('success', False),
+        "message": f"{company_name} {data.app_type} uygulaması build başlatıldı" if result.get('success') else result.get('error', 'Build başlatılamadı'),
+        "company_name": company_name,
+        "app_type": data.app_type,
+        "result": result
+    }
+
+
 @api_router.post("/superadmin/deploy-frontend-to-kvm")
 async def deploy_frontend_to_kvm(background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     """
