@@ -2512,62 +2512,10 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
                 'error': str(e),
                 'results': results
             }
-                            else:
-                                for root, dirs, files in os.walk(item_path):
-                                    # Skip __pycache__
-                                    dirs[:] = [d for d in dirs if d != '__pycache__']
-                                    for file in files:
-                                        if not file.endswith('.pyc'):
-                                            file_path = os.path.join(root, file)
-                                            arcname = os.path.relpath(file_path, backend_path)
-                                            tar.add(file_path, arcname=arcname)
-                
-                tar_data = tar_buffer.getvalue()
-                logger.info(f"[SUPERADMIN-DEPLOY] Backend tar size: {len(tar_data)} bytes")
-                
-                # Upload to backend container
-                results['backend_upload'] = await self.upload_to_container(
-                    container_name=superadmin_backend,
-                    tar_data=tar_data,
-                    dest_path="/app"
-                )
-                
-                # START backend container
-                await self.start_container(superadmin_backend)
-                await self.wait_for_container_state(superadmin_backend, 'running', timeout=30)
-                results['backend_restart'] = {'success': True}
-            else:
-                logger.warning(f"[SUPERADMIN-DEPLOY] Backend code not found at {backend_path}")
-                results['backend_upload'] = {'skipped': True, 'reason': f'Backend not found at {backend_path}'}
-            
-            # Step 6: Reload nginx
-            logger.info(f"[SUPERADMIN-DEPLOY] Step 5: Reloading Nginx")
-            await self.exec_in_container(superadmin_frontend, "nginx -s reload")
-            
-            logger.info(f"[SUPERADMIN-DEPLOY] ✓ Code deployment complete!")
-            
-            return {
-                'success': True,
-                'message': 'SuperAdmin stack code deployed successfully',
-                'results': results,
-                'urls': {
-                    'frontend': f'http://{SERVER_IP}:9000',
-                    'backend': f'http://{SERVER_IP}:9001',
-                    'api': f'http://{SERVER_IP}:9001/api'
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"[SUPERADMIN-DEPLOY] Error: {str(e)}")
-            import traceback
-            logger.error(f"[SUPERADMIN-DEPLOY] Traceback: {traceback.format_exc()}")
-            
-            # Try to restart backend if it was stopped
-            try:
-                await self.start_container(superadmin_backend)
-            except:
-                pass
-            
+
+
+# Singleton instance
+portainer_service = PortainerService()
             return {
                 'success': False,
                 'error': str(e),
