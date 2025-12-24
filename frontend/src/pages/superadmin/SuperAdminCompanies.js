@@ -199,6 +199,43 @@ export function SuperAdminCompanies() {
     }
   };
 
+  // Mobil App Güncelleme - Tek Firma
+  const handleUpdateMobileApps = async (companyId, companyName) => {
+    if (!window.confirm(`"${companyName}" firmasının mobil uygulamalarını güncellemek istediğinize emin misiniz?\n\nBu işlem:\n✅ Template'den mobil app kodlarını kopyalayacak\n✅ Firma özel config'lerini (API URL, Firma adı) enjekte edecek`)) return;
+    
+    try {
+      toast.loading("Mobil uygulamalar güncelleniyor...", { id: "update-mobile" });
+      const response = await axios.post(`${API_URL}/api/superadmin/companies/${companyId}/update-mobile-apps`);
+      if (response.data.success) {
+        toast.success(`${companyName} mobil uygulamaları güncellendi!`, { id: "update-mobile" });
+      } else {
+        toast.error(response.data.error || "Mobil güncelleme başarısız", { id: "update-mobile" });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Mobil uygulamalar güncellenemedi", { id: "update-mobile" });
+    }
+  };
+
+  // Tümünü Güncelle - Web + Mobil
+  const handleUpdateAll = async (companyId, companyName) => {
+    if (!window.confirm(`"${companyName}" firmasının TÜM uygulamalarını (Web + Mobil) güncellemek istediğinize emin misiniz?\n\nBu işlem:\n✅ Web Frontend/Backend güncelleyecek\n✅ Mobil uygulamaları güncelleyecek\n✅ Tüm config'leri yenileyecek`)) return;
+    
+    try {
+      toast.loading("Tüm uygulamalar güncelleniyor (3-5 dakika sürebilir)...", { id: "update-all" });
+      
+      // First update web
+      await axios.post(`${API_URL}/api/superadmin/companies/${companyId}/update-from-template`);
+      
+      // Then update mobile
+      await axios.post(`${API_URL}/api/superadmin/companies/${companyId}/update-mobile-apps`);
+      
+      toast.success(`${companyName} tüm uygulamaları güncellendi!`, { id: "update-all" });
+      fetchCompanies();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Güncelleme başarısız", { id: "update-all" });
+    }
+  };
+
   const filteredCompanies = companies.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
