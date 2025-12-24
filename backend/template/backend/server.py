@@ -19,6 +19,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
+# Optional httpx for Expo API calls
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
+
 # ============== CONFIGURATION ==============
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("tenant-api")
