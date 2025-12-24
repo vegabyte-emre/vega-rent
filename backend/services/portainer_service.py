@@ -2139,6 +2139,7 @@ fi
                                          company_name: str, domain: str) -> Dict[str, Any]:
         """
         Copy mobile app from template to tenant container with tenant-specific config.
+        Note: The source code is in /app/frontend in the template container.
         """
         safe_code = company_code.replace('-', '').replace('_', '')
         template_container = f"rentacar_template_{app_type}_app"
@@ -2153,13 +2154,14 @@ fi
         try:
             logger.info(f"[MOBILE-COPY] Copying {app_type} app to {company_code}")
             
-            # Step 1: Copy code from template to tenant (excluding node_modules and config)
+            # Step 1: Copy code from template/frontend to tenant /app (excluding node_modules and config)
+            # The Expo app is in /app/frontend in the cloned repo
             copy_result = await self.copy_from_template(
                 template_container=template_container,
                 target_container=tenant_container,
-                source_path="/app",
-                dest_path="/",
-                exclude_files=["node_modules", "app.config.js", ".env", ".expo"]
+                source_path="/app/frontend",  # Expo app is in frontend subfolder
+                dest_path="/",  # Copy to /app in tenant container
+                exclude_files=["node_modules", "app.config.js", ".env", ".expo", ".metro-cache"]
             )
             results['code_copy'] = copy_result
             
