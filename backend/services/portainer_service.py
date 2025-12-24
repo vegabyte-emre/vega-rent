@@ -2314,7 +2314,7 @@ ignore-engines=true
             )
             results['credentials_write'] = creds_result
             
-            # Step 2d: Generate Android keystore if not exists
+            # Step 2e: Generate Android keystore if not exists
             logger.info(f"[MOBILE-COPY] Generating Android keystore...")
             keystore_cmd = f'''
 if [ ! -f /app/keystore.jks ]; then
@@ -2328,11 +2328,11 @@ fi
             keystore_result = await self.exec_in_container(tenant_container, keystore_cmd)
             results['keystore_gen'] = {'success': keystore_result.get('success', False)}
             
-            # Step 3: Install dependencies in tenant container
+            # Step 3: Install dependencies in tenant container (with --ignore-engines flag)
             logger.info(f"[MOBILE-COPY] Installing dependencies in {tenant_container}...")
             deps_result = await self.exec_in_container(
                 tenant_container, 
-                "cd /app && yarn install 2>&1 || npm install 2>&1"
+                "cd /app && yarn install --ignore-engines 2>&1 || npm install --legacy-peer-deps 2>&1"
             )
             results['deps_install'] = {'success': deps_result.get('success', False)}
             
