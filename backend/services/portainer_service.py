@@ -2379,5 +2379,172 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
             return {'success': False, 'error': str(e)}
 
 
+    async def deploy_code_to_superadmin(self, frontend_build_path: str = None, backend_path: str = None) -> Dict[str, Any]:
+        """
+        Deploy code to SuperAdmin stack containers.
+        This should be called after a GitHub sync/redeploy to update the running containers.
+        
+        Args:
+            frontend_build_path: Path to frontend build folder (default: /app/frontend/build)
+            backend_path: Path to backend code (default: /app/backend)
+        """
+        if not frontend_build_path:
+            frontend_build_path = "/app/frontend/build"
+        if not backend_path:
+            backend_path = "/app/backend"
+        
+        results = {
+            'frontend_upload': None,
+            'backend_upload': None,
+            'config_js': None,
+            'nginx_config': None,
+            'backend_restart': None
+        }
+        
+        superadmin_frontend = "superadmin_frontend"
+        superadmin_backend = "superadmin_backend"
+        
+        # SuperAdmin API URL - always use IP:9001 for the Portainer stack
+        api_url = f"http://{SERVER_IP}:9001"
+        
+        logger.info(f"[SUPERADMIN-DEPLOY] Starting code deployment to SuperAdmin stack...")
+        
+        try:
+            import asyncio
+            
+            # Step 1: Check if containers exist
+            frontend_id = await self.get_container_id(superadmin_frontend)
+            backend_id = await self.get_container_id(superadmin_backend)
+            
+            if not frontend_id or not backend_id:
+                return {
+                    'success': False,
+                    'error': 'SuperAdmin containers not found. Create the stack first.',
+                    'frontend_found': bool(frontend_id),
+                    'backend_found': bool(backend_id)
+                }
+            
+            # Step 2: Upload frontend build
+            if os.path.exists(frontend_build_path):
+                logger.info(f"[SUPERADMIN-DEPLOY] Step 1: Uploading frontend build from {frontend_build_path}")
+                
+                # Create tar of build folder
+                tar_buffer = std_io.BytesIO()
+                with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+                    for root, dirs, files in os.walk(frontend_build_path):
+                        # Skip node_modules and other unnecessary folders
+                        dirs[:] = [d for d in dirs if d not in ['node_modules', '.git', '__pycache__']]
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, frontend_build_path)
+                            try:
+                                tar.add(file_path, arcname=arcname)
+                            except Exception as e:
+                                logger.warning(f"[SUPERADMIN-DEPLOY] Could not add file {file_path}: {e}")
+                
+                tar_data = tar_buffer.getvalue()
+                logger.info(f"[SUPERADMIN-DEPLOY] Frontend tar size: {len(tar_data)} bytes")
+                
+                # Clean target directory first
+                await self.exec_in_container(superadmin_frontend, "rm -rf /usr/share/nginx/html/*")
+                
+                # Upload
+                results['frontend_upload'] = await self.upload_to_container(
+                    container_name=superadmin_frontend,
+                    tar_data=tar_data,
+                    dest_path="/usr/share/nginx/html"
+                )
+            else:
+                logger.warning(f"[SUPERADMIN-DEPLOY] Frontend build not found at {frontend_build_path}")
+                results['frontend_upload'] = {'skipped': True, 'reason': f'Build not found at {frontend_build_path}'}
+            
+            # Step 3: Create config.js for SuperAdmin
+            logger.info(f"[SUPERADMIN-DEPLOY] Step 2: Creating config.js with API URL: {api_url}")
+            results['config_js'] = await self.create_config_js(superadmin_frontend, api_url)
+            
+            # Step 4: Configure Nginx for SPA
+            logger.info(f"[SUPERADMIN-DEPLOY] Step 3: Configuring Nginx for SPA routing")
+            results['nginx_config'] = await self.configure_nginx_spa(superadmin_frontend)
+            
+            # Step 5: Upload backend code
+            if os.path.exists(backend_path):
+                logger.info(f"[SUPERADMIN-DEPLOY] Step 4: Uploading backend code from {backend_path}")
+                
+                # STOP backend first to prevent issues
+                await self.stop_container(superadmin_backend)
+                await self.wait_for_container_state(superadmin_backend, 'exited', timeout=30)
+                await asyncio.sleep(2)
+                
+                # Create tar of backend folder (only essential files)
+                tar_buffer = std_io.BytesIO()
+                with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+                    for item in ['server.py', 'requirements.txt', 'services', 'models', 'routes', 'utils']:
+                        item_path = os.path.join(backend_path, item)
+                        if os.path.exists(item_path):
+                            if os.path.isfile(item_path):
+                                tar.add(item_path, arcname=item)
+                            else:
+                                for root, dirs, files in os.walk(item_path):
+                                    # Skip __pycache__
+                                    dirs[:] = [d for d in dirs if d != '__pycache__']
+                                    for file in files:
+                                        if not file.endswith('.pyc'):
+                                            file_path = os.path.join(root, file)
+                                            arcname = os.path.relpath(file_path, backend_path)
+                                            tar.add(file_path, arcname=arcname)
+                
+                tar_data = tar_buffer.getvalue()
+                logger.info(f"[SUPERADMIN-DEPLOY] Backend tar size: {len(tar_data)} bytes")
+                
+                # Upload to backend container
+                results['backend_upload'] = await self.upload_to_container(
+                    container_name=superadmin_backend,
+                    tar_data=tar_data,
+                    dest_path="/app"
+                )
+                
+                # START backend container
+                await self.start_container(superadmin_backend)
+                await self.wait_for_container_state(superadmin_backend, 'running', timeout=30)
+                results['backend_restart'] = {'success': True}
+            else:
+                logger.warning(f"[SUPERADMIN-DEPLOY] Backend code not found at {backend_path}")
+                results['backend_upload'] = {'skipped': True, 'reason': f'Backend not found at {backend_path}'}
+            
+            # Step 6: Reload nginx
+            logger.info(f"[SUPERADMIN-DEPLOY] Step 5: Reloading Nginx")
+            await self.exec_in_container(superadmin_frontend, "nginx -s reload")
+            
+            logger.info(f"[SUPERADMIN-DEPLOY] ✓ Code deployment complete!")
+            
+            return {
+                'success': True,
+                'message': 'SuperAdmin stack code deployed successfully',
+                'results': results,
+                'urls': {
+                    'frontend': f'http://{SERVER_IP}:9000',
+                    'backend': f'http://{SERVER_IP}:9001',
+                    'api': f'http://{SERVER_IP}:9001/api'
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"[SUPERADMIN-DEPLOY] Error: {str(e)}")
+            import traceback
+            logger.error(f"[SUPERADMIN-DEPLOY] Traceback: {traceback.format_exc()}")
+            
+            # Try to restart backend if it was stopped
+            try:
+                await self.start_container(superadmin_backend)
+            except:
+                pass
+            
+            return {
+                'success': False,
+                'error': str(e),
+                'results': results
+            }
+
+
 # Singleton instance
 portainer_service = PortainerService()
