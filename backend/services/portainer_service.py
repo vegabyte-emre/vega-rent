@@ -386,6 +386,7 @@ def get_superadmin_compose_template() -> str:
     """
     Generate Docker Compose YAML for SuperAdmin stack
     Ports: Frontend 9000, Backend 9001, MongoDB 27017
+    Backend uses network_mode: host for direct Portainer access
     """
     yaml_content = """version: "3.8"
 
@@ -405,24 +406,18 @@ services:
     image: tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim
     container_name: superadmin_backend
     restart: unless-stopped
-    ports:
-      - "9001:80"
+    network_mode: host
     environment:
-      - MONGO_URL=mongodb://superadmin_mongodb:27017
+      - MONGO_URL=mongodb://localhost:27017
       - DB_NAME=superadmin_db
       - PORTAINER_URL=https://72.61.158.147:9443
       - PORTAINER_API_KEY=ptr_XwtYmxpR0KCkqMLsPLGMM4mHQS5Q75gupgBcCGqRUEY=
       - SERVER_IP=72.61.158.147
       - MODULE_NAME=server
       - VARIABLE_NAME=app
+      - PORT=9001
     volumes:
       - superadmin_backend_app:/app
-    networks:
-      - superadmin_network
-    depends_on:
-      - superadmin_mongodb
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   superadmin_frontend:
     image: nginx:alpine
@@ -434,8 +429,6 @@ services:
       - superadmin_frontend_html:/usr/share/nginx/html
     networks:
       - superadmin_network
-    depends_on:
-      - superadmin_backend
 
 volumes:
   superadmin_mongo_data:
