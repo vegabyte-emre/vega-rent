@@ -413,6 +413,8 @@ services:
       - PORTAINER_URL=https://host.docker.internal:9443
       - PORTAINER_API_KEY=ptr_XwtYmxpR0KCkqMLsPLGMM4mHQS5Q75gupgBcCGqRUEY=
       - SERVER_IP=72.61.158.147
+      - MODULE_NAME=server
+      - VARIABLE_NAME=app
     volumes:
       - superadmin_backend_app:/app
     networks:
