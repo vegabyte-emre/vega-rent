@@ -1616,7 +1616,44 @@ async def start_mobile_build(data: MobileBuildRequest, user: dict = Depends(get_
     }
     await db.mobile_builds.insert_one(build_record)
     
-    # Try to trigger build via Expo GraphQL API (if httpx available)
+    # Try to trigger build via SuperAdmin API (which has access to containers)
+    superadmin_url = os.environ.get("SUPERADMIN_URL", "http://72.61.158.147:9001")
+    company_id = os.environ.get("COMPANY_ID", "")
+    
+    if HTTPX_AVAILABLE and superadmin_url and company_id:
+        try:
+            async with httpx.AsyncClient(timeout=120.0, verify=False) as client:
+                # Call SuperAdmin API to trigger build in tenant container
+                response = await client.post(
+                    f"{superadmin_url}/api/superadmin/companies/{company_id}/trigger-mobile-build",
+                    headers={"Content-Type": "application/json"},
+                    json={"app_type": data.app_type}
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("success"):
+                        build_url = result.get("result", {}).get("build_url", dashboard_url)
+                        await db.mobile_builds.update_one(
+                            {"id": build_id},
+                            {"$set": {
+                                "expo_build_id": result.get("result", {}).get("build_id"),
+                                "status": "building",
+                                "build_url": build_url
+                            }}
+                        )
+                        return {
+                            "success": True,
+                            "build_id": build_id,
+                            "message": "Build başlatıldı! Expo Dashboard'dan takip edebilirsiniz.",
+                            "expo_dashboard": build_url or dashboard_url
+                        }
+                    else:
+                        logger.warning(f"SuperAdmin build trigger failed: {result.get('message')}")
+        except Exception as e:
+            logger.warning(f"SuperAdmin API call failed: {e}")
+    
+    # Fallback: Try Expo GraphQL API directly
     if HTTPX_AVAILABLE and EXPO_TOKEN:
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
