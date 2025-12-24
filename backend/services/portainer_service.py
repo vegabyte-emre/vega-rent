@@ -2169,12 +2169,14 @@ fi
             
             # Step 1: Copy code from template/frontend to tenant /app (excluding node_modules and config)
             # The Expo app is in /app/frontend in the cloned repo
+            # Use flatten_source=True to remove 'frontend/' prefix so files go directly to /app
             copy_result = await self.copy_from_template(
                 template_container=template_container,
                 target_container=tenant_container,
                 source_path="/app/frontend",  # Expo app is in frontend subfolder
-                dest_path="/",  # Copy to /app in tenant container
-                exclude_files=["node_modules", "app.config.js", ".env", ".expo", ".metro-cache"]
+                dest_path="/app",  # Copy directly to /app in tenant container
+                exclude_files=["node_modules", "app.config.js", ".env", ".expo", ".metro-cache"],
+                flatten_source=True  # Remove 'frontend/' prefix from paths
             )
             results['code_copy'] = copy_result
             
