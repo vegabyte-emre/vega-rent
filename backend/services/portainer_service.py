@@ -2259,8 +2259,6 @@ fi
             npmrc_cmd = '''sh -c 'echo -e "engine-strict=false\\nignore-engines=true" > /app/.npmrc' '''
             npmrc_result = await self.exec_in_container(tenant_container, npmrc_cmd)
             results['npmrc_write'] = {'success': npmrc_result.get('success', False)}
-            )
-            results['npmrc_write'] = npmrc_result
             
             # Step 2d: Create credentials.json for local signing
             credentials_json = '''{
