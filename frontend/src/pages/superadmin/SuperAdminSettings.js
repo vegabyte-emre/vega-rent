@@ -19,6 +19,7 @@ export function SuperAdminSettings() {
   const [masterTemplateStatus, setMasterTemplateStatus] = useState(null);
   const [mobileTemplateStatus, setMobileTemplateStatus] = useState(null);
   const [updatingMobileTemplate, setUpdatingMobileTemplate] = useState(false);
+  const [deployingToPortainer, setDeployingToPortainer] = useState(false);
 
   useEffect(() => {
     checkTraefikStatus();
@@ -26,6 +27,36 @@ export function SuperAdminSettings() {
     checkMobileTemplateStatus();
     loadTemplateInfo();
   }, []);
+
+  // Deploy code to Portainer SuperAdmin stack
+  const deployToPortainer = async () => {
+    if (!window.confirm(
+      "SuperAdmin kodunu Portainer'a deploy etmek istediğinize emin misiniz?\n\n" +
+      "Bu işlem:\n" +
+      "✅ Frontend'i build edecek\n" +
+      "✅ Build'i superadmin_frontend container'ına yükleyecek\n" +
+      "✅ Backend kodunu superadmin_backend container'ına yükleyecek\n" +
+      "✅ Config.js'i doğru API URL ile oluşturacak\n\n" +
+      "⏱️ Bu işlem 2-5 dakika sürebilir."
+    )) return;
+
+    setDeployingToPortainer(true);
+    toast.loading("SuperAdmin kodu Portainer'a deploy ediliyor...", { id: "deploy-portainer" });
+
+    try {
+      const response = await axios.post(`${getApiUrl()}/api/superadmin/deploy-code-to-superadmin`);
+      
+      if (response.data.success) {
+        toast.success("SuperAdmin kodu başarıyla deploy edildi!", { id: "deploy-portainer" });
+      } else {
+        toast.error(response.data.error || "Deploy başarısız", { id: "deploy-portainer" });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Deploy işlemi başarısız", { id: "deploy-portainer" });
+    } finally {
+      setDeployingToPortainer(false);
+    }
+  };
 
   const checkTraefikStatus = async () => {
     setLoading(true);
