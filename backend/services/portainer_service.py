@@ -1163,13 +1163,14 @@ class PortainerService:
                         return c.get('Id')
         return None
 
-    async def copy_from_template(self, template_container: str, target_container: str, source_path: str, dest_path: str, exclude_files: list = None) -> Dict[str, Any]:
+    async def copy_from_template(self, template_container: str, target_container: str, source_path: str, dest_path: str, exclude_files: list = None, flatten_source: bool = False) -> Dict[str, Any]:
         """
         Copy files from template container to target container via Portainer API.
         This enables template-based deployment without external APIs.
         
         Args:
             exclude_files: List of filenames to exclude (e.g., ['config.js'] to preserve tenant config)
+            flatten_source: If True, removes the source folder name from paths (e.g., /app/frontend/* -> /app/*)
         """
         logger.info(f"[TEMPLATE-COPY] {template_container}:{source_path} -> {target_container}:{dest_path}")
         if exclude_files:
@@ -1196,17 +1197,29 @@ class PortainerService:
                 tar_data = download_resp.content
                 logger.info(f"[TEMPLATE-COPY] Downloaded {len(tar_data)} bytes from template")
                 
-                # Step 2: Filter out excluded files if specified
-                if exclude_files:
+                # Step 2: Filter out excluded files and optionally flatten paths
+                source_folder_name = os.path.basename(source_path.rstrip('/'))  # e.g., 'frontend'
+                
+                if exclude_files or flatten_source:
                     filtered_tar = std_io.BytesIO()
                     with tarfile.open(fileobj=std_io.BytesIO(tar_data), mode='r') as src_tar:
                         with tarfile.open(fileobj=filtered_tar, mode='w') as dst_tar:
                             for member in src_tar.getmembers():
                                 # Check if this file should be excluded
                                 filename = os.path.basename(member.name)
-                                if filename in exclude_files:
+                                if exclude_files and filename in exclude_files:
                                     logger.info(f"[TEMPLATE-COPY] Excluding: {member.name}")
                                     continue
+                                
+                                # Flatten paths if needed (remove source folder prefix)
+                                if flatten_source and member.name.startswith(source_folder_name + '/'):
+                                    new_name = member.name[len(source_folder_name) + 1:]  # Remove 'frontend/'
+                                    if not new_name:  # Skip the root folder itself
+                                        continue
+                                    member.name = new_name
+                                elif flatten_source and member.name == source_folder_name:
+                                    continue  # Skip the root folder entry
+                                
                                 # Copy the member
                                 if member.isfile():
                                     dst_tar.addfile(member, src_tar.extractfile(member))
