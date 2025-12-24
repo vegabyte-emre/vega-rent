@@ -2480,6 +2480,16 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
                 # Create tar of backend folder (only essential files)
                 tar_buffer = std_io.BytesIO()
                 with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+                    # Add prestart.sh for dependency installation
+                    prestart_content = '''#!/bin/bash
+pip install motor python-jose passlib[bcrypt] python-dotenv httpx bcrypt==4.0.1 -q
+'''
+                    prestart_info = tarfile.TarInfo(name="prestart.sh")
+                    prestart_data = prestart_content.encode()
+                    prestart_info.size = len(prestart_data)
+                    prestart_info.mode = 0o755
+                    tar.addfile(prestart_info, std_io.BytesIO(prestart_data))
+                    
                     for item in ['server.py', 'requirements.txt', 'services', 'models', 'routes', 'utils']:
                         item_path = os.path.join(backend_path, item)
                         if os.path.exists(item_path):
