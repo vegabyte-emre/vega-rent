@@ -1669,7 +1669,7 @@ async def start_mobile_build(data: MobileBuildRequest, user: dict = Depends(get_
     return {
         "success": True,
         "build_id": build_id,
-        "message": f"Build talebi oluşturuldu. APK için Expo Dashboard'dan build başlatın.",
+        "message": "Build talebi oluşturuldu. APK için Expo Dashboard'dan build başlatın.",
         "expo_dashboard": dashboard_url,
         "build_config": build_record["build_config"],
         "instructions": [
@@ -1677,7 +1677,7 @@ async def start_mobile_build(data: MobileBuildRequest, user: dict = Depends(get_
             "2. 'Build' butonuna tıklayın",
             "3. Platform: Android seçin",
             "4. Profile: production seçin",
-            f"5. Environment Variables'a şunları ekleyin:",
+            "5. Environment Variables'a şunları ekleyin:",
             f"   APP_NAME={app_name}",
             f"   API_URL={api_url}",
             f"   COMPANY_CODE={company_code}"
