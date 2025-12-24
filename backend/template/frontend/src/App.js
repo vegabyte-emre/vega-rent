@@ -23,6 +23,7 @@ import { Settings } from "./pages/Settings";
 import { ThemeStore } from "./pages/ThemeStore";
 import { Support } from "./pages/Support";
 import Locations from "./pages/Locations";
+import MobileApps from "./pages/MobileApps";
 
 // Public Pages (Customer Facing)
 import { Home } from "./pages/public/Home";
