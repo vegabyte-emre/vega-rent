@@ -2420,8 +2420,9 @@ fi
                 await self.write_file_to_container(container_name, "/app/eas.json", eas_config)
             
             # Step 4: Run EAS build with token (EAS_NO_VCS=1 since containers don't have git)
+            # Use preview profile to generate APK with local credentials
             logger.info(f"[EAS-BUILD] Starting build...")
-            build_cmd = f"""cd /app && EAS_NO_VCS=1 EXPO_TOKEN={expo_token} eas build --platform android --profile production --non-interactive --no-wait 2>&1"""
+            build_cmd = f"""cd /app && EAS_NO_VCS=1 EXPO_TOKEN={expo_token} eas build --platform android --profile preview --non-interactive --no-wait 2>&1"""
             
             result = await self.exec_in_container(container_name, build_cmd)
             
