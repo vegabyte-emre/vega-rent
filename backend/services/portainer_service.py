@@ -220,7 +220,7 @@ services:
       - "traefik.http.services.{safe_code}-frontend.loadbalancer.server.port=80"
 
   {safe_code}_customer_app:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: {safe_code}_customer_app
     restart: unless-stopped
     working_dir: /app
@@ -235,7 +235,7 @@ services:
       - {safe_code}_network
 
   {safe_code}_operation_app:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: {safe_code}_operation_app
     restart: unless-stopped
     working_dir: /app
