@@ -199,7 +199,7 @@ export function SuperAdminSettings() {
                 </p>
               </div>
             </div>
-          )}}
+          )}
           
           <div className="flex gap-3">
             <Button 
