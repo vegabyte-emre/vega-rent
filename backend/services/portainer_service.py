@@ -2249,7 +2249,7 @@ fi
             )
             results['config_write'] = config_result
             
-            # Step 2b: Create eas.json for EAS build
+            # Step 2b: Create eas.json for EAS build with Node 22 to avoid engine compatibility issues
             project_id = os.environ.get(f'EXPO_{app_type.upper()}_PROJECT_ID', '')
             eas_json_content = f'''{{
   "cli": {{
@@ -2258,12 +2258,20 @@ fi
   "build": {{
     "preview": {{
       "distribution": "internal",
+      "node": "22.12.0",
+      "env": {{
+        "npm_config_engine_strict": "false"
+      }},
       "android": {{
         "buildType": "apk",
         "credentialsSource": "local"
       }}
     }},
     "production": {{
+      "node": "22.12.0",
+      "env": {{
+        "npm_config_engine_strict": "false"
+      }},
       "android": {{
         "credentialsSource": "local"
       }}
@@ -2277,7 +2285,18 @@ fi
             )
             results['eas_json_write'] = eas_result
             
-            # Step 2c: Create credentials.json for local signing
+            # Step 2c: Create .npmrc to ignore engine checks
+            npmrc_content = '''engine-strict=false
+ignore-engines=true
+'''
+            npmrc_result = await self.write_file_to_container(
+                tenant_container,
+                "/app/.npmrc",
+                npmrc_content
+            )
+            results['npmrc_write'] = npmrc_result
+            
+            # Step 2d: Create credentials.json for local signing
             credentials_json = '''{
   "android": {
     "keystore": {
