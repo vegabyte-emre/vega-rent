@@ -688,6 +688,82 @@ class PortainerService:
         endpoint = f"stacks/{stack_id}/stop?endpointId={self.endpoint_id}"
         return await self._request('POST', endpoint)
 
+    async def stop_container(self, container_name: str) -> Dict[str, Any]:
+        """
+        Stop a container by name - CRITICAL for safe updates
+        This prevents crash loops during template updates
+        """
+        container_id = await self.get_container_id(container_name)
+        if not container_id:
+            return {'error': f'Container {container_name} not found'}
+        
+        stop_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{container_id}/stop"
+        
+        async with httpx.AsyncClient(verify=False, timeout=60.0) as client:
+            try:
+                url = f"{self.base_url}/api/{stop_endpoint}"
+                response = await client.post(url, headers=self.headers)
+                
+                if response.status_code < 400 or response.status_code == 304:  # 304 = already stopped
+                    logger.info(f"[CONTAINER] Stopped: {container_name}")
+                    return {'success': True}
+                else:
+                    logger.error(f"[CONTAINER] Stop failed: {response.status_code} - {response.text}")
+                    return {'error': response.text, 'status_code': response.status_code}
+            except Exception as e:
+                logger.error(f"[CONTAINER] Stop error: {str(e)}")
+                return {'error': str(e)}
+
+    async def start_container(self, container_name: str) -> Dict[str, Any]:
+        """
+        Start a container by name
+        """
+        container_id = await self.get_container_id(container_name)
+        if not container_id:
+            return {'error': f'Container {container_name} not found'}
+        
+        start_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{container_id}/start"
+        
+        async with httpx.AsyncClient(verify=False, timeout=60.0) as client:
+            try:
+                url = f"{self.base_url}/api/{start_endpoint}"
+                response = await client.post(url, headers=self.headers)
+                
+                if response.status_code < 400 or response.status_code == 304:  # 304 = already running
+                    logger.info(f"[CONTAINER] Started: {container_name}")
+                    return {'success': True}
+                else:
+                    logger.error(f"[CONTAINER] Start failed: {response.status_code} - {response.text}")
+                    return {'error': response.text, 'status_code': response.status_code}
+            except Exception as e:
+                logger.error(f"[CONTAINER] Start error: {str(e)}")
+                return {'error': str(e)}
+
+    async def wait_for_container_state(self, container_name: str, desired_state: str, timeout: int = 30) -> bool:
+        """
+        Wait for container to reach desired state (running/exited)
+        """
+        import asyncio
+        
+        for _ in range(timeout):
+            containers_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/json?all=true"
+            containers = await self._request('GET', containers_endpoint)
+            
+            if isinstance(containers, list):
+                for c in containers:
+                    names = c.get('Names', [])
+                    for name in names:
+                        if container_name in name:
+                            current_state = c.get('State', '').lower()
+                            if current_state == desired_state.lower():
+                                logger.info(f"[CONTAINER] {container_name} reached state: {desired_state}")
+                                return True
+                            break
+            
+            await asyncio.sleep(1)
+        
+        logger.warning(f"[CONTAINER] {container_name} did not reach state {desired_state} within {timeout}s")
+        return False
 
     async def deploy_traefik(self, admin_email: str = "admin@rentafleet.com") -> Dict[str, Any]:
         """
