@@ -2184,6 +2184,13 @@ fi
             api_url = f"https://api.{domain}"
             package_name = f"com.{safe_code}.rentacar"
             
+            # Expo project IDs (hardcoded for reliability)
+            EXPO_PROJECT_IDS = {
+                "customer": "11d08a0d-b759-4489-9e3f-fca7161a7029",
+                "operation": "af4db31d-9d07-4872-9649-6743df13ba1e"
+            }
+            project_id = EXPO_PROJECT_IDS.get(app_type, "")
+            
             if app_type == "customer":
                 app_name = company_name
                 slug = f"{safe_code}-customer"
@@ -2223,7 +2230,7 @@ fi
     COMPANY_CODE: "{company_code}",
     APP_TYPE: "{app_type}",
     eas: {{
-      projectId: "{os.environ.get(f'EXPO_{app_type.upper()}_PROJECT_ID', '')}"
+      projectId: "{project_id}"
     }}
   }},
   owner: "emrenasir"
