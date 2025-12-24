@@ -275,6 +275,7 @@ export default function MobileApps() {
             appType="customer"
             appState={customerApp}
             icon={<Smartphone className="h-8 w-8 text-blue-500" />}
+            dashboardUrl={mobileConfig?.customer_app?.dashboard_url}
           />
         </TabsContent>
 
@@ -285,6 +286,7 @@ export default function MobileApps() {
             appType="operation"
             appState={operationApp}
             icon={<Smartphone className="h-8 w-8 text-green-500" />}
+            dashboardUrl={mobileConfig?.operation_app?.dashboard_url}
           />
         </TabsContent>
 
