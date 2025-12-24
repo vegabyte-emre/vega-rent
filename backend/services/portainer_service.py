@@ -2453,7 +2453,20 @@ fi
                         'raw_output': output[:500]
                     }
                 
-                # Check for build link
+                # Check for build link in "See logs:" format
+                see_logs_match = re.search(r'See logs:\s*(https://expo\.dev/[^\s]+)', output)
+                if see_logs_match:
+                    build_url = see_logs_match.group(1)
+                    build_id_match = re.search(r'/builds/([a-f0-9-]+)', build_url)
+                    return {
+                        'success': True,
+                        'build_id': build_id_match.group(1) if build_id_match else None,
+                        'build_url': build_url,
+                        'message': 'EAS build started successfully',
+                        'raw_output': output[:500]
+                    }
+                
+                # Check for build link in other formats
                 link_match = re.search(r'https://expo\.dev/.*?/builds/([a-f0-9-]+)', output)
                 if link_match:
                     return {
