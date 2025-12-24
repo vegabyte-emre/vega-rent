@@ -26,6 +26,7 @@ import {
   FileCheck,
   CalendarDays,
   Link2,
+  Smartphone,
 } from "lucide-react";
 
 // Check if we're on panel subdomain
