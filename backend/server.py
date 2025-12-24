@@ -1773,6 +1773,135 @@ async def deploy_code_to_template(user: dict = Depends(get_current_user)):
         logger.error(f"[TEMPLATE] Deploy error: {str(e)}")
         return {"success": False, "error": str(e), "results": results}
 
+# ============== MOBILE APP TEMPLATE ENDPOINTS ==============
+
+class MobileTemplateUpdateRequest(BaseModel):
+    app_type: str  # "customer" or "operation" or "all"
+    github_repo: Optional[str] = None
+
+@api_router.post("/superadmin/template/mobile/update")
+async def update_mobile_template(data: MobileTemplateUpdateRequest, user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Update mobile app template from GitHub.
+    Clones the latest code from GitHub to template container.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can update mobile templates")
+    
+    results = {}
+    
+    # Default GitHub repos
+    repos = {
+        "customer": data.github_repo or "vegabyte-emre/vega-rent-customer-app",
+        "operation": data.github_repo or "vegabyte-emre/vega-rent-operation-mobilapp"
+    }
+    
+    if data.app_type == "all":
+        for app_type, repo in repos.items():
+            logger.info(f"[MOBILE-TEMPLATE] Updating {app_type} from {repo}")
+            result = await portainer_service.update_mobile_template_from_github(app_type, repo)
+            results[app_type] = result
+    else:
+        repo = repos.get(data.app_type, data.github_repo)
+        if not repo:
+            raise HTTPException(status_code=400, detail="Invalid app_type or github_repo required")
+        result = await portainer_service.update_mobile_template_from_github(data.app_type, repo)
+        results[data.app_type] = result
+    
+    # Check if all succeeded
+    all_success = all(r.get('success', False) for r in results.values())
+    
+    return {
+        "success": all_success,
+        "message": "Mobile template(s) updated from GitHub" if all_success else "Some updates failed",
+        "results": results
+    }
+
+@api_router.get("/superadmin/template/mobile/status")
+async def get_mobile_template_status(user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Check mobile template containers status.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can check mobile templates")
+    
+    status = {
+        "customer_app": None,
+        "operation_app": None
+    }
+    
+    containers = await portainer_service.list_containers()
+    
+    for container in containers:
+        name = container.get('Names', [''])[0].replace('/', '')
+        if name == 'rentacar_template_customer_app':
+            status['customer_app'] = {
+                'status': container.get('State'),
+                'container': name
+            }
+        elif name == 'rentacar_template_operation_app':
+            status['operation_app'] = {
+                'status': container.get('State'),
+                'container': name
+            }
+    
+    return {
+        "success": True,
+        "templates": status,
+        "note": "Mobile template containers status"
+    }
+
+@api_router.post("/superadmin/companies/{company_id}/update-mobile-apps")
+async def update_company_mobile_apps(company_id: str, user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Copy mobile apps from template to specific company.
+    Includes tenant-specific configuration injection.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can update mobile apps")
+    
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    company_code = company.get("code")
+    company_name = company.get("name")
+    domain = company.get("domain")
+    
+    if not domain:
+        raise HTTPException(status_code=400, detail="Company domain not configured")
+    
+    results = {}
+    
+    # Copy both apps
+    for app_type in ["customer", "operation"]:
+        logger.info(f"[MOBILE-UPDATE] Copying {app_type} app to {company_code}")
+        result = await portainer_service.copy_mobile_app_to_tenant(
+            company_code=company_code,
+            app_type=app_type,
+            company_name=company_name,
+            domain=domain
+        )
+        results[app_type] = result
+    
+    all_success = all(r.get('success', False) for r in results.values())
+    
+    if all_success:
+        await db.companies.update_one(
+            {"id": company_id},
+            {"$set": {
+                "mobile_apps_updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    
+    return {
+        "success": all_success,
+        "message": f"{company_name} mobil uygulamaları güncellendi" if all_success else "Bazı güncellemeler başarısız",
+        "company_name": company_name,
+        "results": results
+    }
+
 @api_router.post("/superadmin/deploy-frontend-to-kvm")
 async def deploy_frontend_to_kvm(background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     """
