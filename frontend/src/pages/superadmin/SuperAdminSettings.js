@@ -567,6 +567,33 @@ export function SuperAdminSettings() {
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
             Bağlantı aktif
           </div>
+          
+          {/* Deploy to Portainer Button */}
+          <div className="pt-4 border-t border-slate-700">
+            <div className="space-y-2">
+              <Label className="text-slate-300">SuperAdmin Stack Deploy</Label>
+              <p className="text-xs text-slate-500">
+                GitHub'a Save yaptıktan sonra, kodu Portainer'daki SuperAdmin stack'ine deploy edin.
+              </p>
+              <Button
+                onClick={deployToPortainer}
+                disabled={deployingToPortainer}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              >
+                {deployingToPortainer ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deploy Ediliyor... (2-5 dk)
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Kodu Portainer'a Deploy Et
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
