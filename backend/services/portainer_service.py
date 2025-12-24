@@ -2315,16 +2315,20 @@ fi
             keystore_result = await self.exec_in_container(tenant_container, keystore_cmd)
             results['keystore_gen'] = {'success': keystore_result.get('success', False)}
             
-            # Step 2g: Ensure react-native version is compatible with Expo SDK
-            logger.info(f"[MOBILE-COPY] Ensuring correct react-native version...")
-            rn_fix_cmd = '''sed -i 's/"react-native": "0.79.[0-9]*"/"react-native": "0.81.5"/g' /app/package.json && echo "react-native version fixed"'''
-            await self.exec_in_container(tenant_container, rn_fix_cmd)
+            # Step 2g: Ensure react-native and reanimated versions are compatible with Expo SDK
+            logger.info(f"[MOBILE-COPY] Ensuring correct package versions...")
+            fix_versions_cmd = '''
+sed -i 's/"react-native": "0.79.[0-9]*"/"react-native": "0.81.5"/g' /app/package.json
+sed -i 's/"react-native-reanimated": "[^"]*"/"react-native-reanimated": "~3.17.4"/g' /app/package.json
+echo "Versions fixed"
+'''
+            await self.exec_in_container(tenant_container, fix_versions_cmd)
             
-            # Step 3: Install dependencies in tenant container (with --ignore-engines flag)
+            # Step 3: Install dependencies in tenant container (clean install)
             logger.info(f"[MOBILE-COPY] Installing dependencies in {tenant_container}...")
             deps_result = await self.exec_in_container(
                 tenant_container, 
-                "cd /app && rm -rf node_modules yarn.lock && yarn install --ignore-engines 2>&1 || npm install --legacy-peer-deps 2>&1"
+                "cd /app && rm -rf node_modules yarn.lock package-lock.json && yarn install --ignore-engines 2>&1 || npm install --legacy-peer-deps 2>&1"
             )
             results['deps_install'] = {'success': deps_result.get('success', False)}
             
