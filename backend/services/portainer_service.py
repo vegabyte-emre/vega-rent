@@ -2079,6 +2079,8 @@ asyncio.run(get())
         Clone/pull mobile app from GitHub to template container.
         app_type: 'customer' or 'operation'
         github_repo: e.g., 'vegabyte-emre/vega-rent-customer-app'
+        
+        Uses git pull if .git exists, otherwise fresh clone.
         """
         container_name = f"rentacar_template_{app_type}_app"
         results = {
@@ -2090,16 +2092,24 @@ asyncio.run(get())
         try:
             logger.info(f"[MOBILE-TEMPLATE] Updating {app_type} app from GitHub: {github_repo}")
             
-            # Step 1: Clean and clone repo
+            # Step 1: Check if .git exists and either pull or fresh clone
             clone_cmd = f"""
-rm -rf /app/* 2>/dev/null || true
-cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
+if [ -d "/app/.git" ]; then
+    echo "Git repo exists, pulling latest..."
+    cd /app && git fetch --all && git reset --hard origin/main 2>&1 || git reset --hard origin/master 2>&1
+else
+    echo "Fresh clone..."
+    rm -rf /app/* /app/.* 2>/dev/null || true
+    cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
+fi
 """
             clone_result = await self.exec_in_container(container_name, clone_cmd)
             results['clone'] = clone_result
             
-            if not clone_result.get('success'):
-                return {'success': False, 'error': 'Git clone failed', 'results': results}
+            # Check for actual errors (not just warnings)
+            clone_output = str(clone_result.get('output', {}).get('text', ''))
+            if 'fatal:' in clone_output and 'already exists' not in clone_output:
+                return {'success': False, 'error': f'Git clone/pull failed: {clone_output}', 'results': results}
             
             # Step 2: Install dependencies
             logger.info(f"[MOBILE-TEMPLATE] Installing dependencies...")
