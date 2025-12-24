@@ -1,0 +1,248 @@
+import React, { useState, useEffect } from "react";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Smartphone, Download, RefreshCw, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import getApiUrl from "../config/api";
+
+const statusConfig = {
+  idle: { label: "Hazır", color: "secondary", icon: Smartphone },
+  building: { label: "Oluşturuluyor...", color: "default", icon: Loader2 },
+  finished: { label: "Tamamlandı", color: "default", icon: CheckCircle },
+  errored: { label: "Hata", color: "destructive", icon: XCircle },
+};
+
+export default function MobileApps() {
+  const [customerApp, setCustomerApp] = useState({ status: "idle", buildId: null, downloadUrl: null });
+  const [operationApp, setOperationApp] = useState({ status: "idle", buildId: null, downloadUrl: null });
+  const [builds, setBuilds] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const API_URL = getApiUrl();
+
+  useEffect(() => {
+    fetchBuilds();
+  }, []);
+
+  const fetchBuilds = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/mobile/builds`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setBuilds(data.builds || []);
+      }
+    } catch (error) {
+      console.error("Error fetching builds:", error);
+    }
+  };
+
+  const startBuild = async (appType) => {
+    const setApp = appType === "customer" ? setCustomerApp : setOperationApp;
+    setApp(prev => ({ ...prev, status: "building" }));
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/mobile/build`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ app_type: appType })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(`${appType === "customer" ? "Müşteri" : "Operasyon"} App build başladı!`);
+        setApp(prev => ({ ...prev, buildId: data.build_id }));
+        pollBuildStatus(appType, data.build_id);
+      } else {
+        toast.error(data.error || "Build başlatılamadı");
+        setApp(prev => ({ ...prev, status: "errored" }));
+      }
+    } catch (error) {
+      toast.error("Build başlatılırken hata oluştu");
+      setApp(prev => ({ ...prev, status: "errored" }));
+    }
+  };
+
+  const pollBuildStatus = async (appType, buildId) => {
+    const setApp = appType === "customer" ? setCustomerApp : setOperationApp;
+    
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/api/mobile/build/${buildId}/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        if (data.status === "finished") {
+          clearInterval(interval);
+          setApp({ status: "finished", buildId, downloadUrl: data.download_url });
+          toast.success("APK hazır!");
+          fetchBuilds();
+        } else if (data.status === "errored") {
+          clearInterval(interval);
+          setApp({ status: "errored", buildId, downloadUrl: null });
+          toast.error("Build başarısız oldu");
+        }
+      } catch (error) {
+        console.error("Poll error:", error);
+      }
+    }, 15000); // Her 15 saniyede kontrol
+    
+    // 30 dakika sonra durdur
+    setTimeout(() => clearInterval(interval), 30 * 60 * 1000);
+  };
+
+  const AppCard = ({ title, description, appType, appState, icon }) => {
+    const StatusIcon = statusConfig[appState.status]?.icon || Smartphone;
+    const isBuilding = appState.status === "building";
+    
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {icon}
+              <div>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+              </div>
+            </div>
+            <Badge variant={statusConfig[appState.status]?.color}>
+              <StatusIcon className={`h-3 w-3 mr-1 ${isBuilding ? "animate-spin" : ""}`} />
+              {statusConfig[appState.status]?.label}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => startBuild(appType)} 
+              disabled={isBuilding}
+              className="flex-1"
+            >
+              {isBuilding ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Oluşturuluyor...
+                </>
+              ) : (
+                <>
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  APK Üret
+                </>
+              )}
+            </Button>
+            
+            {appState.downloadUrl && (
+              <Button variant="outline" asChild>
+                <a href={appState.downloadUrl} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" />
+                  İndir
+                </a>
+              </Button>
+            )}
+          </div>
+          
+          {isBuilding && (
+            <p className="text-sm text-muted-foreground">
+              <Clock className="h-3 w-3 inline mr-1" />
+              Build süresi yaklaşık 10-20 dakika sürebilir
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Mobil Uygulamalar</h1>
+          <p className="text-muted-foreground">Müşteri ve operasyon uygulamalarını yönetin</p>
+        </div>
+        <Button variant="outline" onClick={fetchBuilds}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Yenile
+        </Button>
+      </div>
+
+      <Tabs defaultValue="customer" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="customer">Müşteri App</TabsTrigger>
+          <TabsTrigger value="operation">Operasyon App</TabsTrigger>
+          <TabsTrigger value="history">Build Geçmişi</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="customer">
+          <AppCard
+            title="Müşteri Uygulaması"
+            description="Müşterileriniz için araç kiralama uygulaması"
+            appType="customer"
+            appState={customerApp}
+            icon={<Smartphone className="h-8 w-8 text-blue-500" />}
+          />
+        </TabsContent>
+
+        <TabsContent value="operation">
+          <AppCard
+            title="Operasyon Uygulaması"
+            description="Personel için araç teslim/iade uygulaması"
+            appType="operation"
+            appState={operationApp}
+            icon={<Smartphone className="h-8 w-8 text-green-500" />}
+          />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle>Build Geçmişi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {builds.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">Henüz build yok</p>
+              ) : (
+                <div className="space-y-3">
+                  {builds.map((build, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Smartphone className="h-5 w-5" />
+                        <div>
+                          <p className="font-medium">{build.app_type === "customer" ? "Müşteri" : "Operasyon"} App</p>
+                          <p className="text-sm text-muted-foreground">{new Date(build.created_at).toLocaleString("tr-TR")}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={statusConfig[build.status]?.color}>
+                          {statusConfig[build.status]?.label}
+                        </Badge>
+                        {build.download_url && (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={build.download_url} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-3 w-3" />
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
