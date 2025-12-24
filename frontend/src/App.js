@@ -4,6 +4,9 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { Layout } from "./components/layout/Layout";
 
+// Check if we're on panel subdomain
+const isAdminPanel = window.location.hostname.startsWith('panel.');
+
 // Admin Pages (Company Panel)
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -21,11 +24,19 @@ import { Payments } from "./pages/Payments";
 import { Reports } from "./pages/Reports";
 import { Settings } from "./pages/Settings";
 import { ThemeStore } from "./pages/ThemeStore";
-import { Support } from "./pages/Support";
-import Locations from "./pages/Locations";
-import MobileApps from "./pages/MobileApps";
 
-// Public Pages (Customer Facing)
+// SuperAdmin Pages
+import { SuperAdminLogin } from "./pages/superadmin/SuperAdminLogin";
+import { SuperAdminDashboard } from "./pages/superadmin/SuperAdminDashboard";
+import { SuperAdminCompanies } from "./pages/superadmin/SuperAdminCompanies";
+import { NewCompany } from "./pages/superadmin/NewCompany";
+import { SuperAdminSettings } from "./pages/superadmin/SuperAdminSettings";
+import { SuperAdminSubscriptions } from "./pages/superadmin/SuperAdminSubscriptions";
+import { SuperAdminTickets } from "./pages/superadmin/SuperAdminTickets";
+import { SuperAdminFranchises } from "./pages/superadmin/SuperAdminFranchises";
+import { SuperAdminLayout } from "./components/layout/SuperAdminLayout";
+
+// Public Pages
 import { Home } from "./pages/public/Home";
 import { VehicleList } from "./pages/public/VehicleList";
 import { VehicleDetail } from "./pages/public/VehicleDetail";
@@ -34,12 +45,15 @@ import { CustomerRegister } from "./pages/public/CustomerRegister";
 import { CustomerDashboard } from "./pages/public/CustomerDashboard";
 import { Reservation } from "./pages/public/Reservation";
 
+// Landing Page (SaaS Marketing)
+import { LandingPage } from "./pages/landing/LandingPage";
+
+// Support Page (Tenant)
+import { Support } from "./pages/Support";
+
 import { Toaster } from "./components/ui/sonner";
 
-// Check if we're on panel subdomain
-const isAdminPanel = window.location.hostname.startsWith('panel.');
-
-// Protected Route Component
+// Protected Route Component (for admin panel)
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user, loading } = useAuth();
 
@@ -52,17 +66,17 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={isAdminPanel ? "/login" : "/admin/login"} replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={isAdminPanel ? "/dashboard" : "/admin/dashboard"} replace />;
   }
 
   return children;
 }
 
-// Public Route Component
+// Public Route Component (redirect if authenticated to admin)
 function PublicRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
@@ -75,6 +89,29 @@ function PublicRoute({ children }) {
   }
 
   if (isAuthenticated) {
+    return <Navigate to={isAdminPanel ? "/dashboard" : "/admin/dashboard"} replace />;
+  }
+
+  return children;
+}
+
+// SuperAdmin Protected Route Component
+function SuperAdminRoute({ children }) {
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/superadmin/login" replace />;
+  }
+
+  if (user?.role !== "superadmin") {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -85,15 +122,22 @@ function AppRoutes() {
   return (
     <Routes>
       {/* ============== ROOT ROUTE ============== */}
+      {/* If on panel subdomain, show login. Otherwise show landing page */}
       <Route path="/" element={
         isAdminPanel ? (
           <PublicRoute>
             <Login />
           </PublicRoute>
         ) : (
-          <Home />
+          <LandingPage />
         )
       } />
+      
+      {/* Landing Page route (for direct access) */}
+      <Route path="/landing" element={<LandingPage />} />
+      
+      {/* Old Home Route (tenant public page) */}
+      <Route path="/home" element={<Home />} />
       
       {/* ============== PUBLIC ROUTES (Customer Facing) ============== */}
       <Route path="/araclar" element={<VehicleList />} />
@@ -103,7 +147,26 @@ function AppRoutes() {
       <Route path="/musteri/kayit" element={<CustomerRegister />} />
       <Route path="/hesabim" element={<CustomerDashboard />} />
 
+      {/* ============== SUPERADMIN ROUTES ============== */}
+      <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+      <Route
+        element={
+          <SuperAdminRoute>
+            <SuperAdminLayout />
+          </SuperAdminRoute>
+        }
+      >
+        <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
+        <Route path="/superadmin/companies" element={<SuperAdminCompanies />} />
+        <Route path="/superadmin/companies/new" element={<NewCompany />} />
+        <Route path="/superadmin/subscriptions" element={<SuperAdminSubscriptions />} />
+        <Route path="/superadmin/tickets" element={<SuperAdminTickets />} />
+        <Route path="/superadmin/franchises" element={<SuperAdminFranchises />} />
+        <Route path="/superadmin/settings" element={<SuperAdminSettings />} />
+      </Route>
+
       {/* ============== COMPANY ADMIN AUTH ROUTES ============== */}
+      {/* Routes for panel.domain.com (without /admin prefix) */}
       <Route
         path="/login"
         element={
@@ -120,11 +183,29 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      
+      {/* Routes for main domain (with /admin prefix) */}
+      <Route
+        path="/admin/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/admin/register"
+        element={
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
+        }
+      />
 
-      {/* ============== COMPANY ADMIN PROTECTED ROUTES ============== */}
+      {/* ============== COMPANY ADMIN PROTECTED ROUTES (panel subdomain - no prefix) ============== */}
       <Route
         element={
-          <ProtectedRoute allowedRoles={["firma_admin", "operasyon", "muhasebe", "personel"]}>
+          <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
         }
@@ -141,14 +222,37 @@ function AppRoutes() {
         <Route path="/integrations" element={<Integrations />} />
         <Route path="/payments" element={<Payments />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/locations" element={<Locations />} />
-        <Route path="/mobile-apps" element={<MobileApps />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/theme-store" element={<ThemeStore />} />
         <Route path="/support" element={<Support />} />
       </Route>
 
-      {/* Catch all - redirect to home */}
+      {/* ============== COMPANY ADMIN PROTECTED ROUTES (main domain - with /admin prefix) ============== */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/admin/dashboard" element={<Dashboard />} />
+        <Route path="/admin/vehicles" element={<Vehicles />} />
+        <Route path="/admin/price-calendar" element={<PriceCalendar />} />
+        <Route path="/admin/customers" element={<Customers />} />
+        <Route path="/admin/reservations" element={<Reservations />} />
+        <Route path="/admin/reservations/new" element={<NewReservation />} />
+        <Route path="/admin/gps" element={<GPS />} />
+        <Route path="/admin/hgs" element={<HGS />} />
+        <Route path="/admin/kabis" element={<Kabis />} />
+        <Route path="/admin/integrations" element={<Integrations />} />
+        <Route path="/admin/payments" element={<Payments />} />
+        <Route path="/admin/reports" element={<Reports />} />
+        <Route path="/admin/settings" element={<Settings />} />
+        <Route path="/admin/theme-store" element={<ThemeStore />} />
+        <Route path="/admin/support" element={<Support />} />
+      </Route>
+
+      {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
