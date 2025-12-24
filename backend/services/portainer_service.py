@@ -2278,7 +2278,25 @@ fi
             )
             results['credentials_write'] = creds_result
             
-            # Step 2e: Generate Android keystore if not exists
+            # Step 2e: Create default Expo assets if not exist
+            logger.info(f"[MOBILE-COPY] Creating Expo assets...")
+            assets_cmd = '''node -e "
+const fs = require('fs');
+const path = require('path');
+const assetsDir = '/app/assets';
+if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, {recursive: true});
+// Minimal valid PNG (1x1 transparent)
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAABhklEQVR4nO2aQQ6CMBRF/xtdexNvIG68hTfQhSu3egPcuJOlJ3DhBbiBK1ceQFeu3OgJWLjQGFESlkMNNDT+l7Sh0Pf6+qcQAgICAgICAgIC/gcAcAKA4dXXwRkArgBwAYBzb97cpD0BwB4ANi1T4QUAIwD4tEidMwCsAODY5/hxfPFpEe7LXkLYNAJwBoC3luZb+nRVPiNi/AYAEgCbtuabmq8dgHiVe2lYvq35pvJrA4DfMa7Kax3hM9C25r1z4yb/BABOF67qS2BXALAD8OTN+5r3yY+fmB8AgHnHeLzKrYGOXYGObQHLV3lDl+ATEJcA3Fx9nT8A/Iry1wI9uwJ9OwImnYDXWn7rGuQ9ATsAuGnZ/FYB/FoLOK0FrNb8ZmuB0wqgYUfA9FXesivQ0hVwfJU3dAVMXwGnV7n5KnfsCli+ys1X+fRVbnqVa8kfAcBxy+a3CuDXWsBpLWC15jdbc5xWAA07AqavcsutgJaugOOr3HAr0PIVcHqVG65yLfkDAgL+PO4kzPF+I0YAAAAASUVORK5CYII=', 'base64');
+['icon.png', 'splash.png', 'adaptive-icon.png', 'favicon.png'].forEach(f => {
+    const fp = path.join(assetsDir, f);
+    if (!fs.existsSync(fp)) fs.writeFileSync(fp, png);
+});
+console.log('Assets ready');
+"'''
+            assets_result = await self.exec_in_container(tenant_container, assets_cmd)
+            results['assets_create'] = {'success': assets_result.get('success', False)}
+            
+            # Step 2f: Generate Android keystore if not exists
             logger.info(f"[MOBILE-COPY] Generating Android keystore...")
             keystore_cmd = f'''
 if [ ! -f /app/keystore.jks ]; then
