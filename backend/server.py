@@ -1980,6 +1980,57 @@ async def update_company_mobile_apps(company_id: str, user: dict = Depends(get_c
         "results": results
     }
 
+
+class TriggerBuildRequest(BaseModel):
+    app_type: str  # "customer" or "operation"
+
+
+@api_router.post("/superadmin/companies/{company_id}/trigger-mobile-build")
+async def trigger_company_mobile_build(company_id: str, data: TriggerBuildRequest, user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Trigger EAS build for a company's mobile app.
+    Runs eas build command inside the tenant's mobile app container.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can trigger mobile builds")
+    
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    company_code = company.get("code")
+    company_name = company.get("name")
+    
+    # Trigger EAS build
+    result = await portainer_service.trigger_eas_build(
+        company_code=company_code,
+        app_type=data.app_type
+    )
+    
+    # Log build request
+    if result.get('success'):
+        build_log = {
+            "id": str(uuid.uuid4()),
+            "company_id": company_id,
+            "company_code": company_code,
+            "company_name": company_name,
+            "app_type": data.app_type,
+            "build_id": result.get('build_id'),
+            "status": "building",
+            "triggered_by": user["id"],
+            "triggered_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.mobile_build_logs.insert_one(build_log)
+    
+    return {
+        "success": result.get('success', False),
+        "message": f"{company_name} {data.app_type} uygulaması build başlatıldı" if result.get('success') else result.get('error', 'Build başlatılamadı'),
+        "company_name": company_name,
+        "app_type": data.app_type,
+        "result": result
+    }
+
+
 @api_router.post("/superadmin/deploy-frontend-to-kvm")
 async def deploy_frontend_to_kvm(background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     """
