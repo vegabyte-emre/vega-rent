@@ -2199,7 +2199,7 @@ cd /app && git clone --depth 1 https://github.com/{github_repo}.git . 2>&1
       projectId: "{os.environ.get(f'EXPO_{app_type.upper()}_PROJECT_ID', '')}"
     }}
   }},
-  owner: "vegabyte"
+  owner: "emrenasir"
 }};
 '''
             
