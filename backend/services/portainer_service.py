@@ -382,13 +382,19 @@ networks:
 """
 
 
-def get_superadmin_compose_template() -> str:
+def get_superadmin_compose_template(github_repo: str = "https://github.com/vegabyte-emre/vega-rent.git") -> str:
     """
     Generate Docker Compose YAML for SuperAdmin stack
+    
+    BAĞIMSIZ ÇALIŞMA:
+    - Backend: GitHub'dan kod çeker, dependencies kurar, çalıştırır
+    - Frontend: Nginx ile static dosyalar serve eder (deploy script ile güncellenir)
+    - MongoDB: Kendi volume'unda persistent data
+    
     Ports: Frontend 9000, Backend 9001, MongoDB 27017
     Backend uses network_mode: host for direct Portainer access
     """
-    yaml_content = """version: "3.8"
+    yaml_content = f"""version: "3.8"
 
 services:
   superadmin_mongodb:
@@ -403,30 +409,52 @@ services:
       - superadmin_network
 
   superadmin_backend:
-    image: tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim
+    image: python:3.11-slim
     container_name: superadmin_backend
     restart: unless-stopped
     network_mode: host
+    working_dir: /app
     environment:
-      - MONGO_URL=mongodb://localhost:27017
+      - MONGO_URL=mongodb://127.0.0.1:27017
       - DB_NAME=superadmin_db
       - PORTAINER_URL=https://72.61.158.147:9443
       - PORTAINER_API_KEY=ptr_XwtYmxpR0KCkqMLsPLGMM4mHQS5Q75gupgBcCGqRUEY=
       - SERVER_IP=72.61.158.147
-      - MODULE_NAME=server
-      - VARIABLE_NAME=app
-      - PORT=9001
+      - PYTHONUNBUFFERED=1
+    command:
+      - bash
+      - -c
+      - |
+        apt-get update && apt-get install -y git > /dev/null 2>&1
+        cd /app
+        if [ -f /app/.git/config ]; then
+          git pull origin main || true
+        else
+          rm -rf /app/*
+          git clone --depth 1 {github_repo} /tmp/repo
+          cp -r /tmp/repo/backend/* /app/
+          rm -rf /tmp/repo
+        fi
+        pip install --no-cache-dir -q -r /app/requirements.txt 2>/dev/null || true
+        pip install --no-cache-dir -q uvicorn email-validator
+        exec uvicorn server:app --host 0.0.0.0 --port 9001 --reload
     volumes:
       - superadmin_backend_app:/app
 
-  superadmin_frontend:
+  superadmin_nginx:
     image: nginx:alpine
-    container_name: superadmin_frontend
+    container_name: superadmin_nginx
     restart: unless-stopped
     ports:
       - "9000:80"
     volumes:
       - superadmin_frontend_html:/usr/share/nginx/html
+    command:
+      - sh
+      - -c
+      - |
+        echo 'server {{ listen 80; root /usr/share/nginx/html; index index.html; location / {{ try_files $$uri $$uri/ /index.html; }} }}' > /etc/nginx/conf.d/default.conf
+        nginx -g "daemon off;"
     networks:
       - superadmin_network
 
