@@ -2684,13 +2684,11 @@ fi
         Deploy SuperAdmin code from GitHub to Portainer containers.
         
         SUNUCUDAN çalışır:
-        1. Geçici Node container oluşturur
-        2. GitHub'dan kodu çeker
-        3. Frontend'i build eder
-        4. Build'i nginx container'ına yükler
-        5. Backend kodunu backend container'ına yükler
-        6. config.js'i doğru API URL ile oluşturur
-        7. Geçici container'ı siler
+        1. Node container'da (template) GitHub'dan kodu çeker
+        2. Frontend'i build eder
+        3. Build'i nginx container'ına yükler
+        4. Backend kodunu backend container'ına yükler
+        5. config.js'i doğru API URL ile oluşturur
         
         Args:
             github_repo: GitHub repo URL (e.g., https://github.com/user/repo.git)
@@ -2709,7 +2707,8 @@ fi
         
         superadmin_nginx = "superadmin_nginx"
         superadmin_backend = "superadmin_backend"
-        temp_container = "superadmin_build_temp"
+        # Node.js container for building - use template container
+        node_container = "rentacar_template_customer_app"
         
         logger.info(f"[GITHUB-DEPLOY] Starting deployment from GitHub: {github_repo}")
         
@@ -2717,6 +2716,7 @@ fi
             # Step 1: Check if target containers exist
             nginx_id = await self.get_container_id(superadmin_nginx)
             backend_id = await self.get_container_id(superadmin_backend)
+            node_id = await self.get_container_id(node_container)
             
             if not nginx_id or not backend_id:
                 return {
@@ -2725,29 +2725,37 @@ fi
                     'results': results
                 }
             
-            logger.info(f"[GITHUB-DEPLOY] Target containers found. nginx: {nginx_id[:12]}, backend: {backend_id[:12]}")
+            if not node_id:
+                return {
+                    'success': False,
+                    'error': f'Node container ({node_container}) not found for building',
+                    'results': results
+                }
             
-            # Step 2: Clone repo and build in backend container (it has git)
-            logger.info(f"[GITHUB-DEPLOY] Step 1: Cloning repo and building in backend container...")
+            logger.info(f"[GITHUB-DEPLOY] Containers found. nginx: {nginx_id[:12]}, backend: {backend_id[:12]}, node: {node_id[:12]}")
             
-            # Use backend container for git clone and build
+            # Step 2: Clone repo and build in Node container
+            logger.info(f"[GITHUB-DEPLOY] Step 1: Cloning repo and building in Node container...")
+            
+            # Install git if needed and clone/build
             clone_build_cmd = f'''
+apk add --no-cache git 2>/dev/null || true
 cd /tmp && rm -rf superadmin_deploy && mkdir -p superadmin_deploy && cd superadmin_deploy &&
 git clone --depth 1 {github_repo} repo 2>&1 &&
 echo "=== Clone complete ===" &&
 cd repo/frontend &&
 echo "=== Installing dependencies ===" &&
-npm install 2>&1 | tail -20 &&
+yarn install 2>&1 | tail -30 &&
 echo "=== Building frontend ===" &&
-npm run build 2>&1 | tail -20 &&
+yarn build 2>&1 | tail -30 &&
 echo "=== Creating config.js ===" &&
 echo "window.REACT_APP_BACKEND_URL = '{api_url}';" > build/config.js &&
 cat build/config.js &&
 echo "=== Build complete ===" &&
-ls -la build/
+ls -la build/ | head -20
 '''
             
-            clone_result = await self.exec_in_container(superadmin_backend, clone_build_cmd)
+            clone_result = await self.exec_in_container(node_container, clone_build_cmd)
             clone_output = str(clone_result.get('output', '')) if clone_result.get('output') else ''
             results['clone'] = {'success': clone_result.get('success', False)}
             results['build'] = {'success': 'Build complete' in clone_output}
@@ -2763,15 +2771,15 @@ ls -la build/
             
             logger.info(f"[GITHUB-DEPLOY] Clone and build successful!")
             
-            # Step 3: Copy build from backend to nginx container
+            # Step 3: Copy frontend build from Node container to nginx container
             logger.info(f"[GITHUB-DEPLOY] Step 2: Copying frontend build to nginx...")
             
-            # Create tar of build in backend container
+            # Create tar of build in node container
             tar_cmd = 'cd /tmp/superadmin_deploy/repo/frontend && tar -cf /tmp/frontend_build.tar -C build .'
-            await self.exec_in_container(superadmin_backend, tar_cmd)
+            await self.exec_in_container(node_container, tar_cmd)
             
-            # Download tar from backend container
-            download_result = await self.download_from_container(superadmin_backend, '/tmp/frontend_build.tar')
+            # Download tar from node container
+            download_result = await self.download_from_container(node_container, '/tmp/frontend_build.tar')
             
             if download_result.get('success') and download_result.get('data'):
                 # Upload to nginx container
@@ -2785,15 +2793,15 @@ ls -la build/
             else:
                 results['frontend_deploy'] = {'success': False, 'error': 'Failed to download build tar'}
             
-            # Step 4: Copy backend code
+            # Step 4: Copy backend code from Node container to backend container
             logger.info(f"[GITHUB-DEPLOY] Step 3: Copying backend code...")
             
-            # Create tar of backend in temp location
+            # Create tar of backend
             backend_tar_cmd = 'cd /tmp/superadmin_deploy/repo && tar -cf /tmp/backend_code.tar -C backend .'
-            await self.exec_in_container(superadmin_backend, backend_tar_cmd)
+            await self.exec_in_container(node_container, backend_tar_cmd)
             
-            # Download and re-upload backend (to refresh code)
-            backend_download = await self.download_from_container(superadmin_backend, '/tmp/backend_code.tar')
+            # Download and upload backend
+            backend_download = await self.download_from_container(node_container, '/tmp/backend_code.tar')
             
             if backend_download.get('success') and backend_download.get('data'):
                 backend_upload = await self.upload_to_container(
@@ -2804,7 +2812,7 @@ ls -la build/
                 results['backend_deploy'] = backend_upload
                 logger.info(f"[GITHUB-DEPLOY] Backend deployed: {backend_upload.get('success')}")
             
-            # Step 5: Create config.js explicitly
+            # Step 5: Create config.js explicitly (backup)
             logger.info(f"[GITHUB-DEPLOY] Step 4: Ensuring config.js with API URL: {api_url}")
             results['config_js'] = await self.create_config_js(superadmin_nginx, api_url)
             
@@ -2813,9 +2821,9 @@ ls -la build/
             restart_result = await self.restart_container_by_name(superadmin_backend)
             results['backend_restart'] = restart_result
             
-            # Step 7: Cleanup temp files
+            # Step 7: Cleanup temp files in node container
             logger.info(f"[GITHUB-DEPLOY] Step 6: Cleaning up...")
-            await self.exec_in_container(superadmin_backend, 'rm -rf /tmp/superadmin_deploy /tmp/frontend_build.tar /tmp/backend_code.tar')
+            await self.exec_in_container(node_container, 'rm -rf /tmp/superadmin_deploy /tmp/frontend_build.tar /tmp/backend_code.tar')
             results['cleanup'] = {'success': True}
             
             logger.info(f"[GITHUB-DEPLOY] ✓ Deployment from GitHub complete!")
