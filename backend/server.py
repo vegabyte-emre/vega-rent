@@ -1627,71 +1627,36 @@ async def deploy_code_to_superadmin_stack(
     background_tasks: BackgroundTasks = None
 ):
     """
-    SuperAdmin: Deploy code from this Emergent environment to the Portainer SuperAdmin stack.
+    SuperAdmin: Deploy SuperAdmin code from GitHub to Portainer containers.
     
-    This should be called after:
-    1. Save to GitHub
-    2. Portainer SuperAdmin stack redeploy
-    
-    It will:
-    1. Build the frontend
-    2. Upload frontend build to superadmin_frontend container
-    3. Upload backend code to superadmin_backend container
-    4. Create config.js with correct API URL
-    5. Restart services
+    Bu endpoint SUNUCUDAN çalışır:
+    1. GitHub'dan SuperAdmin repo'sunu çeker
+    2. Frontend'i build eder (Node container içinde)
+    3. Backend ve Frontend'i ilgili container'lara deploy eder
+    4. config.js'i doğru API URL ile oluşturur
     """
     if user["role"] != UserRole.SUPERADMIN.value:
         raise HTTPException(status_code=403, detail="Only SuperAdmin can deploy code")
     
+    # GitHub repo URL - SuperAdmin projesi
+    GITHUB_REPO = "https://github.com/vegabyte-emre/fleetease-superadmin.git"
+    SUPERADMIN_API_URL = "http://72.61.158.147:9001"
+    
     try:
-        # Step 1: Build frontend first
-        logger.info("[SUPERADMIN-DEPLOY] Building frontend...")
+        logger.info("[SUPERADMIN-DEPLOY] Starting deployment from GitHub...")
         
-        frontend_dir = "/app/frontend"
-        build_dir = "/app/frontend/build"
-        
-        # Run yarn build
-        import subprocess
-        build_process = subprocess.run(
-            ["yarn", "build"],
-            cwd=frontend_dir,
-            capture_output=True,
-            text=True,
-            timeout=300  # 5 minute timeout
-        )
-        
-        if build_process.returncode != 0:
-            logger.error(f"[SUPERADMIN-DEPLOY] Frontend build failed: {build_process.stderr}")
-            raise HTTPException(
-                status_code=500, 
-                detail=f"Frontend build failed: {build_process.stderr[:500]}"
-            )
-        
-        # Step 1b: Create config.js with PRODUCTION API URL (not localhost!)
-        logger.info("[SUPERADMIN-DEPLOY] Creating config.js with production API URL...")
-        SUPERADMIN_API_URL = "http://72.61.158.147:9001"
-        config_js_content = f"window.REACT_APP_BACKEND_URL = '{SUPERADMIN_API_URL}';\n"
-        
-        config_js_path = os.path.join(build_dir, "config.js")
-        with open(config_js_path, "w") as f:
-            f.write(config_js_content)
-        logger.info(f"[SUPERADMIN-DEPLOY] config.js created with URL: {SUPERADMIN_API_URL}")
-        
-        logger.info("[SUPERADMIN-DEPLOY] Frontend build complete, deploying to Portainer...")
-        
-        # Step 2: Deploy to Portainer
-        result = await portainer_service.deploy_code_to_superadmin(
-            frontend_build_path=build_dir,
-            backend_path="/app/backend"
+        # Deploy using Portainer service - it will handle everything
+        result = await portainer_service.deploy_superadmin_from_github(
+            github_repo=GITHUB_REPO,
+            api_url=SUPERADMIN_API_URL
         )
         
         if result.get("success"):
             return {
                 "success": True,
-                "message": "SuperAdmin stack code deployed successfully",
+                "message": "SuperAdmin kodu GitHub'dan çekildi ve deploy edildi",
                 "results": result.get("results"),
-                "urls": result.get("urls"),
-                "note": "Frontend build edildi ve Portainer SuperAdmin container'larına deploy edildi."
+                "note": "GitHub → Build → Deploy tamamlandı."
             }
         else:
             raise HTTPException(
@@ -1699,8 +1664,6 @@ async def deploy_code_to_superadmin_stack(
                 detail=f"Deployment failed: {result.get('error')}"
             )
             
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=500, detail="Frontend build timed out (5 minutes)")
     except Exception as e:
         logger.error(f"[SUPERADMIN-DEPLOY] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
