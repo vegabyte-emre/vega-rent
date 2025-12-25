@@ -1618,14 +1618,14 @@ async def start_mobile_build(data: MobileBuildRequest, user: dict = Depends(get_
     
     # Try to trigger build via SuperAdmin API (which has access to containers)
     superadmin_url = os.environ.get("SUPERADMIN_URL", "http://72.61.158.147:9001")
-    company_id = os.environ.get("COMPANY_ID", "")
+    company_code = os.environ.get("COMPANY_CODE", "")
     
-    if HTTPX_AVAILABLE and superadmin_url and company_id:
+    if HTTPX_AVAILABLE and superadmin_url and company_code:
         try:
             async with httpx.AsyncClient(timeout=120.0, verify=False) as client:
-                # Call SuperAdmin API to trigger build in tenant container
+                # Call SuperAdmin's public tenant endpoint (no auth required)
                 response = await client.post(
-                    f"{superadmin_url}/api/superadmin/companies/{company_id}/trigger-mobile-build",
+                    f"{superadmin_url}/api/tenant/{company_code}/trigger-mobile-build",
                     headers={"Content-Type": "application/json"},
                     json={"app_type": data.app_type}
                 )
