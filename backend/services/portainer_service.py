@@ -2771,7 +2771,8 @@ echo "=== Build complete ===" &&
 ls -la build/ | head -20
 '''
             
-            clone_result = await self.exec_in_container(node_container, clone_build_cmd)
+            # Use longer timeout for clone/build (5 minutes)
+            clone_result = await self.exec_in_container(node_container, clone_build_cmd, timeout=300.0)
             clone_output = str(clone_result.get('output', '')) if clone_result.get('output') else ''
             results['clone'] = {'success': clone_result.get('success', False)}
             results['build'] = {'success': 'Build complete' in clone_output}
