@@ -1639,7 +1639,7 @@ async def deploy_code_to_superadmin_stack(
         raise HTTPException(status_code=403, detail="Only SuperAdmin can deploy code")
     
     # GitHub repo URL - SuperAdmin projesi
-    GITHUB_REPO = "https://github.com/vegabyte-emre/fleetease-superadmin.git"
+    GITHUB_REPO = "https://github.com/vegabyte-emre/vega-rent.git"
     SUPERADMIN_API_URL = "http://72.61.158.147:9001"
     
     try:
