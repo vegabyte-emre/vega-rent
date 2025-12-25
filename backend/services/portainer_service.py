@@ -2152,7 +2152,11 @@ fi
                                          company_name: str, domain: str) -> Dict[str, Any]:
         """
         Copy mobile app from template to tenant container with tenant-specific config.
-        Note: The source code is in /app/frontend in the template container.
+        
+        SIMPLIFIED VERSION (v2):
+        - GitHub repo'ları artık build-ready (eas.json, package.json, assets hazır)
+        - Sadece 3 şey oluşturulur: app.config.js, keystore.jks, credentials.json
+        - Artık runtime'da expo install --fix, asset generation vs. YOK
         """
         safe_code = company_code.replace('-', '').replace('_', '')
         template_container = f"rentacar_template_{app_type}_app"
@@ -2161,87 +2165,121 @@ fi
         results = {
             'code_copy': None,
             'config_write': None,
+            'keystore_gen': None,
+            'credentials_write': None,
             'deps_install': None
         }
         
         try:
-            logger.info(f"[MOBILE-COPY] Copying {app_type} app to {company_code}")
+            logger.info(f"[MOBILE-COPY-V2] Starting simplified copy for {company_code} {app_type} app")
             
-            # Step 1: Copy code from template/frontend to tenant /app (excluding node_modules and config)
-            # The Expo app is in /app/frontend in the cloned repo
-            # Use flatten_source=True to remove 'frontend/' prefix so files go directly to /app
+            # ============================================================
+            # STEP 1: Copy code from template to tenant
+            # GitHub repo is now build-ready, just copy everything
+            # ============================================================
+            logger.info(f"[MOBILE-COPY-V2] Step 1: Copying code from template...")
             copy_result = await self.copy_from_template(
                 template_container=template_container,
                 target_container=tenant_container,
-                source_path="/app/frontend",  # Expo app is in frontend subfolder
-                dest_path="/app",  # Copy directly to /app in tenant container
-                exclude_files=["node_modules", "app.config.js", ".env", ".expo", ".metro-cache"],
-                flatten_source=True  # Remove 'frontend/' prefix from paths
+                source_path="/app/frontend",
+                dest_path="/app",
+                exclude_files=["node_modules", ".expo", ".metro-cache", "keystore.jks", "credentials.json"],
+                flatten_source=True
             )
             results['code_copy'] = copy_result
             
-            # Step 2: Write tenant-specific app.config.js
-            api_url = f"https://api.{domain}"
-            package_name = f"com.{safe_code}.rentacar"
+            # ============================================================
+            # STEP 2: Write tenant-specific app.config.js
+            # Override environment variables with tenant-specific values
+            # ============================================================
+            logger.info(f"[MOBILE-COPY-V2] Step 2: Writing app.config.js...")
             
-            # Expo project IDs (hardcoded for reliability)
-            # Note: We use the master project's slug but customize display name and package
+            api_url = f"https://api.{domain}"
+            package_name = f"com.{safe_code}.rentacar.{app_type}"
+            
             EXPO_PROJECT_IDS = {
                 "customer": "11d08a0d-b759-4489-9e3f-fca7161a7029",
                 "operation": "af4db31d-9d07-4872-9649-6743df13ba1e"
             }
             EXPO_SLUGS = {
-                "customer": "vega-rent",
-                "operation": "vega-rent-o-app"
+                "customer": "vega-rent-customer",
+                "operation": "vega-operasyon"
             }
+            
             project_id = EXPO_PROJECT_IDS.get(app_type, "")
             expo_slug = EXPO_SLUGS.get(app_type, f"{safe_code}-{app_type}")
             
             if app_type == "customer":
                 app_name = company_name
+                bg_color = "#1E3A8A"
             else:
                 app_name = f"{company_name} Operasyon"
+                bg_color = "#0F172A"
             
+            # app.config.js - firma bilgileri ile doldurulmuş
             config_content = f'''export default {{
-  name: "{app_name}",
-  slug: "{expo_slug}",
-  version: "1.0.0",
-  orientation: "portrait",
-  icon: "./assets/icon.png",
-  userInterfaceStyle: "light",
-  splash: {{
-    image: "./assets/splash.png",
-    resizeMode: "contain",
-    backgroundColor: "#ffffff"
-  }},
-  ios: {{
-    supportsTablet: true,
-    bundleIdentifier: "{package_name}.{app_type}"
-  }},
-  android: {{
-    adaptiveIcon: {{
-      foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#ffffff"
+  expo: {{
+    name: "{app_name}",
+    slug: "{expo_slug}",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/icon.png",
+    scheme: "{safe_code}{app_type}",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
+    splash: {{
+      image: "./assets/images/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "{bg_color}"
     }},
-    package: "{package_name}.{app_type}"
-  }},
-  web: {{
-    favicon: "./assets/favicon.png"
-  }},
-  extra: {{
-    API_URL: "{api_url}",
-    COMPANY_NAME: "{company_name}",
-    COMPANY_CODE: "{company_code}",
-    APP_TYPE: "{app_type}",
-    eas: {{
-      projectId: "{project_id}"
-    }}
-  }},
-  owner: "emrenasir"
+    ios: {{
+      supportsTablet: true,
+      bundleIdentifier: "{package_name}"
+    }},
+    android: {{
+      adaptiveIcon: {{
+        foregroundImage: "./assets/images/adaptive-icon.png",
+        backgroundColor: "{bg_color}"
+      }},
+      package: "{package_name}"
+    }},
+    web: {{
+      bundler: "metro",
+      output: "static",
+      favicon: "./assets/images/favicon.png"
+    }},
+    plugins: [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {{
+          image: "./assets/images/splash-icon.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "{bg_color}"
+        }}
+      ]
+    ],
+    experiments: {{
+      typedRoutes: true
+    }},
+    extra: {{
+      API_URL: "{api_url}",
+      COMPANY_NAME: "{company_name}",
+      COMPANY_CODE: "{company_code}",
+      APP_TYPE: "{app_type}",
+      eas: {{
+        projectId: "{project_id}"
+      }}
+    }},
+    owner: "emrenasir"
+  }}
 }};
 '''
             
-            # Write config to container
             config_result = await self.write_file_to_container(
                 tenant_container, 
                 "/app/app.config.js", 
@@ -2249,18 +2287,28 @@ fi
             )
             results['config_write'] = config_result
             
-            # Step 2b: Create eas.json for EAS build with Node 22 to avoid engine compatibility issues
-            # Use Node.js to write valid JSON (avoids shell/tar escaping issues)
-            eas_write_cmd = '''node -e "require('fs').writeFileSync('/app/eas.json', JSON.stringify({cli:{version:'>=3.0.0'},build:{preview:{distribution:'internal',node:'22.12.0',env:{npm_config_engine_strict:'false',EXPO_NO_DOCTOR:'1'},android:{buildType:'apk',credentialsSource:'local'}},production:{node:'22.12.0',env:{npm_config_engine_strict:'false',EXPO_NO_DOCTOR:'1'},android:{credentialsSource:'local'}}}}, null, 2))"'''
-            eas_result = await self.exec_in_container(tenant_container, eas_write_cmd)
-            results['eas_json_write'] = {'success': eas_result.get('success', False)}
+            # ============================================================
+            # STEP 3: Generate Android keystore (only if not exists)
+            # ============================================================
+            logger.info(f"[MOBILE-COPY-V2] Step 3: Generating keystore...")
             
-            # Step 2c: Create .npmrc to ignore engine checks
-            npmrc_cmd = '''sh -c 'echo -e "engine-strict=false\\nignore-engines=true" > /app/.npmrc' '''
-            npmrc_result = await self.exec_in_container(tenant_container, npmrc_cmd)
-            results['npmrc_write'] = {'success': npmrc_result.get('success', False)}
+            keystore_cmd = f'''
+if [ ! -f /app/keystore.jks ]; then
+    apk add --no-cache openjdk17-jre-headless 2>/dev/null || true
+    keytool -genkeypair -v -keystore /app/keystore.jks -alias key0 -keyalg RSA -keysize 2048 -validity 10000 -storepass vegarent123 -keypass vegarent123 -dname "CN={company_name}, OU=Mobile, O=Vega Byte, L=Istanbul, ST=Istanbul, C=TR" 2>&1
+    echo "Keystore generated"
+else
+    echo "Keystore already exists"
+fi
+'''
+            keystore_result = await self.exec_in_container(tenant_container, keystore_cmd)
+            results['keystore_gen'] = {'success': keystore_result.get('success', False)}
             
-            # Step 2d: Create credentials.json for local signing
+            # ============================================================
+            # STEP 4: Create credentials.json for local signing
+            # ============================================================
+            logger.info(f"[MOBILE-COPY-V2] Step 4: Writing credentials.json...")
+            
             credentials_json = '''{
   "android": {
     "keystore": {
@@ -2278,77 +2326,31 @@ fi
             )
             results['credentials_write'] = creds_result
             
-            # Step 2e: Create default Expo assets using sharp (valid PNGs required for prebuild)
-            logger.info(f"[MOBILE-COPY] Creating Expo assets with sharp...")
-            assets_cmd = '''cd /app && npm install sharp --save-dev 2>/dev/null && node -e "
-const sharp = require('sharp');
-const fs = require('fs');
-const dir = '/app/assets';
-if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
-async function create() {
-    // Create 1024x1024 blue icon
-    const icon = await sharp({create: {width: 1024, height: 1024, channels: 4, background: {r: 59, g: 130, b: 246, alpha: 1}}}).png().toBuffer();
-    // Create white splash screen
-    const splash = await sharp({create: {width: 1284, height: 2778, channels: 4, background: {r: 255, g: 255, b: 255, alpha: 1}}}).png().toBuffer();
-    fs.writeFileSync(dir + '/icon.png', icon);
-    fs.writeFileSync(dir + '/adaptive-icon.png', icon);
-    fs.writeFileSync(dir + '/favicon.png', icon);
-    fs.writeFileSync(dir + '/splash.png', splash);
-    console.log('Assets created');
-}
-create();
-"'''
-            assets_result = await self.exec_in_container(tenant_container, assets_cmd)
-            results['assets_create'] = {'success': assets_result.get('success', False)}
+            # ============================================================
+            # STEP 5: Install dependencies (yarn install only - NO fixes needed)
+            # GitHub repo already has correct package.json
+            # ============================================================
+            logger.info(f"[MOBILE-COPY-V2] Step 5: Installing dependencies...")
             
-            # Step 2f: Generate Android keystore if not exists
-            logger.info(f"[MOBILE-COPY] Generating Android keystore...")
-            keystore_cmd = f'''
-if [ ! -f /app/keystore.jks ]; then
-    apk add --no-cache openjdk17-jre-headless 2>/dev/null || true
-    keytool -genkeypair -v -keystore /app/keystore.jks -alias key0 -keyalg RSA -keysize 2048 -validity 10000 -storepass vegarent123 -keypass vegarent123 -dname "CN={company_name}, OU=Mobile, O=Vega Byte, L=Istanbul, ST=Istanbul, C=TR" 2>&1
-    echo "Keystore generated"
-else
-    echo "Keystore already exists"
-fi
-'''
-            keystore_result = await self.exec_in_container(tenant_container, keystore_cmd)
-            results['keystore_gen'] = {'success': keystore_result.get('success', False)}
-            
-            # Step 2g: Clean install and fix all package versions using expo install --fix
-            logger.info(f"[MOBILE-COPY] Installing dependencies and fixing versions...")
-            
-            # Clean install
             deps_result = await self.exec_in_container(
                 tenant_container, 
-                "cd /app && rm -rf node_modules yarn.lock package-lock.json .expo .metro-cache android ios && yarn cache clean && yarn install --ignore-engines 2>&1"
+                "cd /app && yarn install 2>&1"
             )
             results['deps_install'] = {'success': deps_result.get('success', False)}
             
-            # Fix Expo package versions
-            logger.info(f"[MOBILE-COPY] Running expo install --fix...")
-            await self.exec_in_container(tenant_container, "cd /app && npx expo install --fix 2>&1")
-            
-            # Install missing peer dependencies
-            logger.info(f"[MOBILE-COPY] Installing peer dependencies...")
-            await self.exec_in_container(
-                tenant_container,
-                "cd /app && yarn add react-native-worklets@latest @expo/metro-runtime@^6.1.2 @babel/runtime --ignore-engines 2>&1"
-            )
-            
-            # Step 3: Install EAS CLI
+            # Install EAS CLI globally
             await self.exec_in_container(tenant_container, "npm install -g eas-cli@latest 2>&1")
             
-            logger.info(f"[MOBILE-COPY] {app_type} app copied to {company_code} successfully")
+            logger.info(f"[MOBILE-COPY-V2] ✅ {app_type} app copied to {company_code} successfully (simplified)")
             
             return {
                 'success': True,
-                'message': f'{app_type} app copied to tenant with config',
+                'message': f'{app_type} app ready for build (simplified v2)',
                 'results': results
             }
             
         except Exception as e:
-            logger.error(f"[MOBILE-COPY] Error: {e}")
+            logger.error(f"[MOBILE-COPY-V2] Error: {e}")
             return {'success': False, 'error': str(e), 'results': results}
 
     async def write_file_to_container(self, container_name: str, file_path: str, content: str) -> Dict[str, Any]:
