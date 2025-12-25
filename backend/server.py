@@ -1667,6 +1667,16 @@ async def deploy_code_to_superadmin_stack(
                 detail=f"Frontend build failed: {build_process.stderr[:500]}"
             )
         
+        # Step 1b: Create config.js with PRODUCTION API URL (not localhost!)
+        logger.info("[SUPERADMIN-DEPLOY] Creating config.js with production API URL...")
+        SUPERADMIN_API_URL = "http://72.61.158.147:9001"
+        config_js_content = f"window.REACT_APP_BACKEND_URL = '{SUPERADMIN_API_URL}';\n"
+        
+        config_js_path = os.path.join(build_dir, "config.js")
+        with open(config_js_path, "w") as f:
+            f.write(config_js_content)
+        logger.info(f"[SUPERADMIN-DEPLOY] config.js created with URL: {SUPERADMIN_API_URL}")
+        
         logger.info("[SUPERADMIN-DEPLOY] Frontend build complete, deploying to Portainer...")
         
         # Step 2: Deploy to Portainer
