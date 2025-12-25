@@ -2748,14 +2748,16 @@ ls -la build/
 '''
             
             clone_result = await self.exec_in_container(superadmin_backend, clone_build_cmd)
+            clone_output = str(clone_result.get('output', '')) if clone_result.get('output') else ''
             results['clone'] = {'success': clone_result.get('success', False)}
-            results['build'] = {'success': 'Build complete' in str(clone_result.get('output', ''))}
+            results['build'] = {'success': 'Build complete' in clone_output}
             
             if not results['build']['success']:
-                logger.error(f"[GITHUB-DEPLOY] Build failed: {clone_result.get('output', '')[:1000]}")
+                error_msg = clone_output[:1000] if len(clone_output) > 1000 else clone_output
+                logger.error(f"[GITHUB-DEPLOY] Build failed: {error_msg}")
                 return {
                     'success': False,
-                    'error': f"Build failed: {clone_result.get('output', '')[:500]}",
+                    'error': f"Build failed: {error_msg[:500]}",
                     'results': results
                 }
             
