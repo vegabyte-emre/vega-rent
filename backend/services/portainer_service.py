@@ -957,9 +957,14 @@ class PortainerService:
             return {'success': False, 'error': result.get('error', 'Unknown error')}
 
 
-    async def exec_in_container(self, container_name: str, command: str) -> Dict[str, Any]:
+    async def exec_in_container(self, container_name: str, command: str, timeout: float = 60.0) -> Dict[str, Any]:
         """
         Execute a command inside a container via Portainer API
+        
+        Args:
+            container_name: Name of the container
+            command: Command to execute
+            timeout: Timeout in seconds (default 60, use higher for long builds)
         """
         # First, get container ID
         containers_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/json"
@@ -979,24 +984,35 @@ class PortainerService:
         if not container_id:
             return {'error': f'Container {container_name} not found'}
         
-        # Create exec instance
-        exec_create_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{container_id}/exec"
-        exec_payload = {
-            'Cmd': ['sh', '-c', command],
-            'AttachStdout': True,
-            'AttachStderr': True
-        }
-        
-        result = await self._request('POST', exec_create_endpoint, data=exec_payload)
-        
-        if 'Id' in result:
-            exec_id = result['Id']
-            # Start exec
-            exec_start_endpoint = f"endpoints/{self.endpoint_id}/docker/exec/{exec_id}/start"
-            start_result = await self._request('POST', exec_start_endpoint, data={'Detach': False})
-            return {'success': True, 'output': start_result}
-        
-        return {'success': False, 'error': result.get('error', 'Failed to create exec')}
+        # Create exec instance with longer timeout for builds
+        try:
+            async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
+                # Create exec
+                exec_create_url = f"{self.base_url}/api/endpoints/{self.endpoint_id}/docker/containers/{container_id}/exec"
+                exec_payload = {
+                    'Cmd': ['sh', '-c', command],
+                    'AttachStdout': True,
+                    'AttachStderr': True
+                }
+                
+                create_resp = await client.post(exec_create_url, headers=self.headers, json=exec_payload)
+                if create_resp.status_code != 201:
+                    return {'error': f'Failed to create exec: {create_resp.text}'}
+                
+                exec_id = create_resp.json().get('Id')
+                if not exec_id:
+                    return {'error': 'No exec ID returned'}
+                
+                # Start exec with long timeout
+                exec_start_url = f"{self.base_url}/api/endpoints/{self.endpoint_id}/docker/exec/{exec_id}/start"
+                start_resp = await client.post(exec_start_url, headers=self.headers, json={'Detach': False})
+                
+                return {'success': True, 'output': start_resp.text}
+                
+        except httpx.ReadTimeout:
+            return {'error': f'Command timed out after {timeout}s'}
+        except Exception as e:
+            return {'error': str(e)}
 
     async def upload_to_container(self, container_name: str, tar_data: bytes, dest_path: str) -> Dict[str, Any]:
         """
