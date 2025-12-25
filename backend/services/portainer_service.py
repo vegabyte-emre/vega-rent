@@ -2679,6 +2679,210 @@ fi
                 'results': results
             }
 
+    async def deploy_superadmin_from_github(self, github_repo: str, api_url: str) -> Dict[str, Any]:
+        """
+        Deploy SuperAdmin code from GitHub to Portainer containers.
+        
+        SUNUCUDAN çalışır:
+        1. Geçici Node container oluşturur
+        2. GitHub'dan kodu çeker
+        3. Frontend'i build eder
+        4. Build'i nginx container'ına yükler
+        5. Backend kodunu backend container'ına yükler
+        6. config.js'i doğru API URL ile oluşturur
+        7. Geçici container'ı siler
+        
+        Args:
+            github_repo: GitHub repo URL (e.g., https://github.com/user/repo.git)
+            api_url: SuperAdmin API URL for config.js
+        """
+        import asyncio
+        
+        results = {
+            'clone': None,
+            'build': None,
+            'frontend_deploy': None,
+            'backend_deploy': None,
+            'config_js': None,
+            'cleanup': None
+        }
+        
+        superadmin_nginx = "superadmin_nginx"
+        superadmin_backend = "superadmin_backend"
+        temp_container = "superadmin_build_temp"
+        
+        logger.info(f"[GITHUB-DEPLOY] Starting deployment from GitHub: {github_repo}")
+        
+        try:
+            # Step 1: Check if target containers exist
+            nginx_id = await self.get_container_id(superadmin_nginx)
+            backend_id = await self.get_container_id(superadmin_backend)
+            
+            if not nginx_id or not backend_id:
+                return {
+                    'success': False,
+                    'error': f'SuperAdmin containers not found. nginx: {bool(nginx_id)}, backend: {bool(backend_id)}',
+                    'results': results
+                }
+            
+            logger.info(f"[GITHUB-DEPLOY] Target containers found. nginx: {nginx_id[:12]}, backend: {backend_id[:12]}")
+            
+            # Step 2: Clone repo and build in backend container (it has git)
+            logger.info(f"[GITHUB-DEPLOY] Step 1: Cloning repo and building in backend container...")
+            
+            # Use backend container for git clone and build
+            clone_build_cmd = f'''
+cd /tmp && rm -rf superadmin_deploy && mkdir -p superadmin_deploy && cd superadmin_deploy &&
+git clone --depth 1 {github_repo} repo 2>&1 &&
+echo "=== Clone complete ===" &&
+cd repo/frontend &&
+echo "=== Installing dependencies ===" &&
+npm install 2>&1 | tail -20 &&
+echo "=== Building frontend ===" &&
+npm run build 2>&1 | tail -20 &&
+echo "=== Creating config.js ===" &&
+echo "window.REACT_APP_BACKEND_URL = '{api_url}';" > build/config.js &&
+cat build/config.js &&
+echo "=== Build complete ===" &&
+ls -la build/
+'''
+            
+            clone_result = await self.exec_in_container(superadmin_backend, clone_build_cmd)
+            results['clone'] = {'success': clone_result.get('success', False)}
+            results['build'] = {'success': 'Build complete' in str(clone_result.get('output', ''))}
+            
+            if not results['build']['success']:
+                logger.error(f"[GITHUB-DEPLOY] Build failed: {clone_result.get('output', '')[:1000]}")
+                return {
+                    'success': False,
+                    'error': f"Build failed: {clone_result.get('output', '')[:500]}",
+                    'results': results
+                }
+            
+            logger.info(f"[GITHUB-DEPLOY] Clone and build successful!")
+            
+            # Step 3: Copy build from backend to nginx container
+            logger.info(f"[GITHUB-DEPLOY] Step 2: Copying frontend build to nginx...")
+            
+            # Create tar of build in backend container
+            tar_cmd = 'cd /tmp/superadmin_deploy/repo/frontend && tar -cf /tmp/frontend_build.tar -C build .'
+            await self.exec_in_container(superadmin_backend, tar_cmd)
+            
+            # Download tar from backend container
+            download_result = await self.download_from_container(superadmin_backend, '/tmp/frontend_build.tar')
+            
+            if download_result.get('success') and download_result.get('data'):
+                # Upload to nginx container
+                upload_result = await self.upload_to_container(
+                    container_name=superadmin_nginx,
+                    tar_data=download_result['data'],
+                    dest_path='/usr/share/nginx/html'
+                )
+                results['frontend_deploy'] = upload_result
+                logger.info(f"[GITHUB-DEPLOY] Frontend deployed: {upload_result.get('success')}")
+            else:
+                results['frontend_deploy'] = {'success': False, 'error': 'Failed to download build tar'}
+            
+            # Step 4: Copy backend code
+            logger.info(f"[GITHUB-DEPLOY] Step 3: Copying backend code...")
+            
+            # Create tar of backend in temp location
+            backend_tar_cmd = 'cd /tmp/superadmin_deploy/repo && tar -cf /tmp/backend_code.tar -C backend .'
+            await self.exec_in_container(superadmin_backend, backend_tar_cmd)
+            
+            # Download and re-upload backend (to refresh code)
+            backend_download = await self.download_from_container(superadmin_backend, '/tmp/backend_code.tar')
+            
+            if backend_download.get('success') and backend_download.get('data'):
+                backend_upload = await self.upload_to_container(
+                    container_name=superadmin_backend,
+                    tar_data=backend_download['data'],
+                    dest_path='/app'
+                )
+                results['backend_deploy'] = backend_upload
+                logger.info(f"[GITHUB-DEPLOY] Backend deployed: {backend_upload.get('success')}")
+            
+            # Step 5: Create config.js explicitly
+            logger.info(f"[GITHUB-DEPLOY] Step 4: Ensuring config.js with API URL: {api_url}")
+            results['config_js'] = await self.create_config_js(superadmin_nginx, api_url)
+            
+            # Step 6: Restart backend to load new code
+            logger.info(f"[GITHUB-DEPLOY] Step 5: Restarting backend...")
+            restart_result = await self.restart_container_by_name(superadmin_backend)
+            results['backend_restart'] = restart_result
+            
+            # Step 7: Cleanup temp files
+            logger.info(f"[GITHUB-DEPLOY] Step 6: Cleaning up...")
+            await self.exec_in_container(superadmin_backend, 'rm -rf /tmp/superadmin_deploy /tmp/frontend_build.tar /tmp/backend_code.tar')
+            results['cleanup'] = {'success': True}
+            
+            logger.info(f"[GITHUB-DEPLOY] ✓ Deployment from GitHub complete!")
+            
+            return {
+                'success': True,
+                'message': 'SuperAdmin kodu GitHub\'dan deploy edildi',
+                'results': results,
+                'urls': {
+                    'frontend': f'http://{SERVER_IP}:9000',
+                    'backend': f'http://{SERVER_IP}:9001',
+                    'api': f'http://{SERVER_IP}:9001/api'
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"[GITHUB-DEPLOY] Error: {str(e)}")
+            import traceback
+            logger.error(f"[GITHUB-DEPLOY] Traceback: {traceback.format_exc()}")
+            
+            return {
+                'success': False,
+                'error': str(e),
+                'results': results
+            }
+
+    async def download_from_container(self, container_name: str, file_path: str) -> Dict[str, Any]:
+        """Download a file from container as tar data"""
+        try:
+            container_id = await self.get_container_id(container_name)
+            if not container_id:
+                return {'success': False, 'error': f'Container {container_name} not found'}
+            
+            download_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{container_id}/archive?path={file_path}"
+            
+            async with httpx.AsyncClient(verify=False, timeout=120.0) as client:
+                url = f"{self.base_url}/api/{download_endpoint}"
+                response = await client.get(url, headers=self.headers)
+                
+                if response.status_code == 200:
+                    return {'success': True, 'data': response.content}
+                else:
+                    return {'success': False, 'error': f'Download failed: {response.status_code}'}
+                    
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    async def restart_container_by_name(self, container_name: str) -> Dict[str, Any]:
+        """Restart a container by name"""
+        try:
+            container_id = await self.get_container_id(container_name)
+            if not container_id:
+                return {'success': False, 'error': f'Container {container_name} not found'}
+            
+            restart_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{container_id}/restart"
+            
+            async with httpx.AsyncClient(verify=False, timeout=60.0) as client:
+                url = f"{self.base_url}/api/{restart_endpoint}"
+                response = await client.post(url, headers=self.headers)
+                
+                if response.status_code == 204:
+                    logger.info(f"[RESTART] Container {container_name} restarted")
+                    return {'success': True}
+                else:
+                    return {'success': False, 'error': f'Restart failed: {response.status_code}'}
+                    
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
 
 # Singleton instance
 portainer_service = PortainerService()
