@@ -2136,7 +2136,7 @@ fi
             results['clone'] = clone_result
             
             # Check for actual errors (not just warnings)
-            clone_output = str(clone_result.get('output', {}).get('text', ''))
+            clone_output = str(clone_result.get('output', ''))
             if 'fatal:' in clone_output and 'already exists' not in clone_output:
                 return {'success': False, 'error': f'Git clone/pull failed: {clone_output}', 'results': results}
             
