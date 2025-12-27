@@ -1858,6 +1858,42 @@ async def complete_build(build_id: str, data: dict, user: dict = Depends(get_cur
     
     return {"success": True, "message": "Build tamamlandı olarak işaretlendi"}
 
+
+@app.get("/api/mobile/version")
+async def get_mobile_version(user: dict = Depends(get_current_user)):
+    """
+    Get mobile app version info for this tenant.
+    Returns current app versions and last build info.
+    """
+    company_code = os.environ.get("COMPANY_CODE", "tenant")
+    company_name = os.environ.get("COMPANY_NAME", "Rent A Car")
+    
+    # Get last successful builds
+    customer_build = await db.mobile_builds.find_one(
+        {"app_type": "customer", "status": "finished"},
+        {"_id": 0}
+    )
+    operation_build = await db.mobile_builds.find_one(
+        {"app_type": "operation", "status": "finished"},
+        {"_id": 0}
+    )
+    
+    return {
+        "company_code": company_code,
+        "company_name": company_name,
+        "customer_app": {
+            "version": customer_build.get("version", "1.0.0") if customer_build else None,
+            "last_build": customer_build.get("created_at") if customer_build else None,
+            "download_url": customer_build.get("download_url") if customer_build else None
+        },
+        "operation_app": {
+            "version": operation_build.get("version", "1.0.0") if operation_build else None,
+            "last_build": operation_build.get("created_at") if operation_build else None,
+            "download_url": operation_build.get("download_url") if operation_build else None
+        }
+    }
+
+
 # ============== HEALTH CHECK ==============
 @app.get("/api/health")
 async def health_check():
