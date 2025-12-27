@@ -2049,6 +2049,130 @@ async def trigger_tenant_mobile_build(company_code: str, data: TriggerBuildReque
     }
 
 
+# ============== MOBILE VERSION ENDPOINTS ==============
+
+@api_router.get("/superadmin/mobile-template/version")
+async def get_mobile_template_version(user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Get mobile template version info from containers.
+    Reads package.json version from template containers.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can view template versions")
+    
+    versions = {
+        "customer": {"version": None, "last_updated": None},
+        "operation": {"version": None, "last_updated": None}
+    }
+    
+    for app_type in ["customer", "operation"]:
+        container_name = f"rentacar_template_{app_type}_app"
+        try:
+            # Read package.json version
+            result = await portainer_service.exec_in_container(
+                container_name, 
+                "cat /app/package.json 2>/dev/null | grep -m1 '\"version\"' | sed 's/.*\"version\".*\"\\([^\"]*\\)\".*/\\1/'"
+            )
+            if result.get('success'):
+                output = result.get('output', '')
+                if isinstance(output, dict):
+                    output = output.get('text', '') or output.get('output', '')
+                version = output.strip().replace('\n', '').replace('\r', '')
+                if version and '.' in version:
+                    versions[app_type]["version"] = version
+                    
+            # Get last git commit date
+            date_result = await portainer_service.exec_in_container(
+                container_name,
+                "cd /app && git log -1 --format=%ci 2>/dev/null || stat -c %y /app/package.json 2>/dev/null | cut -d' ' -f1"
+            )
+            if date_result.get('success'):
+                date_output = date_result.get('output', '')
+                if isinstance(date_output, dict):
+                    date_output = date_output.get('text', '') or date_output.get('output', '')
+                date_str = date_output.strip().split()[0] if date_output.strip() else None
+                if date_str:
+                    versions[app_type]["last_updated"] = date_str
+        except Exception as e:
+            logger.warning(f"Could not get version for {app_type}: {e}")
+    
+    return {
+        "success": True,
+        "templates": versions
+    }
+
+
+@api_router.get("/superadmin/companies/{company_id}/mobile-version")
+async def get_company_mobile_version(company_id: str, user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Get mobile app version for a specific company.
+    Compares with template version to see if update is needed.
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can view mobile versions")
+    
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    company_code = company.get("code", "").replace('-', '').replace('_', '')
+    
+    versions = {
+        "customer": {"version": None, "needs_update": False},
+        "operation": {"version": None, "needs_update": False}
+    }
+    
+    # Get template versions first
+    template_versions = {}
+    for app_type in ["customer", "operation"]:
+        template_container = f"rentacar_template_{app_type}_app"
+        try:
+            result = await portainer_service.exec_in_container(
+                template_container,
+                "cat /app/package.json 2>/dev/null | grep -m1 '\"version\"' | sed 's/.*\"version\".*\"\\([^\"]*\\)\".*/\\1/'"
+            )
+            if result.get('success'):
+                output = result.get('output', '')
+                if isinstance(output, dict):
+                    output = output.get('text', '') or output.get('output', '')
+                version = output.strip().replace('\n', '').replace('\r', '')
+                if version and '.' in version:
+                    template_versions[app_type] = version
+        except:
+            pass
+    
+    # Get company versions
+    for app_type in ["customer", "operation"]:
+        container_name = f"{company_code}_{app_type}_app"
+        try:
+            result = await portainer_service.exec_in_container(
+                container_name,
+                "cat /app/package.json 2>/dev/null | grep -m1 '\"version\"' | sed 's/.*\"version\".*\"\\([^\"]*\\)\".*/\\1/'"
+            )
+            if result.get('success'):
+                output = result.get('output', '')
+                if isinstance(output, dict):
+                    output = output.get('text', '') or output.get('output', '')
+                version = output.strip().replace('\n', '').replace('\r', '')
+                if version and '.' in version:
+                    versions[app_type]["version"] = version
+                    # Compare with template
+                    template_ver = template_versions.get(app_type)
+                    if template_ver and version != template_ver:
+                        versions[app_type]["needs_update"] = True
+                        versions[app_type]["template_version"] = template_ver
+        except Exception as e:
+            logger.warning(f"Could not get version for {company_code} {app_type}: {e}")
+    
+    return {
+        "success": True,
+        "company_code": company.get("code"),
+        "company_name": company.get("name"),
+        "versions": versions,
+        "template_versions": template_versions
+    }
+
+
 @api_router.post("/superadmin/deploy-frontend-to-kvm")
 async def deploy_frontend_to_kvm(background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     """
