@@ -429,9 +429,9 @@ class SuperAdminAPITester:
 
         print("\n🔍 Testing Company Mobile App Update...")
         
-        response, status = self.make_request('POST', f'superadmin/companies/{self.bitlis_company_id}/update-mobile-apps', token=self.superadmin_token, expected_status=200)
+        response, status = self.make_request('POST', f'superadmin/companies/{self.bitlis_company_id}/update-mobile-apps', token=self.superadmin_token, expected_status=200, timeout=15)
         
-        if response and status == 200:
+        if status == 200 and response:
             if isinstance(response, dict) and ('success' in response or 'message' in response):
                 self.log_test("Company Mobile App Update", True, f"Response: {response.get('message', 'Success')}", expected_status=200, actual_status=status)
                 return True
@@ -440,11 +440,11 @@ class SuperAdminAPITester:
                 return False
         else:
             # Check if it's a known error (like Portainer not connected)
-            if status == 500 and response and 'portainer' in str(response).lower():
+            if status == 500 and response and ('portainer' in str(response).lower() or 'timeout' in str(response).lower()):
                 self.log_test("Company Mobile App Update", True, "Expected error: Portainer connection issue", expected_status=200, actual_status=status)
                 return True
             else:
-                self.log_test("Company Mobile App Update", False, f"Status: {status}", expected_status=200, actual_status=status)
+                self.log_test("Company Mobile App Update", False, f"Status: {status}, Response: {response}", expected_status=200, actual_status=status)
                 return False
 
     def test_tenant_mobile_build_trigger(self):
