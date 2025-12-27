@@ -1185,12 +1185,12 @@ class PortainerService:
         This enables template-based deployment without external APIs.
         
         Args:
-            exclude_files: List of filenames to exclude (e.g., ['config.js'] to preserve tenant config)
+            exclude_files: List of filenames/folders to exclude (e.g., ['node_modules', 'config.js'])
             flatten_source: If True, removes the source folder name from paths (e.g., /app/frontend/* -> /app/*)
         """
         logger.info(f"[TEMPLATE-COPY] {template_container}:{source_path} -> {target_container}:{dest_path}")
         if exclude_files:
-            logger.info(f"[TEMPLATE-COPY] Excluding files: {exclude_files}")
+            logger.info(f"[TEMPLATE-COPY] Excluding files/folders: {exclude_files}")
         
         # Get container IDs
         template_id = await self.get_container_id(template_container)
@@ -1201,7 +1201,8 @@ class PortainerService:
         if not target_id:
             return {'error': f'Target container {target_container} not found'}
         
-        async with httpx.AsyncClient(verify=False, timeout=120.0) as client:
+        # Use longer timeout for large files (10 minutes)
+        async with httpx.AsyncClient(verify=False, timeout=600.0) as client:
             try:
                 # Step 1: Download from template container
                 download_url = f"{self.base_url}/api/endpoints/{self.endpoint_id}/docker/containers/{template_id}/archive?path={source_path}"
@@ -1213,7 +1214,7 @@ class PortainerService:
                 tar_data = download_resp.content
                 logger.info(f"[TEMPLATE-COPY] Downloaded {len(tar_data)} bytes from template")
                 
-                # Step 2: Filter out excluded files and optionally flatten paths
+                # Step 2: Filter out excluded files/folders and optionally flatten paths
                 source_folder_name = os.path.basename(source_path.rstrip('/'))  # e.g., 'frontend'
                 
                 if exclude_files or flatten_source:
@@ -1221,10 +1222,20 @@ class PortainerService:
                     with tarfile.open(fileobj=std_io.BytesIO(tar_data), mode='r') as src_tar:
                         with tarfile.open(fileobj=filtered_tar, mode='w') as dst_tar:
                             for member in src_tar.getmembers():
-                                # Check if this file should be excluded
-                                filename = os.path.basename(member.name)
-                                if exclude_files and filename in exclude_files:
-                                    logger.info(f"[TEMPLATE-COPY] Excluding: {member.name}")
+                                # Check if this file/folder should be excluded
+                                # Check both filename and if path contains excluded folder
+                                should_exclude = False
+                                if exclude_files:
+                                    filename = os.path.basename(member.name)
+                                    if filename in exclude_files:
+                                        should_exclude = True
+                                    # Also check if path contains excluded folder (e.g., node_modules/)
+                                    for excl in exclude_files:
+                                        if f'/{excl}/' in f'/{member.name}/' or member.name == excl or member.name.endswith(f'/{excl}'):
+                                            should_exclude = True
+                                            break
+                                
+                                if should_exclude:
                                     continue
                                 
                                 # Flatten paths if needed (remove source folder prefix)
@@ -1242,7 +1253,7 @@ class PortainerService:
                                 else:
                                     dst_tar.addfile(member)
                     tar_data = filtered_tar.getvalue()
-                    logger.info(f"[TEMPLATE-COPY] Filtered tar size: {len(tar_data)} bytes")
+                    logger.info(f"[TEMPLATE-COPY] Filtered tar size: {len(tar_data)} bytes ({len(tar_data)/1024/1024:.1f} MB)")
                 
                 # Step 3: Upload to target container
                 upload_url = f"{self.base_url}/api/endpoints/{self.endpoint_id}/docker/containers/{target_id}/archive?path={dest_path}"
