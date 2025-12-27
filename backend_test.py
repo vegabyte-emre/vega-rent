@@ -39,7 +39,7 @@ class SuperAdminAPITester:
             "actual_status": actual_status
         })
 
-    def make_request(self, method, endpoint, data=None, token=None, expected_status=200):
+    def make_request(self, method, endpoint, data=None, token=None, expected_status=200, timeout=30):
         """Make HTTP request with error handling"""
         url = f"{self.base_url}/api/{endpoint}"
         headers = {'Content-Type': 'application/json'}
@@ -49,15 +49,15 @@ class SuperAdminAPITester:
 
         try:
             if method == 'GET':
-                response = requests.get(url, headers=headers, timeout=10)
+                response = requests.get(url, headers=headers, timeout=timeout)
             elif method == 'POST':
-                response = requests.post(url, json=data, headers=headers, timeout=10)
+                response = requests.post(url, json=data, headers=headers, timeout=timeout)
             elif method == 'PUT':
-                response = requests.put(url, json=data, headers=headers, timeout=10)
+                response = requests.put(url, json=data, headers=headers, timeout=timeout)
             elif method == 'PATCH':
-                response = requests.patch(url, json=data, headers=headers, timeout=10)
+                response = requests.patch(url, json=data, headers=headers, timeout=timeout)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=headers, timeout=10)
+                response = requests.delete(url, headers=headers, timeout=timeout)
             else:
                 return None, f"Unsupported method: {method}"
 
@@ -68,7 +68,7 @@ class SuperAdminAPITester:
             except:
                 response_data = {"text": response.text}
 
-            return response_data if success else None, response.status_code
+            return response_data if success else response_data, response.status_code
 
         except requests.exceptions.RequestException as e:
             return None, f"Request failed: {str(e)}"
