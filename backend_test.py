@@ -11,7 +11,7 @@ from datetime import datetime
 import time
 
 class SuperAdminAPITester:
-    def __init__(self, base_url="http://72.61.158.147:9001"):
+    def __init__(self, base_url="http://localhost:8001"):
         self.base_url = base_url
         self.superadmin_token = None
         self.tenant_token = None
