@@ -237,6 +237,38 @@ export function SuperAdminCompanies() {
     }
   };
 
+  // Mobil Version Kontrol
+  const handleCheckMobileVersion = async (companyId, companyName) => {
+    setCheckingVersion(companyId);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/superadmin/companies/${companyId}/mobile-version`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        const { versions, template_versions } = response.data;
+        
+        let message = `📱 ${companyName} Mobil App Versiyonları\n\n`;
+        message += `Müşteri App:\n`;
+        message += `  • Mevcut: ${versions.customer?.version || 'Kurulmamış'}\n`;
+        message += `  • Template: ${template_versions?.customer || 'Bilinmiyor'}\n`;
+        message += `  • Güncelleme: ${versions.customer?.needs_update ? '⚠️ GEREKLİ' : '✅ Güncel'}\n\n`;
+        
+        message += `Operasyon App:\n`;
+        message += `  • Mevcut: ${versions.operation?.version || 'Kurulmamış'}\n`;
+        message += `  • Template: ${template_versions?.operation || 'Bilinmiyor'}\n`;
+        message += `  • Güncelleme: ${versions.operation?.needs_update ? '⚠️ GEREKLİ' : '✅ Güncel'}`;
+        
+        alert(message);
+      }
+    } catch (error) {
+      toast.error("Version bilgisi alınamadı: " + (error.response?.data?.detail || error.message));
+    } finally {
+      setCheckingVersion(null);
+    }
+  };
+
   const filteredCompanies = companies.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
