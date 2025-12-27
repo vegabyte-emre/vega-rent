@@ -174,6 +174,7 @@ class SuperAdminAPITester:
             
             if bitlis_company:
                 self.log_test("Bitlis Company Found", True, f"Name: {bitlis_company.get('name')}")
+                self.bitlis_company_id = bitlis_company.get('id')  # Store for mobile tests
                 
                 # Test company details
                 company_id = bitlis_company.get('id')
