@@ -2218,8 +2218,8 @@ fi
                 "operation": "af4db31d-9d07-4872-9649-6743df13ba1e"
             }
             EXPO_SLUGS = {
-                "customer": "vega-rent-customer",
-                "operation": "vega-operasyon"
+                "customer": "vega-rent",
+                "operation": "vega-rent-o-app"
             }
             
             project_id = EXPO_PROJECT_IDS.get(app_type, "")
