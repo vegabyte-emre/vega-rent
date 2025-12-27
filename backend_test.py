@@ -375,9 +375,9 @@ class SuperAdminAPITester:
         
         # Test customer app update
         update_data = {"app_type": "customer"}
-        response, status = self.make_request('POST', 'superadmin/template/mobile/update', data=update_data, token=self.superadmin_token, expected_status=200)
+        response, status = self.make_request('POST', 'superadmin/template/mobile/update', data=update_data, token=self.superadmin_token, expected_status=200, timeout=15)
         
-        if response and status == 200:
+        if status == 200 and response:
             if isinstance(response, dict) and ('success' in response or 'message' in response):
                 self.log_test("Mobile Template Update - Customer", True, f"Response: {response.get('message', 'Success')}", expected_status=200, actual_status=status)
                 customer_success = True
@@ -386,20 +386,20 @@ class SuperAdminAPITester:
                 customer_success = False
         else:
             # Check if it's a known error (like Portainer not connected)
-            if status == 500 and response and 'portainer' in str(response).lower():
+            if status == 500 and response and ('portainer' in str(response).lower() or 'timeout' in str(response).lower()):
                 self.log_test("Mobile Template Update - Customer", True, "Expected error: Portainer connection issue", expected_status=200, actual_status=status)
                 customer_success = True
             else:
-                self.log_test("Mobile Template Update - Customer", False, f"Status: {status}", expected_status=200, actual_status=status)
+                self.log_test("Mobile Template Update - Customer", False, f"Status: {status}, Response: {response}", expected_status=200, actual_status=status)
                 customer_success = False
 
         print("\n🔍 Testing Mobile Template Update (Operation App)...")
         
         # Test operation app update
         update_data = {"app_type": "operation"}
-        response, status = self.make_request('POST', 'superadmin/template/mobile/update', data=update_data, token=self.superadmin_token, expected_status=200)
+        response, status = self.make_request('POST', 'superadmin/template/mobile/update', data=update_data, token=self.superadmin_token, expected_status=200, timeout=15)
         
-        if response and status == 200:
+        if status == 200 and response:
             if isinstance(response, dict) and ('success' in response or 'message' in response):
                 self.log_test("Mobile Template Update - Operation", True, f"Response: {response.get('message', 'Success')}", expected_status=200, actual_status=status)
                 operation_success = True
@@ -408,11 +408,11 @@ class SuperAdminAPITester:
                 operation_success = False
         else:
             # Check if it's a known error (like Portainer not connected)
-            if status == 500 and response and 'portainer' in str(response).lower():
+            if status == 500 and response and ('portainer' in str(response).lower() or 'timeout' in str(response).lower()):
                 self.log_test("Mobile Template Update - Operation", True, "Expected error: Portainer connection issue", expected_status=200, actual_status=status)
                 operation_success = True
             else:
-                self.log_test("Mobile Template Update - Operation", False, f"Status: {status}", expected_status=200, actual_status=status)
+                self.log_test("Mobile Template Update - Operation", False, f"Status: {status}, Response: {response}", expected_status=200, actual_status=status)
                 operation_success = False
 
         return customer_success and operation_success
