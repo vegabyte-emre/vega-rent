@@ -534,11 +534,23 @@ class SuperAdminAPITester:
         if superadmin_login_success:
             self.test_superadmin_companies()
             self.test_superadmin_stats()
+            
+            # Mobile App Build System Tests
+            print("\n" + "=" * 60)
+            print("🔍 MOBILE APP BUILD SYSTEM TESTS")
+            print("=" * 60)
+            self.test_mobile_template_version()
+            self.test_company_mobile_version()
+            self.test_mobile_template_update()
+            self.test_company_mobile_app_update()
         
         # Tenant functionality
         if tenant_login_success:
             self.test_tenant_dashboard()
             self.test_tenant_navigation()
+            
+            # Tenant mobile build tests
+            self.test_tenant_mobile_build_trigger()
         
         return self.get_results()
 
