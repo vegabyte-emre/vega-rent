@@ -1,6 +1,68 @@
 # Test Results - SuperAdmin Multi-Tenant Rent A Car SaaS
 
-## Last Updated: 2025-12-22
+## Last Updated: 2025-12-27
+
+---
+## 2025-12-27 - Mobil App Build Sistemi Net Yapılandırma
+
+### Sistem Akışı (Net Versiyon)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                     SUPERADMIN PANELİ                            │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1️⃣ MOBİL TEMPLATE GÜNCELLE (GitHub → Template Container)        │
+│     • Ayarlar > "Mobil Template Güncelle"                        │
+│     • Customer App: vegabyte-emre/vega-rent-customer-app         │
+│     • Operation App: vegabyte-emre/vega-rent-operation-mobilapp  │
+│                                                                  │
+│  2️⃣ FİRMA MOBİL APP GÜNCELLE (Template → Tenant Container)       │
+│     • Firmalar > Dropdown > "Mobil App Güncelle"                 │
+│     • Firma bilgileri ile config enjekte edilir:                 │
+│       - app.config.js (API_URL, COMPANY_NAME, COMPANY_CODE)      │
+│       - keystore.jks (Android signing)                           │
+│       - credentials.json                                         │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                      TENANT PANELİ                               │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  3️⃣ BUILD TETIKLE                                                │
+│     • Mobil Uygulamalar sayfası                                  │
+│     • "APK Üret" butonu                                          │
+│     • EAS Build başlatılır                                       │
+│     • Expo Dashboard'dan takip edilir                            │
+│     • APK indirilir                                              │
+│                                                                  │
+│  4️⃣ VERSİYON KONTROLÜ                                            │
+│     • /api/mobile/version endpoint'i                             │
+│     • Güncel versiyon ve son build tarihi görüntülenir           │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Eklenen Endpoint'ler
+
+| Endpoint | Açıklama |
+|----------|----------|
+| `GET /api/superadmin/mobile-template/version` | Template versiyonlarını döner |
+| `GET /api/superadmin/companies/{id}/mobile-version` | Firma mobil versiyonlarını döner |
+| `GET /api/mobile/version` (Tenant) | Tenant için mevcut versiyon bilgisi |
+
+### Test Sonuçları
+- ✅ `/api/superadmin/mobile-template/version` - Çalışıyor
+- ✅ `/api/superadmin/template/mobile/status` - Çalışıyor
+- ⏳ Template containerlar kurulu değil (Portainer'da setup gerekli)
+
+### Değişen Dosyalar
+- `/app/backend/server.py` - Version endpoint'leri eklendi
+- `/app/backend/template/backend/server.py` - Tenant version endpoint eklendi
+
+---
 
 ## P0 - Tenant Login Issue (config.js Overwrite)
 - **Status**: FIXED ✅
