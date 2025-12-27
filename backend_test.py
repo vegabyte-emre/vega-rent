@@ -403,10 +403,7 @@ class SuperAdminAPITester:
             print("\n" + "=" * 60)
             print("🔍 MOBILE APP BUILD SYSTEM TESTS")
             print("=" * 60)
-            self.test_mobile_template_version()
-            self.test_company_mobile_version()
-            self.test_mobile_template_update()
-            self.test_company_mobile_app_update()
+            self.test_mobile_endpoints_availability()
         
         # Tenant functionality
         if tenant_login_success:
