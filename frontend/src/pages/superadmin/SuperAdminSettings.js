@@ -18,6 +18,7 @@ export function SuperAdminSettings() {
   const [updatingMasterTemplate, setUpdatingMasterTemplate] = useState(false);
   const [masterTemplateStatus, setMasterTemplateStatus] = useState(null);
   const [mobileTemplateStatus, setMobileTemplateStatus] = useState(null);
+  const [mobileTemplateVersions, setMobileTemplateVersions] = useState(null);
   const [updatingMobileTemplate, setUpdatingMobileTemplate] = useState(false);
   const [deployingToPortainer, setDeployingToPortainer] = useState(false);
 
@@ -25,8 +26,23 @@ export function SuperAdminSettings() {
     checkTraefikStatus();
     checkMasterTemplateStatus();
     checkMobileTemplateStatus();
+    fetchMobileTemplateVersions();
     loadTemplateInfo();
   }, []);
+
+  const fetchMobileTemplateVersions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${getApiUrl()}/api/superadmin/mobile-template/version`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setMobileTemplateVersions(response.data.templates);
+      }
+    } catch (error) {
+      console.error("Mobil template versiyonları alınamadı:", error);
+    }
+  };
 
   // Deploy code to Portainer SuperAdmin stack
   const deployToPortainer = async () => {
