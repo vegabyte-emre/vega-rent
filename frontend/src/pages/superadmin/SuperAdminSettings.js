@@ -107,12 +107,16 @@ export function SuperAdminSettings() {
   const updateMobileTemplate = async (appType) => {
     setUpdatingMobileTemplate(true);
     try {
+      const token = localStorage.getItem('token');
       const response = await axios.post(`${getApiUrl()}/api/superadmin/template/mobile/update`, {
         app_type: appType
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
         toast.success(`Mobil ${appType} template başarıyla güncellendi!`);
         checkMobileTemplateStatus();
+        fetchMobileTemplateVersions();
       } else {
         toast.error(response.data.error || "Mobil template güncelleme başarısız");
       }
