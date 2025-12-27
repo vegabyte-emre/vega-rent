@@ -73,6 +73,7 @@ export function SuperAdminCompanies() {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [checkingVersion, setCheckingVersion] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
