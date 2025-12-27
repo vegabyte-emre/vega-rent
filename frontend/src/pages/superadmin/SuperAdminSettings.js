@@ -355,7 +355,19 @@ export function SuperAdminSettings() {
                   <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">Bekliyor</span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 mb-3">vegabyte-emre/vega-rent-customer-app</p>
+              <p className="text-xs text-slate-400 mb-2">vegabyte-emre/vega-rent-customer-app</p>
+              {mobileTemplateVersions?.customer?.version && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-mono">
+                    v{mobileTemplateVersions.customer.version}
+                  </span>
+                  {mobileTemplateVersions.customer.last_updated && (
+                    <span className="text-xs text-slate-500">
+                      {mobileTemplateVersions.customer.last_updated}
+                    </span>
+                  )}
+                </div>
+              )}
               <Button 
                 onClick={() => updateMobileTemplate('customer')} 
                 disabled={updatingMobileTemplate}
@@ -385,7 +397,19 @@ export function SuperAdminSettings() {
                   <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">Bekliyor</span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 mb-3">vegabyte-emre/vega-rent-operation-mobilapp</p>
+              <p className="text-xs text-slate-400 mb-2">vegabyte-emre/vega-rent-operation-mobilapp</p>
+              {mobileTemplateVersions?.operation?.version && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-mono">
+                    v{mobileTemplateVersions.operation.version}
+                  </span>
+                  {mobileTemplateVersions.operation.last_updated && (
+                    <span className="text-xs text-slate-500">
+                      {mobileTemplateVersions.operation.last_updated}
+                    </span>
+                  )}
+                </div>
+              )}
               <Button 
                 onClick={() => updateMobileTemplate('operation')} 
                 disabled={updatingMobileTemplate}
