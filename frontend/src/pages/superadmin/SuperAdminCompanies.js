@@ -499,6 +499,14 @@ export function SuperAdminCompanies() {
                                   Mobil App Güncelle
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
+                                  className="text-indigo-400 hover:bg-slate-700 cursor-pointer"
+                                  onClick={() => handleCheckMobileVersion(company.id, company.name)}
+                                  disabled={checkingVersion === company.id}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  {checkingVersion === company.id ? 'Kontrol Ediliyor...' : 'Mobil Version Kontrol'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
                                   className="text-green-400 hover:bg-slate-700 cursor-pointer"
                                   onClick={() => handleUpdateAll(company.id, company.name)}
                                 >
