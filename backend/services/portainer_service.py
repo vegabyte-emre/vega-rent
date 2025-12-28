@@ -2132,6 +2132,10 @@ asyncio.run(get())
         try:
             logger.info(f"[MOBILE-TEMPLATE] Updating {app_type} app from GitHub: {github_repo}")
             
+            # Step 0: Install git if not present (Alpine containers)
+            git_install_cmd = "which git || apk add --no-cache git 2>&1"
+            await self.exec_in_container(container_name, git_install_cmd)
+            
             # Step 1: Check if .git exists and either pull or fresh clone
             clone_cmd = f"""
 if [ -d "/app/.git" ]; then
