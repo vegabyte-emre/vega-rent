@@ -2235,12 +2235,25 @@ done
             # GitHub repo is now build-ready, just copy everything
             # ============================================================
             logger.info(f"[MOBILE-COPY-V2] Step 1: Copying code from template...")
+            
+            # Check if template has nested frontend/ structure or flat structure
+            check_structure = await self.exec_in_container(
+                template_container, 
+                "test -f /app/frontend/package.json && echo 'nested' || echo 'flat'"
+            )
+            structure_output = str(check_structure.get('output', '')).strip()
+            
+            if 'nested' in structure_output:
+                source_path = "/app/frontend"
+            else:
+                source_path = "/app"
+            
             copy_result = await self.copy_from_template(
                 template_container=template_container,
                 target_container=tenant_container,
-                source_path="/app/frontend",
+                source_path=source_path,
                 dest_path="/app",
-                exclude_files=["node_modules", ".expo", ".metro-cache", "keystore.jks", "credentials.json"],
+                exclude_files=["node_modules", ".expo", ".metro-cache", "keystore.jks", "credentials.json", ".git"],
                 flatten_source=True
             )
             results['code_copy'] = copy_result
