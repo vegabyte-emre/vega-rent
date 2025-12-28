@@ -2452,6 +2452,12 @@ fi
             logger.info(f"[EAS-BUILD] Starting build...")
             build_cmd = f"""cd /app && EAS_NO_VCS=1 EXPO_TOKEN={expo_token} eas build --platform android --profile preview --non-interactive --no-wait 2>&1"""
             
+            # Also try from /app/frontend if main /app doesn't have app.config.js
+            check_config = await self.exec_in_container(container_name, "test -f /app/app.config.js && echo 'root' || echo 'frontend'")
+            config_location = str(check_config.get('output', '')).strip()
+            if 'frontend' in config_location:
+                build_cmd = f"""cd /app/frontend && EAS_NO_VCS=1 EXPO_TOKEN={expo_token} eas build --platform android --profile preview --non-interactive --no-wait 2>&1"""
+            
             result = await self.exec_in_container(container_name, build_cmd)
             
             if result.get('success'):
