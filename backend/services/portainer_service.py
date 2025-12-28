@@ -2155,6 +2155,38 @@ fi
             if 'fatal:' in clone_output and 'already exists' not in clone_output:
                 return {'success': False, 'error': f'Git clone/pull failed: {clone_output}', 'results': results}
             
+            # Step 1.3: If frontend/ folder exists, move its contents to root (for repos with nested structure)
+            logger.info(f"[MOBILE-TEMPLATE] Checking for nested frontend folder structure...")
+            move_frontend_cmd = '''
+if [ -d "/app/frontend" ] && [ -f "/app/frontend/package.json" ]; then
+    echo "Found nested frontend folder, moving contents to root..."
+    # Remove conflicting root files that might be from old structure
+    rm -rf /app/app /app/src /app/store /app/services /app/components /app/constants /app/types /app/assets 2>/dev/null
+    rm -f /app/package.json /app/babel.config.js /app/tsconfig.json /app/app.config.js /app/metro.config.js 2>/dev/null
+    # Copy frontend contents to root
+    cp -r /app/frontend/app /app/ 2>/dev/null || true
+    cp -r /app/frontend/src /app/ 2>/dev/null || true
+    cp -r /app/frontend/store /app/ 2>/dev/null || true
+    cp -r /app/frontend/services /app/ 2>/dev/null || true
+    cp -r /app/frontend/components /app/ 2>/dev/null || true
+    cp -r /app/frontend/constants /app/ 2>/dev/null || true
+    cp -r /app/frontend/types /app/ 2>/dev/null || true
+    cp -r /app/frontend/assets /app/ 2>/dev/null || true
+    cp -r /app/frontend/scripts /app/ 2>/dev/null || true
+    cp /app/frontend/package.json /app/ 2>/dev/null || true
+    cp /app/frontend/babel.config.js /app/ 2>/dev/null || true
+    cp /app/frontend/tsconfig.json /app/ 2>/dev/null || true
+    cp /app/frontend/app.config.js /app/ 2>/dev/null || true
+    cp /app/frontend/metro.config.js /app/ 2>/dev/null || true
+    cp /app/frontend/eslint.config.js /app/ 2>/dev/null || true
+    cp /app/frontend/app.json /app/ 2>/dev/null || true
+    echo "Frontend contents moved to root"
+else
+    echo "No nested frontend folder or already flat structure"
+fi
+'''
+            await self.exec_in_container(container_name, move_frontend_cmd)
+            
             # Step 1.5: Fix common package.json issues (trailing commas, empty lines)
             fix_package_json_cmd = '''
 for f in /app/package.json /app/frontend/package.json; do
