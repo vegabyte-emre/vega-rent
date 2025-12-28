@@ -2155,23 +2155,6 @@ fi
             if 'fatal:' in clone_output and 'already exists' not in clone_output:
                 return {'success': False, 'error': f'Git clone/pull failed: {clone_output}', 'results': results}
             
-            # Step 1.5: Fix common package.json issues (trailing commas, empty lines)
-            fix_package_json_cmd = '''
-for f in /app/package.json /app/frontend/package.json; do
-  if [ -f "$f" ]; then
-    # Remove trailing commas before closing braces/brackets and empty lines
-    sed -i 's/,\\s*$/,/g' "$f"
-    sed -i ':a;N;$!ba;s/,\\n[[:space:]]*\\n[[:space:]]*}/\\n  }/g' "$f"
-    sed -i ':a;N;$!ba;s/,\\n[[:space:]]*}/\\n  }/g' "$f"
-    sed -i 's/,[[:space:]]*}/}/g' "$f"
-    sed -i 's/,[[:space:]]*\\]/]/g' "$f"
-    # Use node to validate and reformat JSON
-    node -e "const fs=require('fs'); try { const p=JSON.parse(fs.readFileSync('$f')); fs.writeFileSync('$f', JSON.stringify(p, null, 2)); console.log('Fixed: $f'); } catch(e) { console.log('Error fixing $f:', e.message); }" 2>/dev/null || true
-  fi
-done
-'''
-            await self.exec_in_container(container_name, fix_package_json_cmd)
-            
             # Step 2: Install dependencies (remove package-lock.json to avoid conflicts)
             logger.info(f"[MOBILE-TEMPLATE] Installing dependencies...")
             install_cmd = "cd /app && rm -f package-lock.json && yarn install 2>&1 || npm install 2>&1"
