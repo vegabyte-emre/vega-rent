@@ -2182,6 +2182,12 @@ done
             nested_install_cmd = "test -f /app/frontend/package.json && cd /app/frontend && rm -f package-lock.json && yarn install 2>&1 || echo 'No nested frontend'"
             await self.exec_in_container(container_name, nested_install_cmd)
             
+            # Step 2.5: Install commonly missing packages
+            logger.info(f"[MOBILE-TEMPLATE] Installing commonly required packages...")
+            common_packages = "date-fns zustand zod @tanstack/react-query react-hook-form @hookform/resolvers expo-constants react-native-worklets @react-native-async-storage/async-storage"
+            common_packages_cmd = f"cd /app && yarn add {common_packages} 2>&1 || npm install {common_packages} 2>&1"
+            await self.exec_in_container(container_name, common_packages_cmd)
+            
             # Step 3: Install EAS CLI globally
             logger.info(f"[MOBILE-TEMPLATE] Installing EAS CLI...")
             eas_cmd = "npm install -g eas-cli@latest 2>&1"
