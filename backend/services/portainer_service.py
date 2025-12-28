@@ -2155,11 +2155,15 @@ fi
             if 'fatal:' in clone_output and 'already exists' not in clone_output:
                 return {'success': False, 'error': f'Git clone/pull failed: {clone_output}', 'results': results}
             
-            # Step 2: Install dependencies
+            # Step 2: Install dependencies (remove package-lock.json to avoid conflicts)
             logger.info(f"[MOBILE-TEMPLATE] Installing dependencies...")
-            install_cmd = "cd /app && yarn install 2>&1 || npm install 2>&1"
+            install_cmd = "cd /app && rm -f package-lock.json && yarn install 2>&1 || npm install 2>&1"
             install_result = await self.exec_in_container(container_name, install_cmd)
             results['install'] = {'success': True} if install_result.get('success') else install_result
+            
+            # Also check /app/frontend directory for nested project structure
+            nested_install_cmd = "test -f /app/frontend/package.json && cd /app/frontend && rm -f package-lock.json && yarn install 2>&1 || echo 'No nested frontend'"
+            await self.exec_in_container(container_name, nested_install_cmd)
             
             # Step 3: Install EAS CLI globally
             logger.info(f"[MOBILE-TEMPLATE] Installing EAS CLI...")
