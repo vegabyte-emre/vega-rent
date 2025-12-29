@@ -2343,58 +2343,13 @@ JWT_SECRET=kvm_superadmin_jwt_secret_2024
 @api_router.post("/superadmin/seed-kvm-database")
 async def seed_kvm_database(user: dict = Depends(get_current_user)):
     """
-    SuperAdmin: Seed initial admin user to KVM MongoDB
-    Creates admin@fleetease.com user in KVM's MongoDB
+    DEPRECATED: This endpoint is disabled in production.
+    Database seeding should only be done during initial setup.
     """
-    if user["role"] != UserRole.SUPERADMIN.value:
-        raise HTTPException(status_code=403, detail="Only SuperAdmin can seed database")
-    
-    from motor.motor_asyncio import AsyncIOMotorClient
-    
-    try:
-        # Connect to KVM MongoDB
-        kvm_mongo_url = "mongodb://72.61.158.147:27017"
-        kvm_client = AsyncIOMotorClient(kvm_mongo_url, serverSelectionTimeoutMS=5000)
-        kvm_db = kvm_client["superadmin_db"]
-        
-        # Check if admin exists
-        existing = await kvm_db.users.find_one({"email": "admin@fleetease.com"})
-        if existing:
-            return {
-                "success": True,
-                "message": "Admin user already exists",
-                "email": "admin@fleetease.com"
-            }
-        
-        # Create admin user
-        admin_user = {
-            "id": str(uuid.uuid4()),
-            "email": "admin@fleetease.com",
-            "password_hash": pwd_context.hash("admin123"),
-            "full_name": "Super Admin",
-            "role": "superadmin",
-            "company_id": None,
-            "phone": None,
-            "is_active": True,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        
-        await kvm_db.users.insert_one(admin_user)
-        
-        kvm_client.close()
-        
-        return {
-            "success": True,
-            "message": "Admin user created successfully",
-            "email": "admin@fleetease.com",
-            "password": "admin123"
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    raise HTTPException(
+        status_code=410, 
+        detail="Bu endpoint production ortamında devre dışıdır. Veritabanı seed işlemi sadece kurulum sırasında yapılmalıdır."
+    )
 
 # ============== FIX TENANT CONFIG.JS ==============
 class FixTenantConfigRequest(BaseModel):
