@@ -163,6 +163,76 @@ export function Integrations() {
     }
   };
 
+  // Arvento Functions
+  const loadArventoSettings = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${getApiUrl()}/api/arvento/settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setArventoSettings(response.data);
+    } catch (error) {
+      console.error("Arvento ayarları yüklenemedi:", error);
+    }
+  };
+
+  const saveArventoSettings = async () => {
+    setArventoLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(`${getApiUrl()}/api/arvento/settings`, arventoSettings, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        toast.success("Arvento ayarları kaydedildi!");
+        loadArventoSettings();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Arvento ayarları kaydedilemedi");
+    } finally {
+      setArventoLoading(false);
+    }
+  };
+
+  const testArventoConnection = async () => {
+    setArventoTesting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(`${getApiUrl()}/api/arvento/test`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        toast.success(response.data.message || "Arvento bağlantısı başarılı!");
+      } else {
+        toast.error(response.data.message || "Arvento bağlantısı başarısız");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Bağlantı test edilemedi");
+    } finally {
+      setArventoTesting(false);
+    }
+  };
+
+  const loadArventoVehicles = async () => {
+    setArventoLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${getApiUrl()}/api/arvento/vehicles`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setArventoVehicles(response.data.vehicles || []);
+        toast.success(`${response.data.vehicles?.length || 0} araç yüklendi`);
+      } else {
+        toast.error(response.data.message || "Araçlar yüklenemedi");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Araçlar yüklenemedi");
+    } finally {
+      setArventoLoading(false);
+    }
+  };
+
   const getIntegrationStatus = (platformId) => {
     const integration = integrations.find(i => i.platform_id === platformId);
     return integration || null;
