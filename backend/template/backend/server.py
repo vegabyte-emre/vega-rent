@@ -19,6 +19,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
+# Version import
+try:
+    from version import VERSION, get_version_info
+except ImportError:
+    VERSION = "1.0.0"
+    def get_version_info():
+        return {"version": VERSION, "changelog": {}}
+
 # Optional httpx for Expo API calls
 try:
     import httpx
