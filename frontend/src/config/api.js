@@ -3,7 +3,7 @@ export const getApiUrl = () => {
   if (typeof window !== 'undefined' && window.REACT_APP_BACKEND_URL) {
     return window.REACT_APP_BACKEND_URL;
   }
-  return process.env.REACT_APP_BACKEND_URL || 'http://72.61.158.147:8001';
+  return process.env.REACT_APP_BACKEND_URL || 'http://72.61.158.147:9001';
 };
 
 // API_URL - runtime'da window.REACT_APP_BACKEND_URL'den al
