@@ -1,154 +1,188 @@
 <analysis>**original_problem_statement:**
-The user wants to build a SuperAdmin Panel, a multi-tenant corporate car rental SaaS platform. This panel must provision, deploy, and manage isolated Rent A Car application stacks for tenants. A key requirement is a centralized template system managed via GitHub to streamline updates. The user also requested an Integrations page for 3rd-party services and a feature to build and download tenant-specific mobile APKs for Operasyon and Müşteri apps using Expo EAS.
+The user wants to build a SuperAdmin Panel, a multi-tenant corporate car rental SaaS platform. This panel must provision, deploy, and manage isolated Rent A Car application stacks for tenants. A key requirement is a centralized template system managed via GitHub to streamline updates. The user also requested an Integrations page for 3rd-party services and a feature to build and download tenant-specific mobile APKs.
 
-During this and previous sessions, the user repeatedly encountered build and login failures for the mobile apps and requested the agent to fix them, ensuring the template is updated so new tenants do not face the same issues.
+The main goals for this session were:
+1.  Implement a version control system visible in the UI for all components (SuperAdmin, Tenant Panel, Mobile Apps).
+2.  Fix broken connections between the Tenant panel and SuperAdmin (e.g., support tickets).
+3.  Connect the Tenant landing page with backend data (e.g., locations).
+4.  Remove all test/mock data from the entire system.
+5.  Implement a new integration with Arvento GPS tracking service using credentials provided by the user.
+6.  Permanently fix the unreliable Master Template Update -> Tenant Web Template Update workflow that was causing white screens.
 
 **PRODUCT REQUIREMENTS:**
 -   **SuperAdmin SaaS Platform:** A central dashboard to manage tenants, deployments, and master templates.
--   **Tenant Application Stack:** Each tenant gets a separate full-stack application (React frontend, FastAPI backend, MongoDB) and dedicated mobile app build containers.
--   **Centralized Template System:** All tenant updates (Web & Mobile) must originate from master templates synced from dedicated GitHub repositories.
--   **Mobile App Generation:** A feature within the tenant's admin panel to trigger Expo EAS builds, producing downloadable APKs with tenant-specific configurations. The system must be robust and handle all configurations automatically.
--   **Remote Deployment:** The SuperAdmin panel, running on a remote server, must be able to update itself by pulling the latest code from its own GitHub repository.
--   **3rd Party Integrations:** Support for services like iyzico (payments), O Bilet, and Enuygun (vehicle listings).
+-   **Tenant Application Stack:** Each tenant gets a separate full-stack application (React frontend, FastAPI backend, MongoDB).
+-   **Centralized Template System:** All tenant updates must originate from master templates synced from dedicated GitHub repositories.
+-   **Production-Ready Data:** The entire application stack (SuperAdmin and Tenant) must be free of mock, seed, or test data.
+-   **3rd Party Integrations:** Support for services like Arvento (GPS), iyzico (payments), O Bilet, and Enuygun (vehicle listings).
+-   **UI Versioning:** All user-facing applications (SuperAdmin, Tenant Panel, Mobile Apps) must display their current version number.
 
 **User's preferred language**: The user communicates in **Turkish**. The next agent MUST respond in Turkish only.
 
 **what currently exists?**
-The agent and user have collaboratively decided to simplify the mobile app build process. The initial, complex system that applied many on-the-fly fixes (dependency resolution, asset generation) during each build has been refactored. The new architecture relies on the mobile apps' GitHub repositories being build-ready.
+The agent has successfully implemented a versioning system across the entire platform. The SuperAdmin panel, Tenant panel template, and both mobile app repositories now have version management files (, ) and display the version number in their respective UIs. The SuperAdmin panel also features a live check against GitHub to notify the user of new versions.
 
-The SuperAdmin backend ( and ) now contains logic to:
-1.  **Deploy Itself:** A feature on the SuperAdmin panel allows it to pull its own source code from GitHub (), build the frontend, and deploy the new code to the running containers on the remote server. This feature was extensively debugged.
-2.  **Sync Mobile Templates:** Pull mobile app source code from their respective GitHub repos into the template containers.
-3.  **Update Tenant Apps:** Copy the code from the template containers to the tenant-specific containers, excluding .
-4.  **Trigger Mobile Builds:** An endpoint allows tenant panels to trigger an EAS build. This process now only injects tenant-specific variables (, , etc.) into  and creates  and  at runtime.
+A new integration for Arvento GPS has been added. This includes a backend service using SOAP to communicate with Arvento's API and a new Arvento GPS tab on the tenant's Integrations page for entering credentials and viewing data.
 
-However, a fundamental desynchronization exists: numerous critical fixes (dependency versions in , asset creation, and API URLs in ) have been applied directly inside the running containers but **not** committed back to the source GitHub repositories. This causes issues to reappear whenever a template is synced from GitHub.
+However, the session was plagued by persistent deployment and network issues. The agent could not maintain a stable connection to the user's Portainer API, forcing reliance on the user to manually execute complex shell commands, which often led to errors, confusion, and broken states (e.g., white screens on tenant panels). While the agent eventually managed to deploy the new features, the underlying deployment workflow remains fragile.
 
 **Last working item**:
--   **Last item agent was working:** The user reported that after a successful build, the Operasyon app still fails to log in (hatalı eposta şifre). The agent conducted a full-stack investigation and identified the root cause: the  file in the Operation App's source code contains a hardcoded, incorrect API URL. Despite previous attempts to fix this, the agent confirmed that the incorrect code still exists in both the GitHub repository and the live container, meaning the fix was never permanently applied to the source of truth (GitHub).
+-   **Last item agent was working:** Debugging the new Arvento GPS integration. After the user successfully entered their credentials, the API call to fetch vehicles returned 0 araç (0 vehicles), despite the user confirming 18 vehicles exist in their Arvento account. The agent was investigating the SOAP API calls, suspecting an Access Denied error or incorrect API method usage, and was examining the WSDL for clues.
 -   **Status**: IN PROGRESS
--   **Agent Testing Done**: Y (Agent confirmed the hardcoded URL is the issue)
--   **Which testing method agent to use?**: Manual verification. The agent must:
-    1.  Guide the user to update the  file in the  GitHub repository with the correct dynamic URL logic.
-    2.  Verify the change is present on GitHub using the .
-    3.  Trigger the template sync and build process again.
-    4.  Verify the login works on the newly built APK.
--   **User Testing Done**: N
+-   **Agent Testing Done**: N (Agent performed initial  tests and received Access Denied from the SOAP service).
+-   **Which testing method agent to use?**: Manual testing. Use  or a Python script to directly query the Arvento SOAP API () with the user's credentials (/) to debug the 0 vehicles issue. Try different SOAP operations like  or  to find one that works.
+-   **User Testing Done**: Y (User confirmed the UI works but the data is incorrect).
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Operation App Login Failure due to Hardcoded API URL (Priority: P0)
--   **Issue 2**: Mobile App  Dependencies are Outdated in GitHub (Priority: P1)
--   **Issue 3**: Operation App Template Missing Assets in GitHub (Priority: P2)
--   **Issue 4**: Deploy failed Frontend UI Bug (Priority: P3)
--   **Issue 5**: Complete iyzico, O Bilet, Enuygun Integrations (Priority: P4)
+-   **Issue 1**: Arvento integration returns 0 vehicles (Priority: P0)
+-   **Issue 2**: Unreliable Tenant Update Workflow (Priority: P1)
+-   **Issue 3**: Complete the removal of all mock/test data (Priority: P2)
 
 **Issues Detail**:
--   **Issue 1**: Operation App Login Failure due to Hardcoded API URL
-    -   **Description**: The Operation App cannot log in because its  file uses a hardcoded Emergent preview URL instead of the dynamic tenant-specific API URL provided in . The user has been given the correct code but has not yet successfully updated the GitHub repository.
-    -   **Attempted fixes**: The agent identified the issue and provided the correct code. Fixes were applied directly in containers, but these are temporary and overwritten by template syncs.
+-   **Issue 1**: Arvento integration returns 0 vehicles
+    -   **Description**: The Arvento integration is successfully set up on the backend and frontend, and the connection test is successful. However, when trying to fetch the vehicle list, the API returns an empty array, contrary to the user's account which has 18 vehicles. The agent suspects an Access Denied error from the SOAP API for the specific vehicle list operation.
+    -   **Attempted fixes**: The agent tried different SOAP operations (, ) but received Access Denied for both.
     -   **Next debug checklist**:
-        1.  Instruct the user to replace the content of  in the  repo with the correct code that uses .
-        2.  Use  to view the raw file on GitHub and confirm the change has been pushed.
-        3.  Guide the user through the full update and build cycle: SuperAdmin Mobil Template Güncelle -> Mobil App Güncelle for the tenant -> Tenant Panel Build.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is the final blocker preventing the Operation App from being usable. Fixing it will validate the entire end-to-end build and deployment pipeline.
+        1.  Using the provided credentials ( / ), create a dedicated Python script to test various Arvento SOAP API endpoints found in the WSDL ().
+        2.  Focus on endpoints that list vehicles, such as  or .
+        3.  Verify the exact XML structure and parameters required for the request. The issue might be a missing parameter like  or a specific report type.
+        4.  Update the  file with the correct, working SOAP call.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a key feature requested by the user and is required for live vehicle tracking.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Both (Backend for build, Frontend via new APK)
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Backend
     -   **Blocked on other issue**: None.
 
--   **Issue 2**: Mobile App  Dependencies are Outdated in GitHub
-    -   **Description**: The C++ build error for  was fixed by updating the version to  and adding peer dependencies (, ). These changes were made in the live containers but not in the GitHub source. When a template sync happens, the old, broken  is pulled, causing the error to return.
+-   **Issue 2**: Unreliable Tenant Update Workflow
+    -   **Description**: The Master Template Güncelle -> Web Template Güncelle flow is fragile. It has repeatedly caused tenant panels to show a white screen or revert to older versions. The agent identified the root cause: the  function was incorrectly copying the SuperAdmin frontend instead of building the tenant frontend from its source. A fix was implemented in  to build from the correct GitHub source. However, deploying this fix to the live  container has been a constant struggle due to network issues, and the user has reported the flow still fails.
+    -   **Attempted fixes**: The agent modified  to correctly build the tenant frontend from  in the GitHub repo.
     -   **Next debug checklist**:
-        1.  Provide the user with the final, correct  content for both Customer and Operation apps.
-        2.  Instruct the user to update these files in their respective GitHub repositories.
-        3.  Verify the changes on GitHub.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will permanently resolve the recurring C++ build failures.
-    -   **Status**: NOT STARTED
+        1.  First, ensure the user's  container is running the latest version of  from the  GitHub repo.
+        2.  Guide the user to trigger the Master Template Güncelle flow again.
+        3.  Immediately check the logs of the container where the build happens (e.g., ) to ensure the yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. is successful.
+        4.  Verify that the Web Template Güncelle correctly copies the new build to the tenant's nginx container () while preserving .
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a core function of the SaaS platform. A reliable update mechanism is critical for managing tenants.
+    -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Backend (triggering a build)
+    -   **Should Test frontend/backend/both after fix?**: Both
+    -   **Blocked on other issue**: None.
+
+-   **Issue 3**: Complete the removal of all mock/test data
+    -   **Description**: The user wants all placeholder data, test users, and data-seeding functions removed. The agent has only addressed one seed endpoint () by commenting it out.
+    -   **Attempted fixes**: Commented out one seeding endpoint in .
+    -   **Next debug checklist**:
+        1.  Perform a  search for seed, mock, dummy, test, and any hardcoded example data (emails, names, etc.) across the entire  directory.
+        2.  Remove or disable all identified mock data and seed endpoints from both SuperAdmin and Tenant templates.
+        3.  Create a new tenant to verify it's provisioned with a clean, empty state.
+    -   **Why fix this issue and what will be achieved with the fix?**: Prepares the platform for production use with real customers.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Both
     -   **Blocked on other issue**: None.
 
 **In progress Task List**:
--   **Task 1**: Guide User to Permanently Fix Mobile App Source Code
-    -   **Where to resume**: Waiting for the user to confirm they have updated  and  in their GitHub repositories. The agent's next step is to verify these changes.
-    -   **What will be achieved with this?**: The source code (the single source of truth) will be corrected, preventing recurring build and login issues and making the template system robust.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Both
-    -   **Blocked on something**: User action (updating GitHub repositories).
+- **Task 1**: Connect pending application features
+  - **Where to resume**: The user requested connecting all pages, such as Tenant support tickets appearing in SuperAdmin and locations appearing on the landing page. The agent started by adding a webhook to the tenant's ticket creation endpoint but needs to verify the full flow.
+  - **What will be achieved with this?**: A fully functional and integrated application, moving beyond individual components.
+  - **Status**: IN PROGRESS
+  - **Should Test frontend/backend/both after fix?**: Both
+  - **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P2**: Fix the Deploy failed UI bug on the SuperAdmin panel, where the frontend incorrectly reports failure due to the backend restarting.
--   **P3**: Verify the fix for the original P0 issue: Tenant backend crashes after template update. (From previous fork).
--   **P4**: Finalize and test the Integrations page backend (O Bilet, Enuygun).
--   **P5**: Complete the iyzico payment gateway integration.
+-   **P2**: Finalize and test the Integrations page backend (O Bilet, Enuygun).
+-   **P3**: Complete the iyzico payment gateway integration.
+-   **P4**: Fix the Deploy failed UI bug on the SuperAdmin panel.
 
 **Future Tasks:**
--   **P6**: Implement the full SuperAdmin subscription and billing system.
--   **P7**: Refactor the monolithic  and  files into a more modular structure.
+-   **P5**: Implement the full SuperAdmin subscription and billing system.
+-   **P6**: Refactor the monolithic  and  files.
 
 **Completed work in this session**
--   **Simplified Build Process:** Refactored  to remove on-the-fly fixes and rely on build-ready GitHub repos.
--   **Built Remote Deploy Feature:** Created and extensively debugged a Deploy to Portainer feature, allowing the SuperAdmin panel to update itself from a GitHub repo. This involved fixing:
-    -   A chicken-and-egg problem where the deploy endpoint didn't exist on the server.
-    -   Incorrect API URL () in the deployed frontend's .
-    -   Build environment issues (Unknown command: "not"
+-   **Versioning System Implemented**:
+    -   Created  and  files for SuperAdmin, Tenant Templates, and Mobile App repos, setting the initial version to  and later .
+    -   Added UI components to the SuperAdmin panel header and Tenant panel header to display the current version.
+    -   Implemented a check for updates feature in the SuperAdmin panel that compares the local version with the one on GitHub and displays a red notification if an update is available.
+-   **Arvento GPS Integration (Initial)**:
+    -   Created a new backend service () to handle SOAP API communication with Arvento.
+    -   Added API endpoints to the tenant backend () for saving Arvento settings, testing the connection, and fetching vehicle data.
+    -   Added an Arvento GPS tab to the Tenant panel's  page, allowing users to input credentials.
+-   **Production Deployment & Fixes**:
+    -   After extensive troubleshooting, successfully deployed the versioning and Arvento frontend changes to the user's live  and  containers.
+    -   Fixed a critical login issue by correcting the hardcoded backend URL in  and pushing the fix to GitHub.
+-   **Tenant Update Workflow Fix (Attempted)**:
+    -   Modified  to build the tenant frontend from its correct source in GitHub () instead of incorrectly copying the SuperAdmin frontend.
 
-To see a list of supported npm commands, run:
-  npm help, switching to a Node.js container).
-    -   Build timeouts by increasing the timeout to 5 minutes.
--   **Solved Critical Build Errors (in containers):**
-    -   **Expo Slug Mismatch:** Corrected the  in  to match the .
-    -   **Missing Assets:** Added missing  to the Operation App.
-    -   **C++ Build Failure:** Upgraded  and its peer dependencies to fix native build errors.
--   **Identified Root Cause of Login Failure:** Diagnosed that the Operation App's  has a hardcoded, incorrect API URL, which is the final remaining blocker.
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1**: Deploy failed UI Bug
+    -   **Description**: The SuperAdmin frontend incorrectly reports Deploy failed when the backend restarts during a self-update.
+    -   **Debug checklist**: Investigate the frontend logic in  to better handle API call timeouts or network errors during the deployment process.
+    -   **Why to solve this issue and what will be achieved with this?**: Provides accurate feedback to the user, improving usability.
+    -   **Should Test frontend/backend/both after fix**: Frontend.
+    -   **Is recurring issue?**: N
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork**: Unreliable deployments and updates causing white screens or incorrect versions.
+-   **Recurrence count**: High. This was a central theme of the entire session.
+-   **Status**: IN PROGRESS. The agent implemented a code fix for the update workflow, but deploying and verifying this fix has been problematic due to persistent network issues, and the user still reports failures. The core problem of a fragile deployment process remains.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Remote Orchestration:** Using a central API (SuperAdmin) to manage builds and deployments inside remote Docker containers via the Portainer API.
--   **Chicken-and-Egg Deployment Problem:** Encountering and solving a scenario where a deployment feature cannot be used because the endpoint it calls doesn't exist on the code version that is currently deployed.
--   **Source of Truth Desynchronization:** The critical problem in this session where fixes applied in live containers are not persisted to the source code in GitHub, causing issues to recur.
--   **Expo Build Debugging:** Diagnosing and fixing complex build issues, including  vs  mismatch, missing native assets (), and C++ version conflicts with .
--   **Dynamic Frontend Configuration:** Implementing a deploy-time step to create a  file with the correct backend URL, solving issues with hardcoded  URLs.
+-   **SOAP API Integration**: Using Python (, ) to construct and send SOAP requests to the Arvento Web Service.
+-   **Remote Orchestration via Portainer API**: The core architecture relies on a central backend to manage remote Docker containers. However, this is frequently blocked by network issues.
+-   **Dynamic Frontend Configuration**: Using a  file that is generated/preserved during deployment to inject the correct backend URL for each tenant, avoiding hardcoded values in the build.
+-   **In-Container Build Process**: Building React applications inside a temporary Docker container () by cloning from GitHub, running yarn install v1.22.22
+[1/4] Resolving packages...
+success Already up-to-date.
+Done in 0.03s.
+yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command., and then transferring the build artifacts to the final nginx container.
 
 **All files of reference**
--   : Contains the core logic for all remote container operations (builds, deploys, syncs).
--   : Defines the API endpoints that trigger the logic in .
--   : The template for tenant backends.
--   : The source code for the Operation App, which needs to be fixed.
--   : The source code for the Customer App, which needs to be fixed.
+-   : **Most critical file.** Contains all logic for tenant creation and updates. Was modified to fix the template update flow, but deployment of this fix is uncertain.
+-   : **New file.** Contains the logic for Arvento SOAP API calls.
+-   : Updated to include the Arvento GPS integration tab and form.
+-   : Updated with a version endpoint and a commented-out seed endpoint.
+-   : Updated with version and Arvento endpoints.
+-   : Updated to display the version badge.
+-   : The single source of truth for the SuperAdmin and Tenant templates. All recent changes (versioning, Arvento) have been pushed here.
 
 **Critical Info for New Agent**
--   **THE ROOT CAUSE IS GITHUB DESYNC:** The most critical takeaway is that the mobile app GitHub repositories are the source of truth, but they are currently **incorrect**. They contain hardcoded API URLs and outdated dependencies. Any fix that doesn't involve updating the GitHub repos is temporary and will be wiped out.
--   **YOUR MAIN TASK IS GUIDANCE:** You must guide the user to update  and  in their GitHub repositories. Do not proceed with builds until you have verified (using ) that the files on GitHub are correct.
--   **THE WORKFLOW:** The correct workflow for the user is: 1. Update code on GitHub. 2. Use SuperAdmin Mobil Template Güncelle. 3. Use SuperAdmin Mobil App Güncelle for the tenant. 4. Use Tenant Panel to Build.
+-   **SEVERE NETWORK ISSUES**: The agent CANNOT reliably connect to the user's server (72.61.158.147) on any port (SSH:22, Portainer:9443, Web:9000). The user added a firewall rule for the agent's IP (), but it did not resolve the timeouts. **Do not assume you can connect.** You will likely need to provide the user with exact  commands to run via their own SSH/KVM access. Be prepared for this to be a slow and error-prone process.
+-   **User has KVM/SSH access**: The user is capable of running commands directly on the server but can get confused by complex, multi-step  and  sequences. Keep commands as simple and self-contained as possible.
+-   **Arvento Credentials are Live**: The user provided working credentials for their Arvento account: **user: **, **password: **. Use these to debug the 0 vehicles issue directly. The login page is .
+-   **Tenant Update Workflow is the Root of Many Problems**: The user's primary frustration stems from the Master Template Güncelle -> Web Template Güncelle flow breaking their tenant panels. Even though the code to fix this is on GitHub, confirming it's active on the  and works end-to-end is the highest priority after fixing the Arvento bug.
 
 **documents and test reports created in this job**
-- None
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks for updated  content.
-2.  **Agent:** Provides the correct  with added peer dependencies.
-3.  **User:** Reports login still fails after a new build and asks the agent to check everything (git, portainer, db, api url).
-4.  **Agent:** Re-investigates and confirms the root cause: the  file in the GitHub repo is still wrong and has a hardcoded URL.
-5.  **User:** Pastes the (correct) code for  and asks where is the error in this code?.
-6.  **Agent:** Confirms the user's provided code is correct, implying the issue is that this correct code is not what's actually in the GitHub repo.
+1.  **User:** Asks how to add the firewall rule for the agent's IP.
+2.  **Agent:** Provides the  command.
+3.  **User:** Shares the command output confirming the rule was added.
+4.  **Agent:** Still can't connect, suspects a higher-level firewall (Hostinger panel). Asks the user to run  to get container names for manual commands.
+5.  **User:** Provides the  output.
+6.  **Agent:** Provides a 4-step sequence of  commands for the user to run to manually build and deploy the frontend.
+7.  **User:** Reports a 500 Internal Server Error on the tenant panel after running the commands.
+8.  **Agent:** Asks for logs from  and .
+9.  **User:** Provides logs showing  is empty (directory index... is forbidden).
+10. **User:** After the agent provides corrected commands, reports that Arvento is visible but shows 0 vehicles and provides live credentials for testing.
 
 **Project Health Check:**
 -   **Broken**:
-    -   The primary mobile app login flow is broken due to a hardcoded API URL in the source code.
-    -   The template sync mechanism is flawed because it pulls outdated/broken code from GitHub, re-introducing bugs that were fixed in containers.
--   **Fragile**:
-    -   The entire system relies on the user manually keeping multiple GitHub repositories build-ready. Any mistake in these repos breaks the build process for all tenants.
+    -   The Arvento GPS integration is not fetching vehicle data.
+    -   The core Tenant Update workflow is highly unreliable and has repeatedly broken tenant UIs.
+-   **Mocked**:
+    -   One seed endpoint has been disabled, but a full audit and removal of all test/mock data is still pending as per the original request.
 
 **3rd Party Integrations**
--   **Portainer**: Core orchestration engine, managed via its REST API.
--   **Expo EAS**: Used for mobile app builds.
--   **GitHub**: Acts as the source of truth for all application and template code.
--   **iyzipay**: Planned.
--   **O Bilet / Enuygun**: Planned.
+-   **Portainer**: Used for all container orchestration via its REST API. Agent access is currently blocked by network timeouts.
+-   **Expo EAS**: Used for all mobile app builds.
+-   **GitHub**: The single source of truth for all code. Agent has write access via a user-provided PAT.
+-   **Arvento**: **New integration.** GPS vehicle tracking via a SOAP API.
 
 **Testing status**
 -   **Testing agent used after significant changes**: NO
@@ -158,7 +192,14 @@ To see a list of supported npm commands, run:
 **Credentials to test flow:**
 -   **SuperAdmin:**  / 
 -   **Tenant (Bitlis):**  / 
--   **Expo Token:** Active token is hardcoded in .
+-   **Arvento Web Login**: 
+-   **Arvento User:** 
+-   **Arvento Password:** 
+-   **Portainer URL:** 
+-   **Portainer API Key:** 
+-   **GitHub Token:** 
 
 **What agent forgot to execute**
-- The agent successfully identified the root cause of the login failure ( hardcoded URL) and the recurring build failures ( outdated in git). However, the session ended before ensuring the user successfully updated these critical files in their GitHub repositories, which is the only path to a permanent fix. The core feedback loop (user updates git -> agent verifies and proceeds) was not completed.</analysis>
+-   The agent did not verify the end-to-end success of the permanent fix for the tenant update workflow. The code was written and pushed, but due to deployment issues, it's unclear if it's active and working correctly.
+-   The agent did not complete the user's original request to audit and remove all mock/test data from the system.
+-   The agent did not fully connect all pending features, such as tenant support tickets appearing in the SuperAdmin panel.</analysis>
