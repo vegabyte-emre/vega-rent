@@ -5,15 +5,19 @@ Tenant Panel Version Management
 VERSION = "1.1.0"
 
 CHANGELOG = {
-    "1.0.0": {
+    "1.1.0": {
         "date": "2024-12-29",
         "changes": [
-            "Initial tenant release",
-            "Vehicle management",
-            "Customer management", 
-            "Reservation system",
-            "Payment integration ready",
-            "Mobile app integration"
+            "Arvento GPS entegrasyonu eklendi",
+            "Public theme-settings endpoint eklendi",
+            "Destek talepleri SuperAdmin senkronizasyonu",
+            "Version kontrol sistemi"
+        ]
+    },
+    "1.0.0": {
+        "date": "2024-12-28",
+        "changes": [
+            "Initial tenant release"
         ]
     }
 }
