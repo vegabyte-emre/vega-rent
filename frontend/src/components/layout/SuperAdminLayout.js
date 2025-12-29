@@ -218,6 +218,42 @@ export function SuperAdminLayout() {
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="lg:hidden" /> {/* Spacer for mobile menu button */}
             <div className="flex items-center gap-4">
+              {/* Version Badge */}
+              <div className="flex items-center gap-2">
+                <div 
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all",
+                    versionInfo?.has_update
+                      ? "bg-red-500/10 border-red-500/50 text-red-400"
+                      : "bg-slate-800/50 border-slate-600 text-slate-300"
+                  )}
+                  title={versionInfo?.has_update 
+                    ? `Yeni versiyon mevcut: ${versionInfo.github_version}` 
+                    : "Güncel versiyon"
+                  }
+                >
+                  {versionInfo?.has_update && (
+                    <AlertCircle className="h-4 w-4 text-red-400 animate-pulse" />
+                  )}
+                  <span>v{versionInfo?.current_version || "..."}</span>
+                  {versionInfo?.has_update && (
+                    <span className="text-xs text-red-300">
+                      → v{versionInfo.github_version}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={checkVersion}
+                  disabled={checkingVersion}
+                  className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 w-8"
+                  title="Versiyon kontrolü yap"
+                >
+                  <RefreshCw className={cn("h-4 w-4", checkingVersion && "animate-spin")} />
+                </Button>
+              </div>
+
               <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white hover:bg-slate-800">
                 <Bell className="h-5 w-5" />
               </Button>
