@@ -1907,6 +1907,14 @@ async def get_mobile_version(user: dict = Depends(get_current_user)):
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
+@app.get("/api/version")
+async def get_api_version():
+    """Get current tenant panel version"""
+    return {
+        "version": VERSION,
+        "info": get_version_info()
+    }
+
 # ============== STARTUP EVENT ==============
 @app.on_event("startup")
 async def startup_event():
