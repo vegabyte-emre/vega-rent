@@ -1295,6 +1295,185 @@ async def integration_webhook(webhook_data: dict):
     logger.info(f"Received webhook: {webhook_data}")
     return {"success": True, "message": "Webhook received"}
 
+# ============== ARVENTO GPS INTEGRATION ==============
+
+class ArventoSettingsModel(BaseModel):
+    username: str
+    pin1: str
+    pin2: Optional[str] = ""
+    language: Optional[str] = "tr"
+
+@app.get("/api/arvento/settings")
+async def get_arvento_settings(user: dict = Depends(get_current_user)):
+    """Arvento ayarlarını getir"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {
+            "configured": False,
+            "username": "",
+            "pin1": "",
+            "pin2": "",
+            "language": "tr"
+        }
+    
+    # Mask sensitive data
+    return {
+        "configured": bool(settings.get("username") and settings.get("pin1")),
+        "username": settings.get("username", ""),
+        "pin1": "***" if settings.get("pin1") else "",
+        "pin2": "***" if settings.get("pin2") else "",
+        "language": settings.get("language", "tr"),
+        "last_sync": settings.get("last_sync"),
+        "vehicle_count": settings.get("vehicle_count", 0)
+    }
+
+@app.post("/api/arvento/settings")
+async def save_arvento_settings(settings: ArventoSettingsModel, user: dict = Depends(get_current_user)):
+    """Arvento ayarlarını kaydet"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    # Get existing settings
+    existing = await db.arvento_settings.find_one({})
+    
+    update_data = {
+        "username": settings.username,
+        "language": settings.language,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": user["id"]
+    }
+    
+    # Only update PIN if provided (not masked)
+    if settings.pin1 and settings.pin1 != "***":
+        update_data["pin1"] = settings.pin1
+    elif existing:
+        update_data["pin1"] = existing.get("pin1", "")
+    
+    if settings.pin2 and settings.pin2 != "***":
+        update_data["pin2"] = settings.pin2
+    elif existing:
+        update_data["pin2"] = existing.get("pin2", "")
+    
+    await db.arvento_settings.update_one(
+        {},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Arvento ayarları kaydedildi"}
+
+@app.post("/api/arvento/test")
+async def test_arvento_connection(user: dict = Depends(get_current_user)):
+    """Arvento bağlantısını test et"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {
+            "success": False,
+            "message": "Arvento servisi yüklenemedi. services/arvento_service.py dosyasını kontrol edin."
+        }
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("username") or not settings.get("pin1"):
+        return {
+            "success": False,
+            "configured": False,
+            "message": "Arvento ayarları yapılandırılmamış. Önce kullanıcı adı ve PIN girmelisiniz."
+        }
+    
+    arvento = create_arvento_service(settings)
+    result = await arvento.test_connection()
+    
+    # Update settings with test result
+    if result.get("success"):
+        await db.arvento_settings.update_one(
+            {},
+            {"$set": {
+                "last_test": datetime.now(timezone.utc).isoformat(),
+                "last_test_success": True,
+                "vehicle_count": result.get("vehicle_count", 0)
+            }}
+        )
+    
+    return result
+
+@app.get("/api/arvento/vehicles")
+async def get_arvento_vehicles(user: dict = Depends(get_current_user)):
+    """Arvento'dan araç konumlarını al"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {
+            "success": False,
+            "message": "Arvento servisi yüklenemedi",
+            "vehicles": []
+        }
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("username"):
+        return {
+            "success": False,
+            "message": "Arvento yapılandırılmamış",
+            "vehicles": []
+        }
+    
+    arvento = create_arvento_service(settings)
+    result = await arvento.get_all_vehicles()
+    
+    # Update last sync time
+    if result.get("success"):
+        await db.arvento_settings.update_one(
+            {},
+            {"$set": {
+                "last_sync": datetime.now(timezone.utc).isoformat(),
+                "vehicle_count": len(result.get("vehicles", []))
+            }}
+        )
+    
+    return result
+
+@app.get("/api/arvento/vehicle/{plate}/history")
+async def get_arvento_vehicle_history(
+    plate: str,
+    start_date: str,
+    end_date: str,
+    user: dict = Depends(get_current_user)
+):
+    """Araç geçmiş rotasını al"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "history": [], "message": "Arvento servisi yüklenemedi"}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "history": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_vehicle_history(plate, start_date, end_date)
+
+@app.get("/api/arvento/mappings")
+async def get_arvento_mappings(user: dict = Depends(get_current_user)):
+    """Plaka-cihaz eşleştirmelerini al"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "mappings": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "mappings": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_license_plate_mappings()
+
 # ============== PUBLIC API (Mobil Uygulama & Landing Page) ==============
 
 @app.get("/api/public/company")
