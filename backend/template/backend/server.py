@@ -1537,14 +1537,18 @@ async def create_support_ticket(data: SupportTicketCreate, user: dict = Depends(
     await db.support_tickets.insert_one(ticket)
     
     # Try to send to SuperAdmin
-    superadmin_url = os.environ.get("SUPERADMIN_API_URL", "https://api.vegarent.com")
+    superadmin_url = os.environ.get("SUPERADMIN_API_URL", "http://72.61.158.147:9001")
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            await client.post(
+        async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
+            response = await client.post(
                 f"{superadmin_url}/api/superadmin/support/tickets/incoming",
                 json=ticket,
-                headers={"X-Tenant-Secret": os.environ.get("TENANT_SECRET", "")}
+                headers={"X-Tenant-Secret": os.environ.get("TENANT_SECRET", "tenant_sync_key")}
             )
+            if response.status_code == 200:
+                logger.info(f"Ticket sent to SuperAdmin: {ticket['id']}")
+            else:
+                logger.warning(f"SuperAdmin ticket sync failed: {response.status_code}")
     except Exception as e:
         logger.warning(f"Could not send ticket to SuperAdmin: {e}")
     
