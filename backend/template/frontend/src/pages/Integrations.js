@@ -405,10 +405,154 @@ export function Integrations() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="platforms">Platformlar</TabsTrigger>
+          <TabsTrigger value="arvento">🛰️ Arvento GPS</TabsTrigger>
           <TabsTrigger value="active">Aktif Entegrasyonlar</TabsTrigger>
           <TabsTrigger value="logs">Senkronizasyon Logları</TabsTrigger>
           <TabsTrigger value="settings">Ayarlar</TabsTrigger>
         </TabsList>
+
+        {/* Arvento GPS Tab */}
+        <TabsContent value="arvento" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Car className="h-5 w-5 text-blue-500" />
+                Arvento GPS Entegrasyonu
+              </CardTitle>
+              <CardDescription>
+                Araçlarınızın canlı konum takibi için Arvento hesap bilgilerinizi girin
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="arvento-username">Kullanıcı Adı</Label>
+                  <Input
+                    id="arvento-username"
+                    placeholder="Arvento kullanıcı adınız"
+                    value={arventoSettings.username}
+                    onChange={(e) => setArventoSettings({...arventoSettings, username: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="arvento-pin1">PIN1 (Şifre)</Label>
+                  <Input
+                    id="arvento-pin1"
+                    type="password"
+                    placeholder="Arvento PIN1"
+                    value={arventoSettings.pin1}
+                    onChange={(e) => setArventoSettings({...arventoSettings, pin1: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="arvento-pin2">PIN2 (Opsiyonel)</Label>
+                  <Input
+                    id="arvento-pin2"
+                    type="password"
+                    placeholder="Arvento PIN2 (opsiyonel)"
+                    value={arventoSettings.pin2}
+                    onChange={(e) => setArventoSettings({...arventoSettings, pin2: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="arvento-language">Dil</Label>
+                  <Select 
+                    value={arventoSettings.language} 
+                    onValueChange={(v) => setArventoSettings({...arventoSettings, language: v})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Dil seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tr">Türkçe</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={saveArventoSettings} disabled={arventoLoading}>
+                  {arventoLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Kaydet
+                </Button>
+                <Button variant="outline" onClick={testArventoConnection} disabled={arventoTesting}>
+                  {arventoTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Bağlantıyı Test Et
+                </Button>
+                <Button variant="secondary" onClick={loadArventoVehicles} disabled={arventoLoading || !arventoSettings.configured}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${arventoLoading ? 'animate-spin' : ''}`} />
+                  Araçları Yükle
+                </Button>
+              </div>
+
+              {arventoSettings.configured && (
+                <div className="flex items-center gap-2 mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-green-700 dark:text-green-300">
+                    Arvento bağlantısı yapılandırılmış - {arventoSettings.vehicle_count || 0} araç
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Arvento Vehicles Table */}
+          {arventoVehicles.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Canlı Araç Konumları</CardTitle>
+                <CardDescription>
+                  Arvento'dan alınan son araç verileri
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="p-2 text-left font-medium">Plaka</th>
+                        <th className="p-2 text-left font-medium">Konum</th>
+                        <th className="p-2 text-left font-medium">Hız</th>
+                        <th className="p-2 text-left font-medium">Kontak</th>
+                        <th className="p-2 text-left font-medium">Son Güncelleme</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {arventoVehicles.map((vehicle, idx) => (
+                        <tr key={vehicle.vehicle_id || idx} className="border-b">
+                          <td className="p-2 font-medium">{vehicle.plate}</td>
+                          <td className="p-2 text-sm">
+                            {vehicle.lat && vehicle.lng ? (
+                              <a 
+                                href={`https://www.google.com/maps?q=${vehicle.lat},${vehicle.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 hover:underline flex items-center gap-1"
+                              >
+                                {vehicle.lat?.toFixed(4)}, {vehicle.lng?.toFixed(4)}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            ) : '-'}
+                          </td>
+                          <td className="p-2">{vehicle.speed || 0} km/s</td>
+                          <td className="p-2">
+                            {vehicle.ignition ? (
+                              <Badge variant="success" className="bg-green-100 text-green-800">Açık</Badge>
+                            ) : (
+                              <Badge variant="secondary">Kapalı</Badge>
+                            )}
+                          </td>
+                          <td className="p-2 text-sm text-muted-foreground">{vehicle.last_update}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
         {/* Platforms Tab */}
         <TabsContent value="platforms" className="space-y-4">
