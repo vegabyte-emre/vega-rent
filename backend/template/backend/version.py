@@ -2,7 +2,7 @@
 Tenant Panel Version Management
 """
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 CHANGELOG = {
     "1.0.0": {

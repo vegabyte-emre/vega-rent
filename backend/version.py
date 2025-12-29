@@ -3,7 +3,7 @@ SuperAdmin Panel Version Management
 """
 
 # Current version of the SuperAdmin panel
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 # Version history
 CHANGELOG = {
