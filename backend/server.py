@@ -3525,6 +3525,74 @@ async def root():
 async def health():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
+# ============== VERSION CONTROL ==============
+GITHUB_VERSION_URL = "https://raw.githubusercontent.com/vegabyte-emre/vega-rent/main/backend/version.py"
+
+@api_router.get("/version")
+async def get_current_version():
+    """Get current running version"""
+    return {
+        "version": VERSION,
+        "info": get_version_info()
+    }
+
+@api_router.get("/superadmin/version/check")
+async def check_version_update(user: dict = Depends(get_current_user)):
+    """
+    SuperAdmin: Check if there's a new version available on GitHub
+    Returns current version, GitHub version, and update availability
+    """
+    if user["role"] != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=403, detail="Only SuperAdmin can check version")
+    
+    current_version = VERSION
+    github_version = None
+    has_update = False
+    error = None
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(GITHUB_VERSION_URL)
+            
+            if response.status_code == 200:
+                content = response.text
+                # Parse VERSION from the file content
+                for line in content.split('\n'):
+                    if line.strip().startswith('VERSION'):
+                        # Extract version string: VERSION = "1.0.0"
+                        parts = line.split('=')
+                        if len(parts) >= 2:
+                            github_version = parts[1].strip().strip('"').strip("'")
+                            break
+                
+                if github_version:
+                    # Compare versions
+                    current_parts = [int(x) for x in current_version.split('.')]
+                    github_parts = [int(x) for x in github_version.split('.')]
+                    
+                    # Pad with zeros if needed
+                    while len(current_parts) < 3:
+                        current_parts.append(0)
+                    while len(github_parts) < 3:
+                        github_parts.append(0)
+                    
+                    has_update = github_parts > current_parts
+            else:
+                error = f"GitHub'dan versiyon alınamadı: HTTP {response.status_code}"
+                
+    except Exception as e:
+        error = f"GitHub bağlantı hatası: {str(e)}"
+        logger.warning(f"Version check failed: {e}")
+    
+    return {
+        "current_version": current_version,
+        "github_version": github_version,
+        "has_update": has_update,
+        "error": error,
+        "github_url": "https://github.com/vegabyte-emre/vega-rent",
+        "checked_at": datetime.now(timezone.utc).isoformat()
+    }
+
 # Include router
 # ============== PUBLIC ROUTES (No Auth Required) ==============
 @api_router.get("/public/vehicles")
