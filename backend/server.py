@@ -27,9 +27,11 @@ from services.portainer_service import portainer_service
 from services.arvento_service import ArventoService
 from services.kabis_service import KabisService, kabis_service
 from services.hgs_service import HGSService, hgs_service
+from version import VERSION, get_version_info
 import subprocess
 import tarfile
 import io
+import httpx
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
