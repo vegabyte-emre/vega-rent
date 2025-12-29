@@ -217,8 +217,15 @@ export function SuperAdminLayout() {
         <div className="sticky top-0 z-20 bg-slate-900/80 backdrop-blur-xl border-b border-slate-700 px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="lg:hidden" /> {/* Spacer for mobile menu button */}
-            <div className="flex items-center gap-4">
-              {/* Version Badge */}
+            <div className="flex items-center gap-4 ml-auto">
+              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white hover:bg-slate-800">
+                <Bell className="h-5 w-5" />
+              </Button>
+              <div className="hidden sm:flex items-center gap-2 text-sm">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-slate-400">Sistem aktif</span>
+              </div>
+              {/* Version Badge - En sağda */}
               <div className="flex items-center gap-2">
                 <div 
                   className={cn(
@@ -252,14 +259,6 @@ export function SuperAdminLayout() {
                 >
                   <RefreshCw className={cn("h-4 w-4", checkingVersion && "animate-spin")} />
                 </Button>
-              </div>
-
-              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white hover:bg-slate-800">
-                <Bell className="h-5 w-5" />
-              </Button>
-              <div className="hidden sm:flex items-center gap-2 text-sm">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-slate-400">Sistem aktif</span>
               </div>
             </div>
           </div>
