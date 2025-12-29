@@ -35,9 +35,48 @@ const menuItems = [
 export function SuperAdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [versionInfo, setVersionInfo] = useState(null);
+  const [checkingVersion, setCheckingVersion] = useState(false);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Check version on mount
+  useEffect(() => {
+    checkVersion();
+  }, []);
+
+  const checkVersion = async () => {
+    setCheckingVersion(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${getApiUrl()}/api/superadmin/version/check`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setVersionInfo(response.data);
+    } catch (error) {
+      console.error("Version check failed:", error);
+      // Fallback to just getting current version
+      try {
+        const versionResponse = await axios.get(`${getApiUrl()}/api/version`);
+        setVersionInfo({
+          current_version: versionResponse.data.version,
+          github_version: null,
+          has_update: false,
+          error: "GitHub bağlantısı kurulamadı"
+        });
+      } catch (e) {
+        setVersionInfo({
+          current_version: "?.?.?",
+          github_version: null,
+          has_update: false,
+          error: "Versiyon alınamadı"
+        });
+      }
+    } finally {
+      setCheckingVersion(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
