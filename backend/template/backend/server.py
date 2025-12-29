@@ -23,16 +23,24 @@ from jose import JWTError, jwt
 try:
     from version import VERSION, get_version_info
 except ImportError:
-    VERSION = "1.0.0"
+    VERSION = "1.1.0"
     def get_version_info():
         return {"version": VERSION, "changelog": {}}
 
-# Optional httpx for Expo API calls
+# Optional httpx for API calls
 try:
     import httpx
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
+
+# Arvento GPS Service
+try:
+    from services.arvento_service import ArventoService, create_arvento_service
+    ARVENTO_AVAILABLE = True
+except ImportError:
+    ARVENTO_AVAILABLE = False
+    ArventoService = None
 
 # ============== CONFIGURATION ==============
 logging.basicConfig(level=logging.INFO)
