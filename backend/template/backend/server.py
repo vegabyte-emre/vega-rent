@@ -1305,6 +1305,38 @@ async def get_public_company_info():
         }
     return company
 
+@app.get("/api/public/theme-settings")
+async def get_public_theme_settings():
+    """Public: Get theme settings for landing page"""
+    # Get company info
+    company = await db.company.find_one({}, {"_id": 0})
+    # Get theme/landing settings
+    theme = await db.theme_settings.find_one({}, {"_id": 0})
+    landing = await db.landing_content.find_one({}, {"_id": 0})
+    
+    return {
+        "company": company or {
+            "name": os.environ.get("COMPANY_NAME", "Rent A Car"),
+            "phone": None,
+            "email": None
+        },
+        "theme": theme or {
+            "colors": {
+                "primary": "#3B82F6",
+                "secondary": "#1E40AF",
+                "accent": "#60A5FA"
+            }
+        },
+        "landing": landing or {},
+        "settings": {
+            "company_name": company.get("name") if company else os.environ.get("COMPANY_NAME", "Rent A Car"),
+            "logo_url": company.get("logo_url") if company else None,
+            "phone": company.get("phone") if company else None,
+            "email": company.get("email") if company else None,
+            "address": company.get("address") if company else None
+        }
+    }
+
 @app.get("/api/public/vehicles")
 async def get_public_vehicles(
     segment: Optional[str] = None,
