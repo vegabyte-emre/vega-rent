@@ -7,6 +7,16 @@ VERSION = "1.1.0"
 
 # Version history
 CHANGELOG = {
+    "1.1.0": {
+        "date": "2024-12-29",
+        "changes": [
+            "Tenant-SuperAdmin bağlantıları düzeltildi",
+            "Destek talepleri senkronizasyonu eklendi",
+            "Landing page lokasyon bağlantısı düzeltildi",
+            "Test verileri kaldırıldı",
+            "Version kontrol sistemi eklendi"
+        ]
+    },
     "1.0.0": {
         "date": "2024-12-28",
         "changes": [
