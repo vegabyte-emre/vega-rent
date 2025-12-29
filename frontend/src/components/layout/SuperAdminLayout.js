@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../ui/button";
+import getApiUrl from "../../config/api";
+import axios from "axios";
 import {
   Shield,
   Building2,
@@ -16,7 +18,9 @@ import {
   Bell,
   CreditCard,
   MessageSquare,
-  Store
+  Store,
+  RefreshCw,
+  AlertCircle
 } from "lucide-react";
 
 const menuItems = [
