@@ -124,10 +124,23 @@ export function Integrations() {
   const [configForm, setConfigForm] = useState({});
   const [syncLogs, setSyncLogs] = useState([]);
   const [activeTab, setActiveTab] = useState("platforms");
+  
+  // Arvento GPS state
+  const [arventoSettings, setArventoSettings] = useState({
+    username: "",
+    pin1: "",
+    pin2: "",
+    language: "tr",
+    configured: false
+  });
+  const [arventoLoading, setArventoLoading] = useState(false);
+  const [arventoTesting, setArventoTesting] = useState(false);
+  const [arventoVehicles, setArventoVehicles] = useState([]);
 
   useEffect(() => {
     loadIntegrations();
     loadSyncLogs();
+    loadArventoSettings();
   }, []);
 
   const loadIntegrations = async () => {
