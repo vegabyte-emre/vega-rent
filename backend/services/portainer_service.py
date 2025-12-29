@@ -1588,28 +1588,34 @@ class PortainerService:
 
     async def update_master_template_from_superadmin(self) -> Dict[str, Any]:
         """
-        Update the master template containers by copying from superadmin frontend.
-        This ensures the template has the latest code from the current deployment.
+        Update the master template containers by building from GitHub.
+        
+        IMPORTANT: SuperAdmin and Tenant are DIFFERENT applications!
+        - SuperAdmin: /app/frontend (SuperAdmin panel)
+        - Tenant: /app/backend/template/frontend (Tenant panel)
+        
+        This function builds the TENANT template from GitHub repo.
         """
         results = {
-            'frontend_copy': None,
+            'github_clone': None,
+            'frontend_build': None,
+            'frontend_deploy': None,
+            'backend_update': None,
             'template_restart': None
         }
         
-        logger.info("[MASTER-TEMPLATE] Starting master template update from superadmin...")
+        logger.info("[MASTER-TEMPLATE] Starting master template update from GitHub...")
         
         try:
-            # Step 1: Copy frontend files from superadmin_frontend to rentacar_template_frontend
-            logger.info("[MASTER-TEMPLATE] Step 1: Copying frontend from superadmin to template...")
-            
-            # Get superadmin frontend container ID
-            superadmin_frontend_id = await self.get_container_id("superadmin_frontend")
+            # Get container IDs
+            node_container_id = await self.get_container_id("rentacar_template_customer_app")
             template_frontend_id = await self.get_container_id("rentacar_template_frontend")
+            template_backend_id = await self.get_container_id("rentacar_template_backend")
             
-            if not superadmin_frontend_id:
+            if not node_container_id:
                 return {
                     'success': False,
-                    'error': 'superadmin_frontend container bulunamadı'
+                    'error': 'rentacar_template_customer_app (Node) container bulunamadı'
                 }
             
             if not template_frontend_id:
@@ -1618,11 +1624,36 @@ class PortainerService:
                     'error': 'rentacar_template_frontend container bulunamadı'
                 }
             
-            # Download from superadmin
-            download_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{superadmin_frontend_id}/archive?path=/usr/share/nginx/html"
+            # Step 1: Clone GitHub repo and build tenant frontend in Node container
+            logger.info("[MASTER-TEMPLATE] Step 1: Cloning GitHub and building tenant frontend...")
+            
+            build_cmd = """cd /tmp && rm -rf master_template_build && mkdir master_template_build && cd master_template_build && \
+git clone --depth 1 https://github.com/vegabyte-emre/vega-rent.git . && \
+cd backend/template/frontend && \
+yarn install 2>&1 | tail -5 && \
+yarn build 2>&1 | tail -10 && \
+tar -cf /tmp/tenant_template_build.tar -C build . && \
+ls -la /tmp/tenant_template_build.tar && \
+echo BUILD_SUCCESS"""
+            
+            build_result = await self.exec_in_container(node_container_id, build_cmd, timeout=300.0)
+            
+            if not build_result.get('success') or 'BUILD_SUCCESS' not in build_result.get('output', ''):
+                results['frontend_build'] = {'success': False, 'output': build_result.get('output', '')}
+                return {
+                    'success': False,
+                    'error': 'Frontend build başarısız',
+                    'results': results
+                }
+            
+            results['frontend_build'] = {'success': True}
+            logger.info("[MASTER-TEMPLATE] Frontend build successful")
+            
+            # Step 2: Download build tar from Node container
+            logger.info("[MASTER-TEMPLATE] Step 2: Downloading build from Node container...")
             
             async with httpx.AsyncClient(verify=False, timeout=120.0) as client:
-                # Download from superadmin
+                download_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{node_container_id}/archive?path=/tmp/tenant_template_build.tar"
                 download_response = await client.get(
                     f"{self.base_url}/api/{download_endpoint}",
                     headers=self.headers
@@ -1631,35 +1662,115 @@ class PortainerService:
                 if download_response.status_code != 200:
                     return {
                         'success': False,
-                        'error': f'Superadmin frontend dosyaları alınamadı: {download_response.status_code}'
+                        'error': f'Build dosyası indirilemedi: {download_response.status_code}'
                     }
                 
-                tar_content = download_response.content
-                logger.info(f"[MASTER-TEMPLATE] Downloaded {len(tar_content)} bytes from superadmin")
+                # The downloaded content is a tar containing tenant_template_build.tar
+                outer_tar_content = download_response.content
+                logger.info(f"[MASTER-TEMPLATE] Downloaded {len(outer_tar_content)} bytes")
                 
-                # Upload to template
-                upload_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{template_frontend_id}/archive?path=/usr/share/nginx"
+                # Extract the inner tar
+                import tarfile
+                import io
+                
+                outer_tar = tarfile.open(fileobj=io.BytesIO(outer_tar_content), mode='r')
+                inner_tar_info = outer_tar.getmember('tenant_template_build.tar')
+                inner_tar_file = outer_tar.extractfile(inner_tar_info)
+                inner_tar_content = inner_tar_file.read()
+                outer_tar.close()
+                
+                logger.info(f"[MASTER-TEMPLATE] Extracted inner tar: {len(inner_tar_content)} bytes")
+                
+                # Step 3: Clean and upload to template frontend
+                logger.info("[MASTER-TEMPLATE] Step 3: Deploying to template frontend...")
+                
+                # Clean template frontend
+                clean_result = await self.exec_in_container(
+                    "rentacar_template_frontend",
+                    "rm -rf /usr/share/nginx/html/* && echo CLEANED"
+                )
+                
+                # Upload build
+                upload_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{template_frontend_id}/archive?path=/usr/share/nginx/html"
                 upload_response = await client.put(
                     f"{self.base_url}/api/{upload_endpoint}",
                     headers={'X-API-Key': self.api_key, 'Content-Type': 'application/x-tar'},
-                    content=tar_content
+                    content=inner_tar_content
                 )
                 
                 if upload_response.status_code in [200, 204]:
-                    results['frontend_copy'] = {'success': True, 'size': len(tar_content)}
-                    logger.info("[MASTER-TEMPLATE] Frontend files copied to template")
+                    results['frontend_deploy'] = {'success': True}
+                    logger.info("[MASTER-TEMPLATE] Frontend deployed to template")
                 else:
-                    results['frontend_copy'] = {'success': False, 'error': upload_response.text}
-            
-            # Step 2: Restart template container
-            logger.info("[MASTER-TEMPLATE] Step 2: Restarting template container...")
-            results['template_restart'] = await self.restart_container("rentacar_template_frontend")
+                    results['frontend_deploy'] = {'success': False, 'error': upload_response.text}
+                    return {
+                        'success': False,
+                        'error': f'Frontend deploy başarısız: {upload_response.text}',
+                        'results': results
+                    }
+                
+                # Step 4: Create default config.js
+                logger.info("[MASTER-TEMPLATE] Step 4: Creating default config.js...")
+                await self.create_config_js("rentacar_template_frontend", "http://localhost:8001")
+                
+                # Step 5: Update template backend (version.py and server.py)
+                logger.info("[MASTER-TEMPLATE] Step 5: Updating template backend...")
+                
+                if template_backend_id:
+                    backend_update_cmd = """cd /tmp/master_template_build && \
+cp backend/template/backend/version.py /app/ 2>/dev/null || true && \
+cp backend/template/backend/server.py /app/ 2>/dev/null || true && \
+echo BACKEND_UPDATED"""
+                    
+                    # Use Node container to copy files (template_backend might not have git)
+                    # Download backend files from Node and upload to template_backend
+                    backend_tar_cmd = "cd /tmp/master_template_build/backend/template/backend && tar -cf /tmp/backend_files.tar version.py server.py && echo TAR_CREATED"
+                    await self.exec_in_container(node_container_id, backend_tar_cmd, timeout=30.0)
+                    
+                    # Download backend tar
+                    backend_download_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{node_container_id}/archive?path=/tmp/backend_files.tar"
+                    backend_download = await client.get(
+                        f"{self.base_url}/api/{backend_download_endpoint}",
+                        headers=self.headers
+                    )
+                    
+                    if backend_download.status_code == 200:
+                        # Extract inner tar
+                        backend_outer_tar = tarfile.open(fileobj=io.BytesIO(backend_download.content), mode='r')
+                        backend_inner_info = backend_outer_tar.getmember('backend_files.tar')
+                        backend_inner_file = backend_outer_tar.extractfile(backend_inner_info)
+                        backend_tar_content = backend_inner_file.read()
+                        backend_outer_tar.close()
+                        
+                        # Upload to template backend
+                        backend_upload_endpoint = f"endpoints/{self.endpoint_id}/docker/containers/{template_backend_id}/archive?path=/app"
+                        backend_upload = await client.put(
+                            f"{self.base_url}/api/{backend_upload_endpoint}",
+                            headers={'X-API-Key': self.api_key, 'Content-Type': 'application/x-tar'},
+                            content=backend_tar_content
+                        )
+                        
+                        if backend_upload.status_code in [200, 204]:
+                            results['backend_update'] = {'success': True}
+                            logger.info("[MASTER-TEMPLATE] Backend files updated")
+                        else:
+                            results['backend_update'] = {'success': False, 'note': 'Backend update failed but frontend OK'}
+                
+                # Step 6: Restart template containers
+                logger.info("[MASTER-TEMPLATE] Step 6: Restarting template containers...")
+                results['template_restart'] = await self.restart_container("rentacar_template_frontend")
+                
+                if template_backend_id:
+                    try:
+                        await self.restart_container("rentacar_template_backend")
+                    except:
+                        pass  # Backend might already be restarting
             
             logger.info("[MASTER-TEMPLATE] Master template update complete!")
             
             return {
                 'success': True,
-                'message': 'Master template güncellendi',
+                'message': 'Master template GitHub\'dan güncellendi (Frontend build edildi)',
                 'results': results
             }
             
