@@ -36,7 +36,7 @@ const pathPrefix = isAdminPanel ? '' : '/admin';
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: `${pathPrefix}/dashboard`, roles: ["firma_admin", "operasyon", "muhasebe"] },
   { icon: Car, label: "Araçlar", path: `${pathPrefix}/vehicles`, roles: ["firma_admin", "operasyon", "personel"] },
-  { icon: CalendarDays, label: "Fiyat Takvimi", path: `${pathPrefix}/price-calendar`, roles: ["firma_admin", "operasyon"] },
+  { icon: CalendarDays, label: "Fiyat / Müsaitlik", path: `${pathPrefix}/price-calendar`, roles: ["firma_admin", "operasyon"] },
   { icon: Users, label: "Müşteriler", path: `${pathPrefix}/customers`, roles: ["firma_admin", "operasyon"] },
   { icon: Calendar, label: "Rezervasyonlar", path: `${pathPrefix}/reservations`, roles: ["firma_admin", "operasyon", "personel"] },
   { icon: MapPin, label: "Lokasyonlar", path: `${pathPrefix}/locations`, roles: ["firma_admin", "operasyon"] },
