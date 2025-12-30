@@ -568,33 +568,35 @@ export function Integrations() {
 
         {/* Arvento GPS Tab */}
         <TabsContent value="arvento" className="space-y-6">
+          {/* Arvento Settings Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Car className="h-5 w-5 text-blue-500" />
+                <Navigation className="h-5 w-5 text-blue-500" />
                 Arvento GPS Entegrasyonu
               </CardTitle>
               <CardDescription>
-                Araçlarınızın canlı konum takibi için Arvento hesap bilgilerinizi girin
+                Araçlarınızın canlı konum takibi için Arvento API bilgilerinizi girin.
+                <span className="block mt-1 text-amber-600">Not: Web portal şifresi değil, API PIN kodlarını kullanın!</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="arvento-username">Kullanıcı Adı</Label>
                   <Input
                     id="arvento-username"
-                    placeholder="Arvento kullanıcı adınız"
+                    placeholder="API kullanıcı adı"
                     value={arventoSettings.username}
                     onChange={(e) => setArventoSettings({...arventoSettings, username: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="arvento-pin1">PIN1 (Şifre)</Label>
+                  <Label htmlFor="arvento-pin1">PIN1 (API Şifresi)</Label>
                   <Input
                     id="arvento-pin1"
                     type="password"
-                    placeholder="Arvento PIN1"
+                    placeholder="API PIN1"
                     value={arventoSettings.pin1}
                     onChange={(e) => setArventoSettings({...arventoSettings, pin1: e.target.value})}
                   />
@@ -604,7 +606,7 @@ export function Integrations() {
                   <Input
                     id="arvento-pin2"
                     type="password"
-                    placeholder="Arvento PIN2 (opsiyonel)"
+                    placeholder="API PIN2"
                     value={arventoSettings.pin2}
                     onChange={(e) => setArventoSettings({...arventoSettings, pin2: e.target.value})}
                   />
@@ -626,7 +628,7 @@ export function Integrations() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-4">
+              <div className="flex flex-wrap gap-2 pt-4">
                 <Button onClick={saveArventoSettings} disabled={arventoLoading}>
                   {arventoLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Kaydet
@@ -652,58 +654,316 @@ export function Integrations() {
             </CardContent>
           </Card>
 
-          {/* Arvento Vehicles Table */}
-          {arventoVehicles.length > 0 && (
+          {/* Arvento Features Section - Only show if configured */}
+          {arventoSettings.configured && (
+            <>
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <Button 
+                  variant={arventoActiveSection === "vehicles" ? "default" : "outline"} 
+                  className="flex flex-col h-auto py-4 gap-2"
+                  onClick={() => { setArventoActiveSection("vehicles"); loadArventoVehicles(); }}
+                >
+                  <MapPin className="h-5 w-5" />
+                  <span className="text-xs">Canlı Konum</span>
+                </Button>
+                <Button 
+                  variant={arventoActiveSection === "trips" ? "default" : "outline"} 
+                  className="flex flex-col h-auto py-4 gap-2"
+                  onClick={() => { setArventoActiveSection("trips"); loadArventoReport("trips"); }}
+                >
+                  <Route className="h-5 w-5" />
+                  <span className="text-xs">Seferler</span>
+                </Button>
+                <Button 
+                  variant={arventoActiveSection === "speed" ? "default" : "outline"} 
+                  className="flex flex-col h-auto py-4 gap-2"
+                  onClick={() => { setArventoActiveSection("speed"); loadArventoSpeedViolations(); }}
+                >
+                  <Gauge className="h-5 w-5" />
+                  <span className="text-xs">Hız İhlalleri</span>
+                </Button>
+                <Button 
+                  variant={arventoActiveSection === "fuel" ? "default" : "outline"} 
+                  className="flex flex-col h-auto py-4 gap-2"
+                  onClick={() => { setArventoActiveSection("fuel"); loadArventoReport("fuel"); }}
+                >
+                  <Fuel className="h-5 w-5" />
+                  <span className="text-xs">Yakıt</span>
+                </Button>
+                <Button 
+                  variant={arventoActiveSection === "maintenance" ? "default" : "outline"} 
+                  className="flex flex-col h-auto py-4 gap-2"
+                  onClick={() => { setArventoActiveSection("maintenance"); loadArventoMaintenance(); }}
+                >
+                  <Wrench className="h-5 w-5" />
+                  <span className="text-xs">Bakım</span>
+                </Button>
+                <Button 
+                  variant={arventoActiveSection === "alarms" ? "default" : "outline"} 
+                  className="flex flex-col h-auto py-4 gap-2"
+                  onClick={() => { setArventoActiveSection("alarms"); loadArventoAlarms(); }}
+                >
+                  <Bell className="h-5 w-5" />
+                  <span className="text-xs">Alarmlar</span>
+                </Button>
+              </div>
+
+              {/* Date Range Filter */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Başlangıç</Label>
+                      <Input 
+                        type="date" 
+                        value={arventoDateRange.start}
+                        onChange={(e) => setArventoDateRange({...arventoDateRange, start: e.target.value})}
+                        className="w-40"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Bitiş</Label>
+                      <Input 
+                        type="date" 
+                        value={arventoDateRange.end}
+                        onChange={(e) => setArventoDateRange({...arventoDateRange, end: e.target.value})}
+                        className="w-40"
+                      />
+                    </div>
+                    {arventoVehicles.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Araç</Label>
+                        <Select 
+                          value={arventoSelectedVehicle || "all"}
+                          onValueChange={(v) => setArventoSelectedVehicle(v === "all" ? null : v)}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Tüm Araçlar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Tüm Araçlar</SelectItem>
+                            {arventoVehicles.map((v) => (
+                              <SelectItem key={v.node_id || v.vehicle_id} value={v.node_id || v.vehicle_id}>
+                                {v.plate}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => {
+                        if (arventoActiveSection === "vehicles") loadArventoVehicles();
+                        else if (arventoActiveSection === "speed") loadArventoSpeedViolations();
+                        else if (arventoActiveSection === "alarms") loadArventoAlarms();
+                        else if (arventoActiveSection === "maintenance") loadArventoMaintenance();
+                        else loadArventoReport(arventoActiveSection, arventoSelectedVehicle);
+                      }}
+                      disabled={arventoLoading}
+                    >
+                      {arventoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      <span className="ml-2">Yenile</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Content Based on Active Section */}
+              {arventoActiveSection === "vehicles" && arventoVehicles.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-blue-500" />
+                      Canlı Araç Konumları
+                    </CardTitle>
+                    <CardDescription>
+                      {arventoVehicles.length} araç takip ediliyor
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="p-3 text-left font-medium">Plaka</th>
+                            <th className="p-3 text-left font-medium">Konum</th>
+                            <th className="p-3 text-left font-medium">Hız</th>
+                            <th className="p-3 text-left font-medium">Km</th>
+                            <th className="p-3 text-left font-medium">Kontak</th>
+                            <th className="p-3 text-left font-medium">Grup</th>
+                            <th className="p-3 text-left font-medium">Son Güncelleme</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {arventoVehicles.map((vehicle, idx) => (
+                            <tr key={vehicle.vehicle_id || idx} className="border-b hover:bg-muted/30">
+                              <td className="p-3 font-medium">{vehicle.plate || '-'}</td>
+                              <td className="p-3 text-sm">
+                                {vehicle.lat && vehicle.lng ? (
+                                  <a 
+                                    href={`https://www.google.com/maps?q=${vehicle.lat},${vehicle.lng}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:underline flex items-center gap-1"
+                                  >
+                                    <MapPin className="h-3 w-3" />
+                                    Haritada Gör
+                                  </a>
+                                ) : '-'}
+                              </td>
+                              <td className="p-3">
+                                <span className={`font-medium ${vehicle.speed > 100 ? 'text-red-500' : ''}`}>
+                                  {vehicle.speed || 0} km/s
+                                </span>
+                              </td>
+                              <td className="p-3 text-sm">{vehicle.odometer ? `${Math.round(vehicle.odometer).toLocaleString()} km` : '-'}</td>
+                              <td className="p-3">
+                                {vehicle.ignition ? (
+                                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                    <Activity className="h-3 w-3 mr-1" />Açık
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary">Kapalı</Badge>
+                                )}
+                              </td>
+                              <td className="p-3 text-sm text-muted-foreground">{vehicle.group || '-'}</td>
+                              <td className="p-3 text-xs text-muted-foreground">{vehicle.last_update || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Report Data Display */}
+              {arventoReportData && arventoActiveSection !== "vehicles" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-purple-500" />
+                      {arventoActiveSection === "speed" && "Hız İhlalleri Raporu"}
+                      {arventoActiveSection === "trips" && "Sefer Raporu"}
+                      {arventoActiveSection === "fuel" && "Yakıt Raporu"}
+                      {arventoActiveSection === "maintenance" && "Bakım Bilgileri"}
+                      {arventoActiveSection === "alarms" && "Alarm Geçmişi"}
+                    </CardTitle>
+                    <CardDescription>
+                      {arventoDateRange.start} - {arventoDateRange.end} arası veriler
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {arventoReportData.data?.success ? (
+                      <div className="space-y-4">
+                        {/* Summary Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="p-4 bg-muted/50 rounded-lg text-center">
+                            <p className="text-2xl font-bold">
+                              {arventoReportData.data?.count || 
+                               arventoReportData.data?.violations?.length ||
+                               arventoReportData.data?.trips?.length ||
+                               arventoReportData.data?.alarms?.length ||
+                               arventoReportData.data?.maintenance?.length ||
+                               0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Toplam Kayıt</p>
+                          </div>
+                          {arventoReportData.data?.total_km && (
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                              <p className="text-2xl font-bold text-blue-600">{Math.round(arventoReportData.data.total_km).toLocaleString()}</p>
+                              <p className="text-xs text-muted-foreground">Toplam KM</p>
+                            </div>
+                          )}
+                          {arventoReportData.data?.total_consumption && (
+                            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-center">
+                              <p className="text-2xl font-bold text-amber-600">{arventoReportData.data.total_consumption.toFixed(1)} L</p>
+                              <p className="text-xs text-muted-foreground">Yakıt Tüketimi</p>
+                            </div>
+                          )}
+                          {arventoReportData.data?.speed_limit && (
+                            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                              <p className="text-2xl font-bold text-red-600">{arventoReportData.data.speed_limit} km/s</p>
+                              <p className="text-xs text-muted-foreground">Hız Limiti</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Data Table */}
+                        <div className="rounded-md border overflow-x-auto max-h-96">
+                          <table className="w-full text-sm">
+                            <thead className="sticky top-0 bg-muted">
+                              <tr className="border-b">
+                                {Object.keys(
+                                  (arventoReportData.data?.violations?.[0] ||
+                                   arventoReportData.data?.trips?.[0] ||
+                                   arventoReportData.data?.alarms?.[0] ||
+                                   arventoReportData.data?.maintenance?.[0] ||
+                                   arventoReportData.data?.report?.[0] ||
+                                   {})
+                                ).slice(0, 6).map((key) => (
+                                  <th key={key} className="p-2 text-left font-medium capitalize">
+                                    {key.replace(/_/g, ' ')}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(arventoReportData.data?.violations ||
+                                arventoReportData.data?.trips ||
+                                arventoReportData.data?.alarms ||
+                                arventoReportData.data?.maintenance ||
+                                arventoReportData.data?.report ||
+                                []).slice(0, 50).map((row, idx) => (
+                                <tr key={idx} className="border-b hover:bg-muted/30">
+                                  {Object.values(row).slice(0, 6).map((val, i) => (
+                                    <td key={i} className="p-2">{String(val || '-')}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-amber-500" />
+                        <p>{arventoReportData.data?.message || "Veri bulunamadı"}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Empty State */}
+              {arventoActiveSection === "vehicles" && arventoVehicles.length === 0 && !arventoLoading && (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium">Araç verisi yok</h3>
+                    <p className="text-muted-foreground mt-1">
+                      "Araçları Yükle" butonuna tıklayarak Arvento'dan araç verilerini çekin
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+
+          {/* Not Configured State */}
+          {!arventoSettings.configured && (
             <Card>
-              <CardHeader>
-                <CardTitle>Canlı Araç Konumları</CardTitle>
-                <CardDescription>
-                  Arvento'dan alınan son araç verileri
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="p-2 text-left font-medium">Plaka</th>
-                        <th className="p-2 text-left font-medium">Konum</th>
-                        <th className="p-2 text-left font-medium">Hız</th>
-                        <th className="p-2 text-left font-medium">Kontak</th>
-                        <th className="p-2 text-left font-medium">Son Güncelleme</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {arventoVehicles.map((vehicle, idx) => (
-                        <tr key={vehicle.vehicle_id || idx} className="border-b">
-                          <td className="p-2 font-medium">{vehicle.plate}</td>
-                          <td className="p-2 text-sm">
-                            {vehicle.lat && vehicle.lng ? (
-                              <a 
-                                href={`https://www.google.com/maps?q=${vehicle.lat},${vehicle.lng}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-500 hover:underline flex items-center gap-1"
-                              >
-                                {vehicle.lat?.toFixed(4)}, {vehicle.lng?.toFixed(4)}
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
-                            ) : '-'}
-                          </td>
-                          <td className="p-2">{vehicle.speed || 0} km/s</td>
-                          <td className="p-2">
-                            {vehicle.ignition ? (
-                              <Badge variant="success" className="bg-green-100 text-green-800">Açık</Badge>
-                            ) : (
-                              <Badge variant="secondary">Kapalı</Badge>
-                            )}
-                          </td>
-                          <td className="p-2 text-sm text-muted-foreground">{vehicle.last_update}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <CardContent className="py-12 text-center">
+                <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+                <h3 className="text-lg font-medium">Arvento Yapılandırılmamış</h3>
+                <p className="text-muted-foreground mt-1">
+                  Yukarıdaki formu doldurup "Kaydet" butonuna tıklayın
+                </p>
+                <p className="text-sm text-amber-600 mt-2">
+                  Not: Arvento panelinden API PIN kodlarınızı almanız gerekmektedir.
+                </p>
               </CardContent>
             </Card>
           )}
