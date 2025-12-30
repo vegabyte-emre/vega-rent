@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import getApiUrl from '../config/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import {
   Dialog,
@@ -21,52 +19,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../components/ui/popover';
+import { Label } from '../components/ui/label';
 import { ScrollArea } from '../components/ui/scroll-area';
 import {
   ChevronLeft,
   ChevronRight,
-  Calendar,
-  Car,
-  DollarSign,
-  Settings,
+  Plus,
   Filter,
   RefreshCw,
-  Check,
-  X,
-  AlertCircle,
-  Wrench,
-  Clock
+  Search,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Car,
+  Calendar,
+  User
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
-const STATUS_COLORS = {
-  available: 'bg-green-500/80 hover:bg-green-500',
-  rented: 'bg-red-500/80 hover:bg-red-500',
-  reserved: 'bg-yellow-500/80 hover:bg-yellow-500',
-  service: 'bg-blue-500/80 hover:bg-blue-500',
-  unavailable: 'bg-gray-500/80 hover:bg-gray-500'
-};
-
-const STATUS_LABELS = {
-  available: 'Müsait',
-  rented: 'Kirada',
-  reserved: 'Rezerve',
-  service: 'Serviste',
-  unavailable: 'Müsait Değil'
-};
-
-const STATUS_ICONS = {
-  available: Check,
-  rented: Car,
-  reserved: Clock,
-  service: Wrench,
-  unavailable: X
-};
+// Renk paleti - farklı rezervasyonlar için
+const RESERVATION_COLORS = [
+  { bg: 'bg-yellow-100', border: 'border-yellow-300', text: 'text-yellow-800' },
+  { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' },
+  { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-800' },
+  { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-800' },
+  { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-800' },
+  { bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-800' },
+  { bg: 'bg-cyan-100', border: 'border-cyan-300', text: 'text-cyan-800' },
+  { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-800' },
+];
 
 const DAYS_TR = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 const MONTHS_TR = [
@@ -77,41 +58,44 @@ const MONTHS_TR = [
 export const PriceCalendar = () => {
   const [vehicles, setVehicles] = useState([]);
   const [reservations, setReservations] = useState([]);
-  const [priceRules, setPriceRules] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [selectedDates, setSelectedDates] = useState([]);
-  const [isMultiSelect, setIsMultiSelect] = useState(false);
-  const [isPriceDialogOpen, setIsPriceDialogOpen] = useState(false);
-  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [viewMode, setViewMode] = useState('month'); // 'day', 'week', 'month'
+  const [filterVehicle, setFilterVehicle] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   
-  const [priceForm, setPriceForm] = useState({
-    daily_price: '',
-    weekend_price: '',
-    weekly_price: '',
-    monthly_price: ''
-  });
-
-  const [statusForm, setStatusForm] = useState({
-    status: 'available',
+  // Dialog states
+  const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
+  const [isEditReservationOpen, setIsEditReservationOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState(null);
+  const [reservationForm, setReservationForm] = useState({
+    vehicle_id: '',
+    customer_id: '',
+    start_date: '',
+    end_date: '',
+    daily_rate: '',
     notes: ''
   });
 
+  // Veri yükleme
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [vehiclesRes, reservationsRes, priceRulesRes] = await Promise.all([
-        axios.get(`${getApiUrl()}/api/vehicles`),
-        axios.get(`${getApiUrl()}/api/reservations`),
-        axios.get(`${getApiUrl()}/api/price-rules`).catch(() => ({ data: [] }))
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const [vehiclesRes, reservationsRes, customersRes] = await Promise.all([
+        axios.get(`${getApiUrl()}/api/vehicles`, { headers }),
+        axios.get(`${getApiUrl()}/api/reservations`, { headers }),
+        axios.get(`${getApiUrl()}/api/customers`, { headers }).catch(() => ({ data: [] }))
       ]);
-      setVehicles(vehiclesRes.data);
-      setReservations(reservationsRes.data);
-      setPriceRules(priceRulesRes.data);
+      
+      setVehicles(vehiclesRes.data || []);
+      setReservations(reservationsRes.data || []);
+      setCustomers(customersRes.data || []);
     } catch (error) {
+      console.error('Veri yükleme hatası:', error);
       toast.error('Veriler yüklenirken hata oluştu');
     } finally {
       setLoading(false);
@@ -122,486 +106,684 @@ export const PriceCalendar = () => {
     fetchData();
   }, [fetchData]);
 
-  // Generate calendar days for current month
-  const generateCalendarDays = () => {
+  // Takvim günlerini hesapla
+  const calendarData = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
     
-    // Adjust for Monday start (0 = Monday, 6 = Sunday)
-    let startDay = firstDay.getDay() - 1;
-    if (startDay < 0) startDay = 6;
+    // Ayın ilk ve son günü
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
     
-    const days = [];
+    // Görüntülenecek gün sayısı (ay görünümünde)
+    let startDate, endDate, totalDays;
     
-    // Previous month padding
-    for (let i = 0; i < startDay; i++) {
-      const prevDate = new Date(year, month, -startDay + i + 1);
-      days.push({ date: prevDate, isCurrentMonth: false });
-    }
-    
-    // Current month days
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ date: new Date(year, month, i), isCurrentMonth: true });
-    }
-    
-    // Next month padding
-    const remaining = 42 - days.length;
-    for (let i = 1; i <= remaining; i++) {
-      days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
-    }
-    
-    return days;
-  };
-
-  // Get vehicle status for a specific date
-  const getVehicleStatusForDate = (vehicle, date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    
-    // Check reservations
-    const reservation = reservations.find(r => {
-      if (r.vehicle_id !== vehicle.id) return false;
-      const start = new Date(r.start_date).toISOString().split('T')[0];
-      const end = new Date(r.end_date).toISOString().split('T')[0];
-      return dateStr >= start && dateStr <= end;
-    });
-    
-    if (reservation) {
-      if (reservation.status === 'delivered' || reservation.status === 'confirmed') {
-        return 'rented';
-      }
-      if (reservation.status === 'created') {
-        return 'reserved';
-      }
-    }
-    
-    // Check vehicle base status
-    if (vehicle.status === 'service') return 'service';
-    if (vehicle.status === 'rented') return 'rented';
-    
-    return 'available';
-  };
-
-  // Get price for a specific vehicle and date
-  const getPriceForDate = (vehicle, date) => {
-    const dayOfWeek = date.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    
-    // Check specific price rules
-    const rule = priceRules.find(r => {
-      if (r.vehicle_id !== vehicle.id) return false;
-      const start = new Date(r.start_date);
-      const end = new Date(r.end_date);
-      return date >= start && date <= end;
-    });
-    
-    if (rule) {
-      return isWeekend ? (rule.weekend_price || rule.daily_price) : rule.daily_price;
-    }
-    
-    // Return base price
-    return isWeekend ? (vehicle.weekend_price || vehicle.daily_price) : vehicle.daily_price;
-  };
-
-  // Handle date click
-  const handleDateClick = (vehicle, date) => {
-    if (isMultiSelect) {
-      const dateStr = date.toISOString();
-      const existing = selectedDates.find(d => d.date.toISOString() === dateStr && d.vehicleId === vehicle.id);
-      
-      if (existing) {
-        setSelectedDates(selectedDates.filter(d => !(d.date.toISOString() === dateStr && d.vehicleId === vehicle.id)));
-      } else {
-        setSelectedDates([...selectedDates, { date, vehicleId: vehicle.id }]);
-      }
+    if (viewMode === 'month') {
+      // Pazartesi'den başlat
+      const firstDayWeekday = firstDayOfMonth.getDay();
+      const startOffset = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1;
+      startDate = new Date(year, month, 1 - startOffset);
+      totalDays = 35; // 5 hafta
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + totalDays - 1);
+    } else if (viewMode === 'week') {
+      const currentDay = currentDate.getDay();
+      const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
+      startDate = new Date(currentDate);
+      startDate.setDate(currentDate.getDate() - mondayOffset);
+      totalDays = 7;
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
     } else {
-      setSelectedVehicle(vehicle);
-      setSelectedDates([{ date, vehicleId: vehicle.id }]);
-    }
-  };
-
-  // Open price dialog
-  const openPriceDialog = () => {
-    if (selectedDates.length === 0) {
-      toast.error('Lütfen önce tarih seçin');
-      return;
+      startDate = new Date(currentDate);
+      totalDays = 1;
+      endDate = new Date(currentDate);
     }
     
-    const vehicle = vehicles.find(v => v.id === selectedDates[0].vehicleId);
-    if (vehicle) {
-      setPriceForm({
-        daily_price: vehicle.daily_price?.toString() || '',
-        weekend_price: vehicle.weekend_price?.toString() || '',
-        weekly_price: vehicle.weekly_price?.toString() || '',
-        monthly_price: vehicle.monthly_price?.toString() || ''
+    // Günleri oluştur
+    const days = [];
+    for (let i = 0; i < totalDays; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      days.push({
+        date,
+        dayOfMonth: date.getDate(),
+        dayOfWeek: date.getDay(),
+        isCurrentMonth: date.getMonth() === month,
+        isToday: date.toDateString() === new Date().toDateString()
       });
     }
-    setIsPriceDialogOpen(true);
-  };
+    
+    return { days, startDate, endDate, month, year };
+  }, [currentDate, viewMode]);
 
-  // Save price changes
-  const handleSavePrice = async () => {
-    try {
-      const vehicleIds = [...new Set(selectedDates.map(d => d.vehicleId))];
-      
-      for (const vehicleId of vehicleIds) {
-        const dates = selectedDates.filter(d => d.vehicleId === vehicleId);
-        const startDate = new Date(Math.min(...dates.map(d => d.date.getTime())));
-        const endDate = new Date(Math.max(...dates.map(d => d.date.getTime())));
-        
-        await axios.post(`${getApiUrl()}/api/price-rules`, {
-          vehicle_id: vehicleId,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-          daily_price: parseFloat(priceForm.daily_price) || 0,
-          weekend_price: parseFloat(priceForm.weekend_price) || 0,
-          weekly_price: parseFloat(priceForm.weekly_price) || 0,
-          monthly_price: parseFloat(priceForm.monthly_price) || 0
-        });
-      }
-      
-      toast.success('Fiyatlar güncellendi');
-      setIsPriceDialogOpen(false);
-      setSelectedDates([]);
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Fiyat güncellenirken hata oluştu');
+  // Araç için rezervasyonları getir
+  const getVehicleReservations = useCallback((vehicleId) => {
+    return reservations.filter(r => r.vehicle_id === vehicleId);
+  }, [reservations]);
+
+  // Rezervasyonun görüntüleneceği pozisyonu hesapla
+  const getReservationPosition = useCallback((reservation, days) => {
+    const startDate = new Date(reservation.start_date);
+    const endDate = new Date(reservation.end_date);
+    
+    // Takvim başlangıç ve bitiş tarihleri
+    const calendarStart = days[0].date;
+    const calendarEnd = days[days.length - 1].date;
+    
+    // Rezervasyon takvim aralığında mı?
+    if (endDate < calendarStart || startDate > calendarEnd) {
+      return null;
     }
-  };
-
-  // Save status changes
-  const handleSaveStatus = async () => {
-    try {
-      const vehicleIds = [...new Set(selectedDates.map(d => d.vehicleId))];
-      
-      for (const vehicleId of vehicleIds) {
-        await axios.patch(`${getApiUrl()}/api/vehicles/${vehicleId}/status`, {
-          status: statusForm.status
-        });
+    
+    // Başlangıç ve bitiş indekslerini bul
+    let startIndex = -1;
+    let endIndex = -1;
+    
+    for (let i = 0; i < days.length; i++) {
+      const dayStr = days[i].date.toDateString();
+      if (startDate.toDateString() <= dayStr && startIndex === -1) {
+        startIndex = i;
       }
-      
-      toast.success('Durum güncellendi');
-      setIsStatusDialogOpen(false);
-      setSelectedDates([]);
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Durum güncellenirken hata oluştu');
+      if (endDate.toDateString() >= dayStr) {
+        endIndex = i;
+      }
     }
-  };
+    
+    if (startIndex === -1) startIndex = 0;
+    if (endIndex === -1 || endIndex >= days.length) endIndex = days.length - 1;
+    
+    return {
+      startIndex,
+      endIndex,
+      span: endIndex - startIndex + 1
+    };
+  }, []);
 
-  // Navigate months
-  const navigateMonth = (direction) => {
+  // Müşteri adını getir
+  const getCustomerName = useCallback((customerId) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (customer) {
+      return `${customer.first_name} ${customer.last_name}`;
+    }
+    return 'Müşteri';
+  }, [customers]);
+
+  // Renk atama (rezervasyon ID'sine göre tutarlı renk)
+  const getReservationColor = useCallback((reservationId) => {
+    const index = reservationId ? reservationId.charCodeAt(0) % RESERVATION_COLORS.length : 0;
+    return RESERVATION_COLORS[index];
+  }, []);
+
+  // Navigasyon
+  const navigate = (direction) => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
-      newDate.setMonth(newDate.getMonth() + direction);
+      if (viewMode === 'month') {
+        newDate.setMonth(newDate.getMonth() + direction);
+      } else if (viewMode === 'week') {
+        newDate.setDate(newDate.getDate() + (direction * 7));
+      } else {
+        newDate.setDate(newDate.getDate() + direction);
+      }
       return newDate;
     });
   };
 
-  // Filter vehicles
-  const filteredVehicles = vehicles.filter(v => {
-    if (filterStatus !== 'all' && v.status !== filterStatus) return false;
-    if (filterCategory !== 'all' && v.category !== filterCategory) return false;
-    return true;
-  });
+  // Bugüne git
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
 
-  const calendarDays = generateCalendarDays();
-  const today = new Date().toISOString().split('T')[0];
+  // Filtrelenmiş araçlar
+  const filteredVehicles = useMemo(() => {
+    let result = vehicles;
+    
+    if (filterVehicle !== 'all') {
+      result = result.filter(v => v.id === filterVehicle);
+    }
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(v => 
+        v.plate?.toLowerCase().includes(query) ||
+        v.brand?.toLowerCase().includes(query) ||
+        v.model?.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [vehicles, filterVehicle, searchQuery]);
+
+  // Yeni rezervasyon
+  const handleNewReservation = () => {
+    setReservationForm({
+      vehicle_id: '',
+      customer_id: '',
+      start_date: '',
+      end_date: '',
+      daily_rate: '',
+      notes: ''
+    });
+    setIsNewReservationOpen(true);
+  };
+
+  // Rezervasyon düzenle
+  const handleEditReservation = (reservation) => {
+    setSelectedReservation(reservation);
+    setReservationForm({
+      vehicle_id: reservation.vehicle_id,
+      customer_id: reservation.customer_id,
+      start_date: reservation.start_date?.split('T')[0] || '',
+      end_date: reservation.end_date?.split('T')[0] || '',
+      daily_rate: reservation.daily_rate?.toString() || '',
+      notes: reservation.notes || ''
+    });
+    setIsEditReservationOpen(true);
+  };
+
+  // Rezervasyon sil
+  const handleDeleteReservation = async (reservationId) => {
+    if (!window.confirm('Bu rezervasyonu silmek istediğinize emin misiniz?')) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${getApiUrl()}/api/reservations/${reservationId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Rezervasyon silindi');
+      fetchData();
+    } catch (error) {
+      toast.error('Rezervasyon silinemedi');
+    }
+  };
+
+  // Rezervasyon kaydet
+  const handleSaveReservation = async (isEdit = false) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const data = {
+        vehicle_id: reservationForm.vehicle_id,
+        customer_id: reservationForm.customer_id,
+        start_date: reservationForm.start_date,
+        end_date: reservationForm.end_date,
+        daily_rate: parseFloat(reservationForm.daily_rate) || 0,
+        notes: reservationForm.notes
+      };
+      
+      if (isEdit && selectedReservation) {
+        await axios.put(`${getApiUrl()}/api/reservations/${selectedReservation.id}`, data, { headers });
+        toast.success('Rezervasyon güncellendi');
+        setIsEditReservationOpen(false);
+      } else {
+        await axios.post(`${getApiUrl()}/api/reservations`, data, { headers });
+        toast.success('Rezervasyon oluşturuldu');
+        setIsNewReservationOpen(false);
+      }
+      
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'İşlem başarısız');
+    }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Fiyat & Müsaitlik Takvimi</h1>
-          <p className="text-slate-400">Araç fiyatlarını ve müsaitlik durumunu yönetin</p>
+      <div className="flex items-center justify-between p-4 border-b bg-card">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Car className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-semibold">Araç Kiralam</h1>
+          </div>
+          
+          {/* Araç Filtresi */}
+          <Select value={filterVehicle} onValueChange={setFilterVehicle}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Tüm Araçlar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Araçlar</SelectItem>
+              {vehicles.map(v => (
+                <SelectItem key={v.id} value={v.id}>{v.plate}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+        
         <div className="flex items-center gap-2">
-          <Button
-            variant={isMultiSelect ? "default" : "outline"}
-            onClick={() => {
-              setIsMultiSelect(!isMultiSelect);
-              setSelectedDates([]);
-            }}
-            className={isMultiSelect ? "bg-orange-600" : "border-slate-600 text-slate-300"}
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Çoklu Seçim
+          <Button onClick={handleNewReservation} className="bg-orange-500 hover:bg-orange-600">
+            <Plus className="h-4 w-4 mr-2" />
+            Yeni Rezervasyon
           </Button>
-          <Button onClick={fetchData} variant="outline" className="border-slate-600 text-slate-300">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Yenile
+          <Button variant="ghost" size="icon">
+            <MoreHorizontal className="h-5 w-5" />
           </Button>
         </div>
       </div>
-
-      {/* Legend & Filters */}
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Legend */}
-            <div className="flex flex-wrap items-center gap-4">
-              {Object.entries(STATUS_LABELS).map(([key, label]) => {
-                const Icon = STATUS_ICONS[key];
-                return (
-                  <div key={key} className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded flex items-center justify-center ${STATUS_COLORS[key]}`}>
-                      <Icon className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-slate-300 text-sm">{label}</span>
-                  </div>
-                );
-              })}
+      
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-card/50">
+        <div className="flex items-center gap-2">
+          {/* Araç Listesi Toggle */}
+          <Select defaultValue="list">
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="list">Araç Listesi</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Navigasyon */}
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          
+          {/* Görünüm Seçici */}
+          <div className="flex items-center border rounded-md">
+            <Button 
+              variant={viewMode === 'day' ? 'secondary' : 'ghost'} 
+              size="sm"
+              onClick={() => setViewMode('day')}
+              className="rounded-r-none"
+            >
+              Gün
+            </Button>
+            <Button 
+              variant={viewMode === 'week' ? 'secondary' : 'ghost'} 
+              size="sm"
+              onClick={() => setViewMode('week')}
+              className="rounded-none border-x"
+            >
+              Hafta
+            </Button>
+            <Button 
+              variant={viewMode === 'month' ? 'secondary' : 'ghost'} 
+              size="sm"
+              onClick={() => setViewMode('month')}
+              className="rounded-l-none"
+            >
+              Ay
+            </Button>
+          </div>
+          
+          <Button variant="ghost" size="icon" onClick={() => navigate(1)}>
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+          
+          {/* Diğer butonlar */}
+          <Button variant="ghost" size="icon">
+            <Filter className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={handleNewReservation}>
+            <Plus className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon">
+            <Search className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={fetchData}>
+            <MoreHorizontal className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+      
+      {/* Calendar Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="min-w-[900px]">
+          {/* Takvim Başlık Satırı */}
+          <div className="flex border-b bg-muted/30 sticky top-0 z-10">
+            {/* Araç Listesi Başlığı */}
+            <div className="w-52 min-w-52 p-2 border-r flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Araç Listesi</span>
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </div>
             
-            {/* Filters */}
-            <div className="flex items-center gap-2">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-32 bg-slate-700 border-slate-600 text-white">
-                  <SelectValue placeholder="Durum" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="all">Tüm Durumlar</SelectItem>
-                  <SelectItem value="available">Müsait</SelectItem>
-                  <SelectItem value="rented">Kirada</SelectItem>
-                  <SelectItem value="service">Serviste</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Calendar Navigation */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigateMonth(-1)} className="text-slate-300 hover:text-white">
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <h2 className="text-xl font-semibold text-white">
-          {MONTHS_TR[currentDate.getMonth()]} {currentDate.getFullYear()}
-        </h2>
-        <Button variant="ghost" onClick={() => navigateMonth(1)} className="text-slate-300 hover:text-white">
-          <ChevronRight className="h-5 w-5" />
-        </Button>
-      </div>
-
-      {/* Action Buttons */}
-      {selectedDates.length > 0 && (
-        <div className="flex items-center gap-2 p-3 bg-orange-500/20 border border-orange-500/30 rounded-lg">
-          <span className="text-orange-400">
-            {selectedDates.length} tarih seçildi
-          </span>
-          <Button size="sm" onClick={openPriceDialog} className="bg-green-600 hover:bg-green-700">
-            <DollarSign className="h-4 w-4 mr-1" />
-            Fiyat Belirle
-          </Button>
-          <Button size="sm" onClick={() => setIsStatusDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-            <Settings className="h-4 w-4 mr-1" />
-            Durum Değiştir
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setSelectedDates([])} className="border-slate-600 text-slate-300">
-            <X className="h-4 w-4 mr-1" />
-            Temizle
-          </Button>
-        </div>
-      )}
-
-      {/* Calendar Grid */}
-      <Card className="bg-slate-800/50 border-slate-700 overflow-hidden">
-        <ScrollArea className="h-[600px]">
-          <div className="min-w-[1200px]">
-            {/* Header Row - Days */}
-            <div className="grid grid-cols-[200px_repeat(7,1fr)] sticky top-0 bg-slate-800 z-10 border-b border-slate-700">
-              <div className="p-3 font-semibold text-slate-400">Araç</div>
-              {DAYS_TR.map(day => (
-                <div key={day} className="p-3 text-center font-semibold text-slate-400">{day}</div>
+            {/* Gün Başlıkları */}
+            <div className="flex-1 flex">
+              {calendarData.days.map((day, index) => (
+                <div 
+                  key={index} 
+                  className={`flex-1 min-w-[80px] p-2 text-center border-r last:border-r-0 ${
+                    day.isToday ? 'bg-primary/10' : ''
+                  }`}
+                >
+                  <div className="text-xs text-muted-foreground">
+                    {DAYS_TR[day.dayOfWeek === 0 ? 6 : day.dayOfWeek - 1]} {day.dayOfMonth}
+                  </div>
+                </div>
               ))}
             </div>
-
-            {/* Calendar Weeks */}
-            {[0, 1, 2, 3, 4, 5].map(weekIndex => (
-              <React.Fragment key={weekIndex}>
-                {/* Date Numbers Row */}
-                <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b border-slate-700/50">
-                  <div className="p-2 text-slate-500 text-xs">
-                    {weekIndex === 0 && 'Hafta ' + (weekIndex + 1)}
+          </div>
+          
+          {/* Araç Satırları */}
+          <ScrollArea className="h-[calc(100vh-220px)]">
+            {filteredVehicles.map((vehicle) => {
+              const vehicleReservations = getVehicleReservations(vehicle.id);
+              
+              return (
+                <div key={vehicle.id} className="flex border-b hover:bg-muted/20">
+                  {/* Araç Bilgisi */}
+                  <div className="w-52 min-w-52 p-2 border-r flex items-center gap-3">
+                    <div className="w-14 h-10 rounded bg-muted flex items-center justify-center overflow-hidden">
+                      {vehicle.image_url ? (
+                        <img 
+                          src={vehicle.image_url} 
+                          alt={vehicle.plate} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Car className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{vehicle.brand} {vehicle.model}</p>
+                      <p className="text-xs text-muted-foreground">{vehicle.plate}</p>
+                    </div>
                   </div>
-                  {calendarDays.slice(weekIndex * 7, (weekIndex + 1) * 7).map((day, dayIndex) => {
-                    const dateStr = day.date.toISOString().split('T')[0];
-                    const isToday = dateStr === today;
-                    return (
+                  
+                  {/* Takvim Hücreleri */}
+                  <div className="flex-1 flex relative" style={{ minHeight: '60px' }}>
+                    {/* Gün Hücreleri (arka plan çizgileri) */}
+                    {calendarData.days.map((day, index) => (
                       <div 
-                        key={dayIndex} 
-                        className={`p-2 text-center text-sm ${
-                          day.isCurrentMonth ? 'text-slate-300' : 'text-slate-600'
-                        } ${isToday ? 'bg-orange-500/20 font-bold' : ''}`}
+                        key={index} 
+                        className={`flex-1 min-w-[80px] border-r last:border-r-0 ${
+                          !day.isCurrentMonth ? 'bg-muted/20' : ''
+                        } ${day.isToday ? 'bg-primary/5' : ''}`}
                       >
-                        {day.date.getDate()}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Vehicle Rows for this week */}
-                {filteredVehicles.map(vehicle => (
-                  <div key={`${weekIndex}-${vehicle.id}`} className="grid grid-cols-[200px_repeat(7,1fr)] border-b border-slate-700/30 hover:bg-slate-700/20">
-                    {/* Vehicle Info */}
-                    {weekIndex === 0 ? (
-                      <div className="p-2 flex items-center gap-2 sticky left-0 bg-slate-800/90">
-                        <Car className="h-4 w-4 text-orange-500" />
-                        <div className="truncate">
-                          <p className="text-white text-sm font-medium truncate">{vehicle.plate}</p>
-                          <p className="text-slate-400 text-xs truncate">{vehicle.brand} {vehicle.model}</p>
+                        <div className="p-1 text-center">
+                          <span className={`text-xs ${
+                            day.isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'
+                          }`}>
+                            {day.dayOfMonth}
+                          </span>
                         </div>
                       </div>
-                    ) : (
-                      <div className="p-2 sticky left-0 bg-slate-800/90" />
-                    )}
-
-                    {/* Day Cells */}
-                    {calendarDays.slice(weekIndex * 7, (weekIndex + 1) * 7).map((day, dayIndex) => {
-                      const status = getVehicleStatusForDate(vehicle, day.date);
-                      const price = getPriceForDate(vehicle, day.date);
-                      const dateStr = day.date.toISOString();
-                      const isSelected = selectedDates.some(
-                        d => d.date.toISOString() === dateStr && d.vehicleId === vehicle.id
-                      );
-                      const Icon = STATUS_ICONS[status];
-
+                    ))}
+                    
+                    {/* Rezervasyon Blokları */}
+                    {vehicleReservations.map((reservation) => {
+                      const position = getReservationPosition(reservation, calendarData.days);
+                      if (!position) return null;
+                      
+                      const color = getReservationColor(reservation.id);
+                      const customerName = getCustomerName(reservation.customer_id);
+                      const totalPrice = reservation.total_amount || (reservation.daily_rate * position.span);
+                      
+                      // Pozisyon hesapla
+                      const leftPercent = (position.startIndex / calendarData.days.length) * 100;
+                      const widthPercent = (position.span / calendarData.days.length) * 100;
+                      
                       return (
                         <div
-                          key={dayIndex}
-                          onClick={() => day.isCurrentMonth && handleDateClick(vehicle, day.date)}
-                          className={`
-                            p-1 cursor-pointer transition-all relative
-                            ${day.isCurrentMonth ? '' : 'opacity-30 pointer-events-none'}
-                            ${isSelected ? 'ring-2 ring-orange-500 ring-inset' : ''}
-                          `}
+                          key={reservation.id}
+                          className={`absolute top-1/2 -translate-y-1/2 h-10 mx-1 rounded-md border-l-4 ${color.bg} ${color.border} flex items-center justify-between px-2 cursor-pointer hover:shadow-md transition-shadow group`}
+                          style={{
+                            left: `calc(${leftPercent}% + 4px)`,
+                            width: `calc(${widthPercent}% - 8px)`
+                          }}
+                          onClick={() => handleEditReservation(reservation)}
                         >
-                          <div className={`
-                            rounded p-1 h-full flex flex-col items-center justify-center
-                            ${STATUS_COLORS[status]}
-                            ${isSelected ? 'scale-95' : ''}
-                          `}>
-                            <Icon className="h-3 w-3 text-white mb-0.5" />
-                            <span className="text-white text-xs font-medium">
-                              ₺{price || '-'}
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className={`font-bold text-sm ${color.text}`}>
+                              {totalPrice?.toLocaleString('tr-TR')} ₺
                             </span>
+                            <span className={`text-sm truncate ${color.text}`}>
+                              {customerName}
+                            </span>
+                          </div>
+                          
+                          {/* Aksiyon Butonları */}
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              className={`p-1 hover:bg-white/50 rounded ${color.text}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditReservation(reservation);
+                              }}
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button 
+                              className={`p-1 hover:bg-white/50 rounded ${color.text}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteReservation(reservation.id);
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                ))}
-              </React.Fragment>
-            ))}
-          </div>
-        </ScrollArea>
-      </Card>
-
-      {/* Price Dialog */}
-      <Dialog open={isPriceDialogOpen} onOpenChange={setIsPriceDialogOpen}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white">
+                </div>
+              );
+            })}
+            
+            {filteredVehicles.length === 0 && (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                <Car className="h-8 w-8 mr-3 opacity-50" />
+                <span>Araç bulunamadı</span>
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      </div>
+      
+      {/* Yeni Rezervasyon Dialog */}
+      <Dialog open={isNewReservationOpen} onOpenChange={setIsNewReservationOpen}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Fiyat Belirle</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Seçili tarihler için fiyat güncellemesi yapın
+            <DialogTitle>Yeni Rezervasyon</DialogTitle>
+            <DialogDescription>
+              Yeni bir araç rezervasyonu oluşturun
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Araç</Label>
+              <Select 
+                value={reservationForm.vehicle_id} 
+                onValueChange={(v) => setReservationForm({...reservationForm, vehicle_id: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Araç seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vehicles.map(v => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.plate} - {v.brand} {v.model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Müşteri</Label>
+              <Select 
+                value={reservationForm.customer_id} 
+                onValueChange={(v) => setReservationForm({...reservationForm, customer_id: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Müşteri seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.first_name} {c.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-slate-300">Günlük Fiyat (₺)</Label>
-                <Input
-                  type="number"
-                  value={priceForm.daily_price}
-                  onChange={(e) => setPriceForm({...priceForm, daily_price: e.target.value})}
-                  className="bg-slate-700 border-slate-600 text-white"
-                  placeholder="0"
+              <div className="space-y-2">
+                <Label>Başlangıç Tarihi</Label>
+                <Input 
+                  type="date" 
+                  value={reservationForm.start_date}
+                  onChange={(e) => setReservationForm({...reservationForm, start_date: e.target.value})}
                 />
               </div>
-              <div>
-                <Label className="text-slate-300">Hafta Sonu Fiyat (₺)</Label>
-                <Input
-                  type="number"
-                  value={priceForm.weekend_price}
-                  onChange={(e) => setPriceForm({...priceForm, weekend_price: e.target.value})}
-                  className="bg-slate-700 border-slate-600 text-white"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label className="text-slate-300">Haftalık Fiyat (₺)</Label>
-                <Input
-                  type="number"
-                  value={priceForm.weekly_price}
-                  onChange={(e) => setPriceForm({...priceForm, weekly_price: e.target.value})}
-                  className="bg-slate-700 border-slate-600 text-white"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label className="text-slate-300">Aylık Fiyat (₺)</Label>
-                <Input
-                  type="number"
-                  value={priceForm.monthly_price}
-                  onChange={(e) => setPriceForm({...priceForm, monthly_price: e.target.value})}
-                  className="bg-slate-700 border-slate-600 text-white"
-                  placeholder="0"
+              <div className="space-y-2">
+                <Label>Bitiş Tarihi</Label>
+                <Input 
+                  type="date" 
+                  value={reservationForm.end_date}
+                  onChange={(e) => setReservationForm({...reservationForm, end_date: e.target.value})}
                 />
               </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label>Günlük Ücret (₺)</Label>
+              <Input 
+                type="number" 
+                placeholder="0"
+                value={reservationForm.daily_rate}
+                onChange={(e) => setReservationForm({...reservationForm, daily_rate: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Notlar</Label>
+              <Input 
+                placeholder="Opsiyonel notlar..."
+                value={reservationForm.notes}
+                onChange={(e) => setReservationForm({...reservationForm, notes: e.target.value})}
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPriceDialogOpen(false)} className="border-slate-600 text-slate-300">
+            <Button variant="outline" onClick={() => setIsNewReservationOpen(false)}>
               İptal
             </Button>
-            <Button onClick={handleSavePrice} className="bg-orange-600 hover:bg-orange-700">
-              Kaydet
+            <Button onClick={() => handleSaveReservation(false)} className="bg-orange-500 hover:bg-orange-600">
+              Oluştur
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Status Dialog */}
-      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white">
+      
+      {/* Düzenleme Dialog */}
+      <Dialog open={isEditReservationOpen} onOpenChange={setIsEditReservationOpen}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Durum Değiştir</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Seçili araçların durumunu güncelleyin
+            <DialogTitle>Rezervasyon Düzenle</DialogTitle>
+            <DialogDescription>
+              Rezervasyon bilgilerini güncelleyin
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <Label className="text-slate-300">Yeni Durum</Label>
-              <Select value={statusForm.status} onValueChange={(v) => setStatusForm({...statusForm, status: v})}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                  <SelectValue />
+            <div className="space-y-2">
+              <Label>Araç</Label>
+              <Select 
+                value={reservationForm.vehicle_id} 
+                onValueChange={(v) => setReservationForm({...reservationForm, vehicle_id: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Araç seçin" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="available">Müsait</SelectItem>
-                  <SelectItem value="service">Serviste</SelectItem>
-                  <SelectItem value="unavailable">Müsait Değil</SelectItem>
+                <SelectContent>
+                  {vehicles.map(v => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.plate} - {v.brand} {v.model}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+            
+            <div className="space-y-2">
+              <Label>Müşteri</Label>
+              <Select 
+                value={reservationForm.customer_id} 
+                onValueChange={(v) => setReservationForm({...reservationForm, customer_id: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Müşteri seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.first_name} {c.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Başlangıç Tarihi</Label>
+                <Input 
+                  type="date" 
+                  value={reservationForm.start_date}
+                  onChange={(e) => setReservationForm({...reservationForm, start_date: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Bitiş Tarihi</Label>
+                <Input 
+                  type="date" 
+                  value={reservationForm.end_date}
+                  onChange={(e) => setReservationForm({...reservationForm, end_date: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Günlük Ücret (₺)</Label>
+              <Input 
+                type="number" 
+                placeholder="0"
+                value={reservationForm.daily_rate}
+                onChange={(e) => setReservationForm({...reservationForm, daily_rate: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Notlar</Label>
+              <Input 
+                placeholder="Opsiyonel notlar..."
+                value={reservationForm.notes}
+                onChange={(e) => setReservationForm({...reservationForm, notes: e.target.value})}
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)} className="border-slate-600 text-slate-300">
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (selectedReservation) {
+                  handleDeleteReservation(selectedReservation.id);
+                  setIsEditReservationOpen(false);
+                }
+              }}
+            >
+              Sil
+            </Button>
+            <Button variant="outline" onClick={() => setIsEditReservationOpen(false)}>
               İptal
             </Button>
-            <Button onClick={handleSaveStatus} className="bg-orange-600 hover:bg-orange-700">
+            <Button onClick={() => handleSaveReservation(true)} className="bg-orange-500 hover:bg-orange-600">
               Kaydet
             </Button>
           </DialogFooter>
