@@ -944,7 +944,7 @@ export function Integrations() {
                     <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium">Araç verisi yok</h3>
                     <p className="text-muted-foreground mt-1">
-                      "Araçları Yükle" butonuna tıklayarak Arvento'dan araç verilerini çekin
+                      Araçları Yükle butonuna tıklayarak Arvento verilerini çekin
                     </p>
                   </CardContent>
                 </Card>
@@ -959,7 +959,7 @@ export function Integrations() {
                 <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
                 <h3 className="text-lg font-medium">Arvento Yapılandırılmamış</h3>
                 <p className="text-muted-foreground mt-1">
-                  Yukarıdaki formu doldurup "Kaydet" butonuna tıklayın
+                  Yukarıdaki formu doldurup Kaydet butonuna tıklayın
                 </p>
                 <p className="text-sm text-amber-600 mt-2">
                   Not: Arvento panelinden API PIN kodlarınızı almanız gerekmektedir.
