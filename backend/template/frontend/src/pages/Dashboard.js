@@ -124,7 +124,7 @@ export function Dashboard() {
             {company?.name || "Rent A Car"} 
           </h1>
           <p className="text-muted-foreground mt-1">
-            Merhaba {user?.full_name}, bugün harika bir gün! 🚗
+            Merhaba {company?.owner_name || user?.full_name || "Firma Admin"}, bugün harika bir gün! 🚗
           </p>
         </div>
         <Button onClick={fetchDashboardData} variant="outline" size="sm" data-testid="refresh-dashboard">
@@ -136,20 +136,22 @@ export function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {statCards.map((stat, index) => (
-          <Card key={index} className="card-interactive" data-testid={`stat-card-${index}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+          <Link to={stat.link} key={index}>
+            <Card className="card-interactive hover:shadow-md transition-shadow cursor-pointer" data-testid={`stat-card-${index}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
+                  {stat.isRevenue && <TrendingUp className="h-4 w-4 text-green-500" />}
                 </div>
-                {stat.isRevenue && <TrendingUp className="h-4 w-4 text-green-500" />}
-              </div>
-              <div className="mt-3">
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stat.title}</p>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="mt-3">
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{stat.title}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
