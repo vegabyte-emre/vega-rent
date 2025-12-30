@@ -436,6 +436,53 @@ async def update_vehicle_status(vehicle_id: str, status_update: dict, user: dict
     
     return {"success": True, "message": "Status updated"}
 
+@app.put("/api/vehicles/{vehicle_id}")
+async def update_vehicle(vehicle_id: str, vehicle_data: dict, user: dict = Depends(get_current_user)):
+    """Araç bilgilerini güncelle"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.OPERASYON.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    # Mevcut aracı kontrol et
+    existing = await db.vehicles.find_one({"id": vehicle_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    # Güncellenebilir alanlar
+    allowed_fields = [
+        "plate", "brand", "model", "year", "segment", "transmission", 
+        "fuel_type", "seat_count", "door_count", "daily_rate", "color",
+        "mileage", "status", "image_url", "branch_id"
+    ]
+    
+    update_data = {}
+    for field in allowed_fields:
+        if field in vehicle_data:
+            update_data[field] = vehicle_data[field]
+    
+    # Plakayı büyük harfe çevir
+    if "plate" in update_data:
+        update_data["plate"] = update_data["plate"].upper()
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.vehicles.update_one({"id": vehicle_id}, {"$set": update_data})
+    
+    # Güncellenmiş aracı döndür
+    updated = await db.vehicles.find_one({"id": vehicle_id}, {"_id": 0})
+    return updated
+
+@app.delete("/api/vehicles/{vehicle_id}")
+async def delete_vehicle(vehicle_id: str, user: dict = Depends(get_current_user)):
+    """Araç sil"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.OPERASYON.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    result = await db.vehicles.delete_one({"id": vehicle_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    return {"success": True, "message": "Araç silindi"}
+
 # ============== CUSTOMER ROUTES ==============
 @app.post("/api/customers", response_model=CustomerResponse)
 async def create_customer(customer: CustomerCreate, user: dict = Depends(get_current_user)):
