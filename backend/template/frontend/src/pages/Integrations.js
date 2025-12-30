@@ -148,6 +148,13 @@ export function Integrations() {
   const [arventoLoading, setArventoLoading] = useState(false);
   const [arventoTesting, setArventoTesting] = useState(false);
   const [arventoVehicles, setArventoVehicles] = useState([]);
+  const [arventoActiveSection, setArventoActiveSection] = useState("vehicles");
+  const [arventoReportData, setArventoReportData] = useState(null);
+  const [arventoSelectedVehicle, setArventoSelectedVehicle] = useState(null);
+  const [arventoDateRange, setArventoDateRange] = useState({
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
 
   useEffect(() => {
     loadIntegrations();
