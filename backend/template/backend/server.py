@@ -1474,6 +1474,366 @@ async def get_arvento_mappings(user: dict = Depends(get_current_user)):
     arvento = create_arvento_service(settings)
     return await arvento.get_license_plate_mappings()
 
+# ============== ARVENTO EXTENDED API ==============
+
+@app.get("/api/arvento/groups")
+async def get_arvento_groups(user: dict = Depends(get_current_user)):
+    """Araç gruplarını al"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "groups": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "groups": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_vehicle_groups()
+
+@app.get("/api/arvento/drivers")
+async def get_arvento_drivers(user: dict = Depends(get_current_user)):
+    """Sürücü listesini al"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "drivers": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "drivers": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_drivers()
+
+@app.get("/api/arvento/vehicle/{node_id}/location")
+async def get_arvento_vehicle_location(node_id: str, user: dict = Depends(get_current_user)):
+    """Tek araç son konumu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "message": "Arvento servisi yüklenemedi"}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_last_known_location(node_id=node_id)
+
+@app.get("/api/arvento/vehicle/{node_id}/trips")
+async def get_arvento_vehicle_trips(
+    node_id: str,
+    start_date: str,
+    end_date: str,
+    user: dict = Depends(get_current_user)
+):
+    """Araç sefer raporu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "trips": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "trips": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_trip_report(node_id=node_id, start_date=start_date, end_date=end_date)
+
+@app.get("/api/arvento/vehicle/{node_id}/stops")
+async def get_arvento_vehicle_stops(
+    node_id: str,
+    start_date: str,
+    end_date: str,
+    min_duration: int = 5,
+    user: dict = Depends(get_current_user)
+):
+    """Araç duruş raporu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "stops": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "stops": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_stop_report(node_id, start_date, end_date, min_duration)
+
+@app.get("/api/arvento/vehicle/{node_id}/idle")
+async def get_arvento_vehicle_idle(
+    node_id: str,
+    start_date: str,
+    end_date: str,
+    user: dict = Depends(get_current_user)
+):
+    """Araç rölanti raporu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "idle_events": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "idle_events": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_idle_report(node_id, start_date, end_date)
+
+@app.get("/api/arvento/vehicle/{node_id}/speed")
+async def get_arvento_vehicle_speed(
+    node_id: str,
+    start_date: str,
+    end_date: str,
+    user: dict = Depends(get_current_user)
+):
+    """Araç hız raporu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "speed_data": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "speed_data": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_speed_report(node_id, start_date, end_date)
+
+@app.get("/api/arvento/speed-violations")
+async def get_arvento_speed_violations(
+    node_id: str = None,
+    group: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    speed_limit: int = 120,
+    user: dict = Depends(get_current_user)
+):
+    """Hız ihlalleri raporu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "violations": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "violations": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_speed_violations(node_id, group, start_date, end_date, speed_limit)
+
+@app.get("/api/arvento/vehicle/{node_id}/odometer")
+async def get_arvento_vehicle_odometer(node_id: str, user: dict = Depends(get_current_user)):
+    """Araç kilometre bilgisi"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "message": "Arvento servisi yüklenemedi"}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_odometer(node_id)
+
+@app.get("/api/arvento/kilometer-report")
+async def get_arvento_kilometer_report(
+    node_id: str = None,
+    group: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    user: dict = Depends(get_current_user)
+):
+    """Kilometre raporu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "report": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "report": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_kilometer_report(node_id, group, start_date, end_date)
+
+@app.get("/api/arvento/vehicle/{node_id}/fuel")
+async def get_arvento_vehicle_fuel(
+    node_id: str,
+    start_date: str,
+    end_date: str,
+    user: dict = Depends(get_current_user)
+):
+    """Araç yakıt raporu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "fuel_data": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "fuel_data": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_fuel_report(node_id, start_date, end_date)
+
+@app.get("/api/arvento/vehicle/{node_id}/fuel-consumption")
+async def get_arvento_fuel_consumption(
+    node_id: str,
+    start_date: str,
+    end_date: str,
+    user: dict = Depends(get_current_user)
+):
+    """Yakıt tüketimi raporu"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "consumption_data": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "consumption_data": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_fuel_consumption(node_id, start_date, end_date)
+
+@app.get("/api/arvento/maintenance")
+async def get_arvento_maintenance(node_id: str = None, user: dict = Depends(get_current_user)):
+    """Bakım bilgileri"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "maintenance": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "maintenance": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_maintenance_info(node_id)
+
+@app.get("/api/arvento/service-reminders")
+async def get_arvento_service_reminders(node_id: str = None, user: dict = Depends(get_current_user)):
+    """Servis hatırlatmaları"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "reminders": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "reminders": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_service_reminders(node_id)
+
+@app.get("/api/arvento/alarms")
+async def get_arvento_alarms(
+    node_id: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    user: dict = Depends(get_current_user)
+):
+    """Alarm listesi"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "alarms": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "alarms": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_alarms(node_id, start_date, end_date)
+
+@app.get("/api/arvento/alarm-types")
+async def get_arvento_alarm_types(user: dict = Depends(get_current_user)):
+    """Alarm türleri"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "alarm_types": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "alarm_types": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_alarm_types()
+
+@app.get("/api/arvento/events")
+async def get_arvento_events(
+    node_id: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    user: dict = Depends(get_current_user)
+):
+    """Olay listesi"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "events": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "events": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_events(node_id, start_date, end_date)
+
+@app.get("/api/arvento/pois")
+async def get_arvento_pois(user: dict = Depends(get_current_user)):
+    """İlgi noktaları (POI)"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "pois": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "pois": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_pois()
+
+@app.get("/api/arvento/routes")
+async def get_arvento_routes(node_id: str = None, user: dict = Depends(get_current_user)):
+    """Rota listesi"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, UserRole.PERSONEL.value]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    if not ARVENTO_AVAILABLE:
+        return {"success": False, "routes": []}
+    
+    settings = await db.arvento_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "routes": [], "message": "Arvento yapılandırılmamış"}
+    
+    arvento = create_arvento_service(settings)
+    return await arvento.get_routes(node_id)
+
 # ============== PUBLIC API (Mobil Uygulama & Landing Page) ==============
 
 @app.get("/api/public/company")
