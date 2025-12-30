@@ -612,7 +612,7 @@ export const PriceCalendar = () => {
                   <SelectValue placeholder="Müşteri seçin (opsiyonel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Seçilmedi</SelectItem>
+                  <SelectItem value="none">Seçilmedi</SelectItem>
                   {customers.map(c => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.first_name} {c.last_name}
@@ -721,7 +721,7 @@ export const PriceCalendar = () => {
                   <SelectValue placeholder="Müşteri seçin (opsiyonel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Seçilmedi</SelectItem>
+                  <SelectItem value="none">Seçilmedi</SelectItem>
                   {customers.map(c => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.first_name} {c.last_name}
