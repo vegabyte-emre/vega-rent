@@ -433,6 +433,62 @@ export function Vehicles() {
                     data-testid="vehicle-mileage"
                   />
                 </div>
+                {branches.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Şube</Label>
+                    <Select value={formData.branch_id || 'none'} onValueChange={(v) => handleChange("branch_id", v === 'none' ? '' : v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Şube seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Merkez</SelectItem>
+                        {branches.map(b => (
+                          <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              {/* Image Upload */}
+              <div className="space-y-2">
+                <Label>Araç Görseli</Label>
+                <div className="flex items-center gap-4">
+                  {formData.image_url ? (
+                    <div className="relative w-32 h-24 rounded-lg overflow-hidden border">
+                      <img src={formData.image_url} alt="Araç" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleChange('image_url', '')}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-32 h-24 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted/20">
+                      <Car className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="vehicle-image-add"
+                    />
+                    <label htmlFor="vehicle-image-add">
+                      <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
+                        <span>
+                          {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                          Resim Yükle
+                        </span>
+                      </Button>
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG (max 5MB)</p>
+                  </div>
+                </div>
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
@@ -441,6 +497,233 @@ export function Vehicles() {
                 <Button type="submit" disabled={saving} data-testid="save-vehicle-btn">
                   {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Kaydet
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Vehicle Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Araç Düzenle</DialogTitle>
+              <DialogDescription>Araç bilgilerini güncelleyin</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleUpdate} className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Plaka</Label>
+                  <Input
+                    value={formData.plate}
+                    onChange={(e) => handleChange("plate", e.target.value.toUpperCase())}
+                    placeholder="34 ABC 123"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Marka</Label>
+                  <Input
+                    value={formData.brand}
+                    onChange={(e) => handleChange("brand", e.target.value)}
+                    placeholder="Toyota"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Model</Label>
+                  <Input
+                    value={formData.model}
+                    onChange={(e) => handleChange("model", e.target.value)}
+                    placeholder="Corolla"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Yıl</Label>
+                  <Input
+                    type="number"
+                    value={formData.year}
+                    onChange={(e) => handleChange("year", parseInt(e.target.value))}
+                    min="2000"
+                    max="2030"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Segment</Label>
+                  <Select value={formData.segment} onValueChange={(v) => handleChange("segment", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Ekonomi">Ekonomi</SelectItem>
+                      <SelectItem value="Sedan">Sedan</SelectItem>
+                      <SelectItem value="SUV">SUV</SelectItem>
+                      <SelectItem value="Hatchback">Hatchback</SelectItem>
+                      <SelectItem value="Lüks">Lüks</SelectItem>
+                      <SelectItem value="Ticari">Ticari</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Vites</Label>
+                  <Select value={formData.transmission} onValueChange={(v) => handleChange("transmission", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manuel">Manuel</SelectItem>
+                      <SelectItem value="otomatik">Otomatik</SelectItem>
+                      <SelectItem value="yari_otomatik">Yarı Otomatik</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Yakıt</Label>
+                  <Select value={formData.fuel_type} onValueChange={(v) => handleChange("fuel_type", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="benzin">Benzin</SelectItem>
+                      <SelectItem value="dizel">Dizel</SelectItem>
+                      <SelectItem value="elektrik">Elektrik</SelectItem>
+                      <SelectItem value="hibrit">Hibrit</SelectItem>
+                      <SelectItem value="lpg">LPG</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Durum</Label>
+                  <Select value={formData.status} onValueChange={(v) => handleChange("status", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Müsait</SelectItem>
+                      <SelectItem value="rented">Kirada</SelectItem>
+                      <SelectItem value="service">Serviste</SelectItem>
+                      <SelectItem value="reserved">Rezerve</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Renk</Label>
+                  <Input
+                    value={formData.color}
+                    onChange={(e) => handleChange("color", e.target.value)}
+                    placeholder="Beyaz"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Koltuk Sayısı</Label>
+                  <Input
+                    type="number"
+                    value={formData.seat_count}
+                    onChange={(e) => handleChange("seat_count", parseInt(e.target.value))}
+                    min="2"
+                    max="9"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Kapı Sayısı</Label>
+                  <Input
+                    type="number"
+                    value={formData.door_count}
+                    onChange={(e) => handleChange("door_count", parseInt(e.target.value))}
+                    min="2"
+                    max="5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Günlük Ücret (₺)</Label>
+                  <Input
+                    type="number"
+                    value={formData.daily_rate}
+                    onChange={(e) => handleChange("daily_rate", parseFloat(e.target.value))}
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Kilometre</Label>
+                  <Input
+                    type="number"
+                    value={formData.mileage}
+                    onChange={(e) => handleChange("mileage", parseInt(e.target.value))}
+                    min="0"
+                  />
+                </div>
+                {branches.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Şube</Label>
+                    <Select value={formData.branch_id || 'none'} onValueChange={(v) => handleChange("branch_id", v === 'none' ? '' : v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Şube seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Merkez</SelectItem>
+                        {branches.map(b => (
+                          <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              {/* Image Upload */}
+              <div className="space-y-2">
+                <Label>Araç Görseli</Label>
+                <div className="flex items-center gap-4">
+                  {formData.image_url ? (
+                    <div className="relative w-32 h-24 rounded-lg overflow-hidden border">
+                      <img src={formData.image_url} alt="Araç" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleChange('image_url', '')}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-32 h-24 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted/20">
+                      <Car className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="vehicle-image-edit"
+                    />
+                    <label htmlFor="vehicle-image-edit">
+                      <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
+                        <span>
+                          {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                          Resim Yükle
+                        </span>
+                      </Button>
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG (max 5MB)</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="destructive" onClick={() => selectedVehicle && handleDelete(selectedVehicle.id)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Sil
+                </Button>
+                <Button type="button" variant="outline" onClick={() => { setIsEditOpen(false); resetForm(); }}>
+                  İptal
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Güncelle
                 </Button>
               </div>
             </form>
