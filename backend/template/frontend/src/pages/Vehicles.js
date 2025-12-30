@@ -41,17 +41,25 @@ import {
   Settings2,
   Users as UsersIcon,
   Loader2,
+  Edit,
+  Trash2,
+  Image,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 
 
 export function Vehicles() {
   const [vehicles, setVehicles] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     plate: "",
     brand: "",
@@ -65,10 +73,14 @@ export function Vehicles() {
     daily_rate: 0,
     color: "",
     mileage: 0,
+    image_url: "",
+    branch_id: "",
+    status: "available",
   });
 
   useEffect(() => {
     fetchVehicles();
+    fetchBranches();
   }, [statusFilter]);
 
   const fetchVehicles = async () => {
@@ -84,36 +96,161 @@ export function Vehicles() {
     }
   };
 
+  const fetchBranches = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${getApiUrl()}/api/branches`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBranches(response.data || []);
+    } catch (error) {
+      // silently fail
+    }
+  };
+
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const resetForm = () => {
+    setFormData({
+      plate: "",
+      brand: "",
+      model: "",
+      year: new Date().getFullYear(),
+      segment: "Sedan",
+      transmission: "otomatik",
+      fuel_type: "benzin",
+      seat_count: 5,
+      door_count: 4,
+      daily_rate: 0,
+      color: "",
+      mileage: 0,
+      image_url: "",
+      branch_id: "",
+      status: "available",
+    });
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      toast.error('Lütfen bir resim dosyası seçin');
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Dosya boyutu 5MB dan küçük olmalı');
+      return;
+    }
+    
+    setUploading(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${getApiUrl()}/api/upload`, formDataUpload, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (response.data.url) {
+        handleChange('image_url', response.data.url);
+        toast.success('Resim yüklendi');
+      }
+    } catch (error) {
+      // Fallback: Base64 olarak kaydet
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        handleChange('image_url', reader.result);
+        toast.success('Resim eklendi');
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.post(`${getApiUrl()}/api/vehicles`, formData);
+      const token = localStorage.getItem('token');
+      await axios.post(`${getApiUrl()}/api/vehicles`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       toast.success("Araç başarıyla eklendi");
       setIsAddOpen(false);
-      setFormData({
-        plate: "",
-        brand: "",
-        model: "",
-        year: new Date().getFullYear(),
-        segment: "Sedan",
-        transmission: "otomatik",
-        fuel_type: "benzin",
-        seat_count: 5,
-        door_count: 4,
-        daily_rate: 0,
-        color: "",
-        mileage: 0,
-      });
+      resetForm();
       fetchVehicles();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Araç eklenirken hata oluştu");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEdit = (vehicle) => {
+    setSelectedVehicle(vehicle);
+    setFormData({
+      plate: vehicle.plate || "",
+      brand: vehicle.brand || "",
+      model: vehicle.model || "",
+      year: vehicle.year || new Date().getFullYear(),
+      segment: vehicle.segment || "Sedan",
+      transmission: vehicle.transmission || "otomatik",
+      fuel_type: vehicle.fuel_type || "benzin",
+      seat_count: vehicle.seat_count || 5,
+      door_count: vehicle.door_count || 4,
+      daily_rate: vehicle.daily_rate || 0,
+      color: vehicle.color || "",
+      mileage: vehicle.mileage || 0,
+      image_url: vehicle.image_url || "",
+      branch_id: vehicle.branch_id || "",
+      status: vehicle.status || "available",
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!selectedVehicle) return;
+    
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${getApiUrl()}/api/vehicles/${selectedVehicle.id}`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Araç güncellendi");
+      setIsEditOpen(false);
+      resetForm();
+      setSelectedVehicle(null);
+      fetchVehicles();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Araç güncellenirken hata oluştu");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (vehicleId) => {
+    if (!window.confirm('Bu aracı silmek istediğinize emin misiniz?')) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${getApiUrl()}/api/vehicles/${vehicleId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Araç silindi");
+      fetchVehicles();
+    } catch (error) {
+      toast.error("Araç silinemedi");
     }
   };
 
