@@ -874,6 +874,277 @@ async def update_profile(data: dict, user: dict = Depends(get_current_user)):
     
     return {"success": True, "message": "Profil güncellendi"}
 
+# ============== USER MANAGEMENT ==============
+
+@app.get("/api/users")
+async def list_users(user: dict = Depends(get_current_user)):
+    """Kullanıcı listesi - Sadece firma admini"""
+    if user["role"] != UserRole.FIRMA_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    users = await db.users.find(
+        {"company_id": user.get("company_id")},
+        {"_id": 0, "password": 0}
+    ).to_list(1000)
+    return users
+
+@app.post("/api/users")
+async def create_user(data: dict, user: dict = Depends(get_current_user)):
+    """Yeni kullanıcı oluştur"""
+    if user["role"] != UserRole.FIRMA_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    existing = await db.users.find_one({"email": data.get("email")})
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu e-posta zaten kullanılıyor")
+    
+    hashed_password = bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt()).decode()
+    
+    new_user = {
+        "id": str(uuid.uuid4()),
+        "email": data["email"],
+        "password": hashed_password,
+        "full_name": data.get("full_name", ""),
+        "phone": data.get("phone", ""),
+        "role": data.get("role", "personel"),
+        "company_id": user.get("company_id"),
+        "branch_id": data.get("branch_id"),
+        "permissions": data.get("permissions", []),
+        "is_active": data.get("is_active", True),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(new_user)
+    del new_user["password"]
+    new_user.pop("_id", None)
+    return new_user
+
+@app.put("/api/users/{user_id}")
+async def update_user(user_id: str, data: dict, user: dict = Depends(get_current_user)):
+    """Kullanıcı güncelle"""
+    if user["role"] != UserRole.FIRMA_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    update_data = {}
+    allowed_fields = ["full_name", "phone", "role", "branch_id", "permissions", "is_active"]
+    
+    for field in allowed_fields:
+        if field in data:
+            update_data[field] = data[field]
+    
+    if "password" in data and data["password"]:
+        update_data["password"] = bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt()).decode()
+    
+    if "email" in data:
+        existing = await db.users.find_one({"email": data["email"], "id": {"$ne": user_id}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Bu e-posta zaten kullanılıyor")
+        update_data["email"] = data["email"]
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.users.update_one({"id": user_id}, {"$set": update_data})
+    return {"success": True, "message": "Kullanıcı güncellendi"}
+
+@app.delete("/api/users/{user_id}")
+async def delete_user(user_id: str, user: dict = Depends(get_current_user)):
+    """Kullanıcı sil"""
+    if user["role"] != UserRole.FIRMA_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    return {"success": True, "message": "Kullanıcı silindi"}
+
+# ============== BRANCHES (Şubeler) ==============
+
+@app.get("/api/branches")
+async def list_branches(user: dict = Depends(get_current_user)):
+    """Şube listesi"""
+    query = {}
+    # Şube yetkilisi sadece kendi şubesini görebilir
+    if user.get("branch_id") and user["role"] != UserRole.FIRMA_ADMIN.value:
+        query["id"] = user["branch_id"]
+    
+    branches = await db.branches.find(query, {"_id": 0}).to_list(100)
+    return branches
+
+@app.post("/api/branches")
+async def create_branch(data: dict, user: dict = Depends(get_current_user)):
+    """Yeni şube oluştur"""
+    if user["role"] != UserRole.FIRMA_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    branch = {
+        "id": str(uuid.uuid4()),
+        "name": data.get("name", ""),
+        "code": data.get("code", ""),
+        "address": data.get("address", ""),
+        "city": data.get("city", ""),
+        "district": data.get("district", ""),
+        "phone": data.get("phone", ""),
+        "email": data.get("email", ""),
+        "working_hours": data.get("working_hours", "09:00 - 18:00"),
+        "latitude": data.get("latitude"),
+        "longitude": data.get("longitude"),
+        "is_pickup": data.get("is_pickup", True),
+        "is_dropoff": data.get("is_dropoff", True),
+        "is_active": data.get("is_active", True),
+        "company_id": user.get("company_id"),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.branches.insert_one(branch)
+    branch.pop("_id", None)
+    return branch
+
+@app.put("/api/branches/{branch_id}")
+async def update_branch(branch_id: str, data: dict, user: dict = Depends(get_current_user)):
+    """Şube güncelle"""
+    if user["role"] != UserRole.FIRMA_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    update_data = {k: v for k, v in data.items() if k not in ["id", "_id", "company_id", "created_at"]}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.branches.update_one({"id": branch_id}, {"$set": update_data})
+    return {"success": True, "message": "Şube güncellendi"}
+
+@app.delete("/api/branches/{branch_id}")
+async def delete_branch(branch_id: str, user: dict = Depends(get_current_user)):
+    """Şube sil"""
+    if user["role"] != UserRole.FIRMA_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    result = await db.branches.delete_one({"id": branch_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Şube bulunamadı")
+    return {"success": True, "message": "Şube silindi"}
+
+# ============== PUBLIC BRANCHES (Landing Page için) ==============
+
+@app.get("/api/public/branches")
+async def list_public_branches():
+    """Aktif şubeleri listele - Public"""
+    branches = await db.branches.find(
+        {"is_active": True},
+        {"_id": 0, "id": 1, "name": 1, "city": 1, "district": 1, "address": 1, "is_pickup": 1, "is_dropoff": 1}
+    ).to_list(100)
+    return branches
+
+# ============== FINANCE (Finans) ==============
+
+@app.get("/api/finance/stats")
+async def get_finance_stats(
+    start_date: str = None,
+    end_date: str = None,
+    branch_id: str = None,
+    user: dict = Depends(get_current_user)
+):
+    """Finans istatistikleri"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, "muhasebe"]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    query = {}
+    if branch_id and branch_id != "all":
+        query["branch_id"] = branch_id
+    elif user.get("branch_id") and user["role"] != UserRole.FIRMA_ADMIN.value:
+        query["branch_id"] = user["branch_id"]
+    
+    # Rezervasyonlardan gelir hesapla
+    reservations = await db.reservations.find(query, {"_id": 0}).to_list(10000)
+    
+    total_revenue = sum(r.get("total_amount", 0) for r in reservations if r.get("status") in ["completed", "active"])
+    
+    # Tarih filtresi
+    if start_date and end_date:
+        filtered_res = [r for r in reservations if r.get("start_date", "") >= start_date and r.get("start_date", "") <= end_date]
+        monthly_revenue = sum(r.get("total_amount", 0) for r in filtered_res if r.get("status") in ["completed", "active"])
+    else:
+        monthly_revenue = total_revenue
+    
+    # Gider hesapla (transactions koleksiyonundan)
+    expenses = await db.transactions.find({**query, "type": "expense"}, {"_id": 0}).to_list(1000)
+    total_expenses = sum(e.get("amount", 0) for e in expenses)
+    
+    return {
+        "total_revenue": total_revenue,
+        "monthly_revenue": monthly_revenue,
+        "total_expenses": total_expenses,
+        "net_profit": monthly_revenue - total_expenses,
+        "pending_payments": len([r for r in reservations if r.get("payment_status") == "pending"]),
+        "completed_payments": len([r for r in reservations if r.get("payment_status") == "paid"])
+    }
+
+@app.get("/api/finance/transactions")
+async def list_transactions(
+    start_date: str = None,
+    end_date: str = None,
+    branch_id: str = None,
+    user: dict = Depends(get_current_user)
+):
+    """İşlem listesi"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, "muhasebe"]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    query = {}
+    if branch_id and branch_id != "all":
+        query["branch_id"] = branch_id
+    elif user.get("branch_id") and user["role"] != UserRole.FIRMA_ADMIN.value:
+        query["branch_id"] = user["branch_id"]
+    
+    if start_date:
+        query["date"] = {"$gte": start_date}
+    if end_date:
+        if "date" in query:
+            query["date"]["$lte"] = end_date
+        else:
+            query["date"] = {"$lte": end_date}
+    
+    transactions = await db.transactions.find(query, {"_id": 0}).to_list(1000)
+    return transactions
+
+@app.post("/api/finance/transactions")
+async def create_transaction(data: dict, user: dict = Depends(get_current_user)):
+    """Yeni işlem ekle"""
+    if user["role"] not in [UserRole.FIRMA_ADMIN.value, "muhasebe"]:
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    transaction = {
+        "id": str(uuid.uuid4()),
+        "type": data.get("type", "income"),
+        "category": data.get("category", "other"),
+        "amount": float(data.get("amount", 0)),
+        "description": data.get("description", ""),
+        "date": data.get("date", datetime.now(timezone.utc).isoformat().split("T")[0]),
+        "branch_id": data.get("branch_id") or user.get("branch_id"),
+        "created_by": user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.transactions.insert_one(transaction)
+    transaction.pop("_id", None)
+    return transaction
+
+# ============== FILE UPLOAD ==============
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile, user: dict = Depends(get_current_user)):
+    """Dosya yükle"""
+    import os
+    import base64
+    
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Sadece resim dosyaları kabul edilir")
+    
+    # Dosyayı base64 olarak kaydet
+    contents = await file.read()
+    base64_data = base64.b64encode(contents).decode('utf-8')
+    data_url = f"data:{file.content_type};base64,{base64_data}"
+    
+    return {"url": data_url, "filename": file.filename}
+
 # ============== PRICE RULES ROUTES ==============
 @app.post("/api/price-rules", response_model=PriceRuleResponse)
 async def create_price_rule(rule: PriceRuleCreate, user: dict = Depends(get_current_user)):
