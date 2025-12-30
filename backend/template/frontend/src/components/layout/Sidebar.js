@@ -34,18 +34,19 @@ const isAdminPanel = window.location.hostname.startsWith('panel.');
 const pathPrefix = isAdminPanel ? '' : '/admin';
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: `${pathPrefix}/dashboard`, roles: ["firma_admin", "operasyon", "muhasebe"] },
+  { icon: LayoutDashboard, label: "Dashboard", path: `${pathPrefix}/dashboard`, roles: ["firma_admin", "operasyon", "muhasebe", "personel"] },
   { icon: Car, label: "Araçlar", path: `${pathPrefix}/vehicles`, roles: ["firma_admin", "operasyon", "personel"] },
   { icon: CalendarDays, label: "Fiyat / Müsaitlik", path: `${pathPrefix}/price-calendar`, roles: ["firma_admin", "operasyon"] },
   { icon: Users, label: "Müşteriler", path: `${pathPrefix}/customers`, roles: ["firma_admin", "operasyon"] },
   { icon: Calendar, label: "Rezervasyonlar", path: `${pathPrefix}/reservations`, roles: ["firma_admin", "operasyon", "personel"] },
-  { icon: MapPin, label: "Lokasyonlar", path: `${pathPrefix}/locations`, roles: ["firma_admin", "operasyon"] },
+  { icon: Building2, label: "Şubeler", path: `${pathPrefix}/branches`, roles: ["firma_admin", "operasyon"] },
+  { icon: UserCog, label: "Kullanıcı Yönetimi", path: `${pathPrefix}/user-management`, roles: ["firma_admin"] },
+  { icon: Wallet, label: "Finans", path: `${pathPrefix}/finance`, roles: ["firma_admin", "muhasebe"] },
   { icon: Smartphone, label: "Mobil Uygulamalar", path: `${pathPrefix}/mobile-apps`, roles: ["firma_admin"] },
   { icon: MapPin, label: "GPS Takip", path: `${pathPrefix}/gps`, roles: ["firma_admin", "operasyon"] },
-  { icon: Wallet, label: "HGS Takip", path: `${pathPrefix}/hgs`, roles: ["firma_admin", "operasyon"] },
+  { icon: CreditCard, label: "HGS Takip", path: `${pathPrefix}/hgs`, roles: ["firma_admin", "operasyon"] },
   { icon: FileCheck, label: "KABİS", path: `${pathPrefix}/kabis`, roles: ["firma_admin", "operasyon"] },
   { icon: Link2, label: "Entegrasyonlar", path: `${pathPrefix}/integrations`, roles: ["firma_admin"] },
-  { icon: CreditCard, label: "Ödemeler", path: `${pathPrefix}/payments`, roles: ["firma_admin", "muhasebe"] },
   { icon: FileText, label: "Raporlar", path: `${pathPrefix}/reports`, roles: ["firma_admin", "muhasebe"] },
   { icon: Palette, label: "Tema Mağazası", path: `${pathPrefix}/theme-store`, roles: ["firma_admin"] },
   { icon: HelpCircle, label: "Destek", path: `${pathPrefix}/support`, roles: ["firma_admin", "operasyon", "personel", "muhasebe"] },
