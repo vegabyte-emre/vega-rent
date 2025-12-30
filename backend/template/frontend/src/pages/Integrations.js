@@ -41,7 +41,19 @@ import {
   Zap,
   Shield,
   Clock,
-  TrendingUp
+  TrendingUp,
+  MapPin,
+  Gauge,
+  Fuel,
+  Wrench,
+  Bell,
+  Route,
+  Navigation,
+  Activity,
+  AlertTriangle,
+  Timer,
+  BarChart3,
+  Users
 } from "lucide-react";
 import { toast } from "sonner";
 
