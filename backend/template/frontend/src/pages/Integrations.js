@@ -252,6 +252,142 @@ export function Integrations() {
     }
   };
 
+  // New Arvento Functions
+  const loadArventoReport = async (reportType, nodeId = null) => {
+    setArventoLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      let endpoint = "";
+      let params = new URLSearchParams();
+      
+      if (nodeId) params.append("node_id", nodeId);
+      params.append("start_date", arventoDateRange.start + " 00:00:00");
+      params.append("end_date", arventoDateRange.end + " 23:59:59");
+      
+      switch (reportType) {
+        case "trips":
+          endpoint = nodeId ? `/api/arvento/vehicle/${nodeId}/trips` : `/api/arvento/kilometer-report`;
+          break;
+        case "stops":
+          endpoint = `/api/arvento/vehicle/${nodeId}/stops`;
+          break;
+        case "speed":
+          endpoint = nodeId ? `/api/arvento/vehicle/${nodeId}/speed` : `/api/arvento/speed-violations`;
+          break;
+        case "fuel":
+          endpoint = `/api/arvento/vehicle/${nodeId}/fuel`;
+          break;
+        case "maintenance":
+          endpoint = `/api/arvento/maintenance`;
+          break;
+        case "alarms":
+          endpoint = `/api/arvento/alarms`;
+          break;
+        case "drivers":
+          endpoint = `/api/arvento/drivers`;
+          break;
+        case "groups":
+          endpoint = `/api/arvento/groups`;
+          break;
+        default:
+          endpoint = `/api/arvento/vehicles`;
+      }
+      
+      const response = await axios.get(`${getApiUrl()}${endpoint}?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setArventoReportData({
+        type: reportType,
+        data: response.data,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (response.data.success) {
+        toast.success(`${reportType} raporu yüklendi`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Rapor yüklenemedi");
+    } finally {
+      setArventoLoading(false);
+    }
+  };
+
+  const loadArventoSpeedViolations = async () => {
+    setArventoLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams({
+        start_date: arventoDateRange.start + " 00:00:00",
+        end_date: arventoDateRange.end + " 23:59:59",
+        speed_limit: "120"
+      });
+      
+      const response = await axios.get(`${getApiUrl()}/api/arvento/speed-violations?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setArventoReportData({
+        type: "speed_violations",
+        data: response.data,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (response.data.success) {
+        toast.success(`${response.data.count || 0} hız ihlali bulundu`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Hız ihlalleri yüklenemedi");
+    } finally {
+      setArventoLoading(false);
+    }
+  };
+
+  const loadArventoAlarms = async () => {
+    setArventoLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams({
+        start_date: arventoDateRange.start + " 00:00:00",
+        end_date: arventoDateRange.end + " 23:59:59"
+      });
+      
+      const response = await axios.get(`${getApiUrl()}/api/arvento/alarms?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setArventoReportData({
+        type: "alarms",
+        data: response.data,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Alarmlar yüklenemedi");
+    } finally {
+      setArventoLoading(false);
+    }
+  };
+
+  const loadArventoMaintenance = async () => {
+    setArventoLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${getApiUrl()}/api/arvento/maintenance`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setArventoReportData({
+        type: "maintenance",
+        data: response.data,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Bakım bilgileri yüklenemedi");
+    } finally {
+      setArventoLoading(false);
+    }
+  };
+
   const getIntegrationStatus = (platformId) => {
     const integration = integrations.find(i => i.platform_id === platformId);
     return integration || null;
