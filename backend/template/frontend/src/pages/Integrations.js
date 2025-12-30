@@ -1276,7 +1276,7 @@ export function Integrations() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Bu URL'yi platform ayarlarında webhook endpoint olarak kullanın
+                  Bu URL yi platform ayarlarında webhook endpoint olarak kullanın
                 </p>
               </div>
             </CardContent>
