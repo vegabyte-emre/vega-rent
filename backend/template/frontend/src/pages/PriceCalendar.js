@@ -606,7 +606,7 @@ export const PriceCalendar = () => {
               <Label>Müşteri</Label>
               <Select 
                 value={reservationForm.customer_id} 
-                onValueChange={(v) => setReservationForm({...reservationForm, customer_id: v})}
+                onValueChange={(v) => setReservationForm({...reservationForm, customer_id: v === 'none' ? '' : v})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Müşteri seçin (opsiyonel)" />
@@ -715,7 +715,7 @@ export const PriceCalendar = () => {
               <Label>Müşteri</Label>
               <Select 
                 value={reservationForm.customer_id || ''} 
-                onValueChange={(v) => setReservationForm({...reservationForm, customer_id: v})}
+                onValueChange={(v) => setReservationForm({...reservationForm, customer_id: v === 'none' ? '' : v})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Müşteri seçin (opsiyonel)" />
