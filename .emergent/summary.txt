@@ -1,37 +1,41 @@
 <analysis>**original_problem_statement:**
 The user wants to build a SuperAdmin Panel, a multi-tenant corporate car rental SaaS platform. This panel must provision, deploy, and manage isolated Rent A Car application stacks for tenants. A key requirement is a centralized template system managed via GitHub to streamline updates. The user also requested an Integrations page for 3rd-party services and a feature to build and download tenant-specific mobile APKs.
 
-The main goals for this session were:
-1.  Implement a version control system visible in the UI for all components (SuperAdmin, Tenant Panel, Mobile Apps).
-2.  Fix broken connections between the Tenant panel and SuperAdmin (e.g., support tickets).
-3.  Connect the Tenant landing page with backend data (e.g., locations).
-4.  Remove all test/mock data from the entire system.
-5.  Implement a new integration with Arvento GPS tracking service using credentials provided by the user.
-6.  Permanently fix the unreliable Master Template Update -> Tenant Web Template Update workflow that was causing white screens.
+During this session, the user added several major feature requests for the Tenant Panel:
+1.  **Dashboard Revamp:** Display the company owner's name and make stat cards clickable, linking to other sections.
+2.  **New Finance Page:** A comprehensive section to view all income, with PDF/XLSX export capabilities.
+3.  **Vehicle Management Enhancements:** Add functionality to upload vehicle images and edit existing vehicle details.
+4.  **New User Management Page:** Create roles and permissions for tenant-level users.
+5.  **Branches (formerly Locations):** A complete multi-branch management system with data scoping, where each branch manages its own vehicles and users, and the main admin has a global view.
+6.  **KABİS Integration:** Integrate with the EGM's mandatory vehicle rental reporting system.
+7.  **Price/Availability Calendar Redesign:** A complete UI and functional overhaul of the price calendar page.
 
 **PRODUCT REQUIREMENTS:**
 -   **SuperAdmin SaaS Platform:** A central dashboard to manage tenants, deployments, and master templates.
 -   **Tenant Application Stack:** Each tenant gets a separate full-stack application (React frontend, FastAPI backend, MongoDB).
 -   **Centralized Template System:** All tenant updates must originate from master templates synced from dedicated GitHub repositories.
 -   **Production-Ready Data:** The entire application stack (SuperAdmin and Tenant) must be free of mock, seed, or test data.
--   **3rd Party Integrations:** Support for services like Arvento (GPS), iyzico (payments), O Bilet, and Enuygun (vehicle listings).
--   **UI Versioning:** All user-facing applications (SuperAdmin, Tenant Panel, Mobile Apps) must display their current version number.
+-   **3rd Party Integrations:** Support for services like Arvento (GPS), iyzico (payments), and now KABİS (EGM reporting).
+-   **Multi-Branch Hierarchy:** Support for a main tenant admin overseeing multiple branches, with data isolated for branch-level users.
+-   **Role-Based Access Control (RBAC):** Ability to define different user roles within a tenant's organization.
 
 **User's preferred language**: The user communicates in **Turkish**. The next agent MUST respond in Turkish only.
 
 **what currently exists?**
-The agent has successfully implemented a versioning system across the entire platform. The SuperAdmin panel, Tenant panel template, and both mobile app repositories now have version management files (, ) and display the version number in their respective UIs. The SuperAdmin panel also features a live check against GitHub to notify the user of new versions.
+The agent has performed a massive, but incomplete, feature implementation on the Tenant Panel as requested by the user. New, non-functional pages have been created for Finance, User Management, and Branches. The Vehicles page has been updated to include UI elements for image uploads and editing, and the Dashboard has been modified to support clickable cards. The backend has been updated with placeholder API endpoints for these new features. This incomplete version was deployed to the  at the user's request.
 
-A new integration for Arvento GPS has been added. This includes a backend service using SOAP to communicate with Arvento's API and a new Arvento GPS tab on the tenant's Integrations page for entering credentials and viewing data.
+The Price/Availability Calendar was completely redesigned over two iterations and successfully deployed.
 
-However, the session was plagued by persistent deployment and network issues. The agent could not maintain a stable connection to the user's Portainer API, forcing reliance on the user to manually execute complex shell commands, which often led to errors, confusion, and broken states (e.g., white screens on tenant panels). While the agent eventually managed to deploy the new features, the underlying deployment workflow remains fragile.
+The agent also diagnosed the Arvento GPS integration issue, concluding that separate API PINs are required from Arvento. The backend service and frontend UI for Arvento have been fully scaffolded in preparation for receiving these PINs.
+
+Finally, a detailed research report on KABİS integration was completed and presented to the user, outlining the risks and options since no official API exists.
 
 **Last working item**:
--   **Last item agent was working:** Debugging the new Arvento GPS integration. After the user successfully entered their credentials, the API call to fetch vehicles returned 0 araç (0 vehicles), despite the user confirming 18 vehicles exist in their Arvento account. The agent was investigating the SOAP API calls, suspecting an Access Denied error or incorrect API method usage, and was examining the WSDL for clues.
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: N (Agent performed initial  tests and received Access Denied from the SOAP service).
--   **Which testing method agent to use?**: Manual testing. Use  or a Python script to directly query the Arvento SOAP API () with the user's credentials (/) to debug the 0 vehicles issue. Try different SOAP operations like  or  to find one that works.
--   **User Testing Done**: Y (User confirmed the UI works but the data is incorrect).
+-   **Last item agent was working:** The agent just finished scaffolding a large set of new features for the Tenant Panel (Finance, User Management, Branches, Vehicle editing, Dashboard links) and deployed the changes to the  container. The user explicitly requested this deployment without any testing.
+-   **Status**: IN PROGRESS (The features are not functional, only the UI skeletons and backend API stubs have been created).
+-   **Agent Testing Done**: N (User instructed the agent not to test).
+-   **Which testing method agent to use?**: Both. The frontend testing agent will be needed to verify the new UI components and workflows across Finance, User Management, Branches, and Vehicles. The backend testing agent will be needed to test the new API endpoints for CRUD operations on branches, users, financial data, and vehicle image uploads.
+-   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
 -   **Issue 1**: Arvento integration returns 0 vehicles (Priority: P0)
@@ -40,54 +44,58 @@ However, the session was plagued by persistent deployment and network issues. Th
 
 **Issues Detail**:
 -   **Issue 1**: Arvento integration returns 0 vehicles
-    -   **Description**: The Arvento integration is successfully set up on the backend and frontend, and the connection test is successful. However, when trying to fetch the vehicle list, the API returns an empty array, contrary to the user's account which has 18 vehicles. The agent suspects an Access Denied error from the SOAP API for the specific vehicle list operation.
-    -   **Attempted fixes**: The agent tried different SOAP operations (, ) but received Access Denied for both.
-    -   **Next debug checklist**:
-        1.  Using the provided credentials ( / ), create a dedicated Python script to test various Arvento SOAP API endpoints found in the WSDL ().
-        2.  Focus on endpoints that list vehicles, such as  or .
-        3.  Verify the exact XML structure and parameters required for the request. The issue might be a missing parameter like  or a specific report type.
-        4.  Update the  file with the correct, working SOAP call.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a key feature requested by the user and is required for live vehicle tracking.
-    -   **Status**: IN PROGRESS
+    -   **Description**: The integration is set up, but API calls fail with Access Denied. The agent has confirmed that the web portal credentials are not valid for the SOAP API.
+    -   **Attempted fixes**: The agent tested multiple SOAP endpoints and determined that separate API credentials (PIN1/PIN2) are required. The system has been updated with stubs for all necessary Arvento services.
+    -   **Next debug checklist**: The agent is waiting for the user to provide the correct API , , and  from Arvento. Once received, these credentials must be used to test the existing functions in .
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a key feature for live vehicle tracking.
+    -   **Status**: BLOCKED (Waiting for user to provide Arvento API credentials).
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Backend
     -   **Blocked on other issue**: None.
 
 -   **Issue 2**: Unreliable Tenant Update Workflow
-    -   **Description**: The Master Template Güncelle -> Web Template Güncelle flow is fragile. It has repeatedly caused tenant panels to show a white screen or revert to older versions. The agent identified the root cause: the  function was incorrectly copying the SuperAdmin frontend instead of building the tenant frontend from its source. A fix was implemented in  to build from the correct GitHub source. However, deploying this fix to the live  container has been a constant struggle due to network issues, and the user has reported the flow still fails.
-    -   **Attempted fixes**: The agent modified  to correctly build the tenant frontend from  in the GitHub repo.
-    -   **Next debug checklist**:
-        1.  First, ensure the user's  container is running the latest version of  from the  GitHub repo.
-        2.  Guide the user to trigger the Master Template Güncelle flow again.
-        3.  Immediately check the logs of the container where the build happens (e.g., ) to ensure the yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. is successful.
-        4.  Verify that the Web Template Güncelle correctly copies the new build to the tenant's nginx container () while preserving .
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a core function of the SaaS platform. A reliable update mechanism is critical for managing tenants.
-    -   **Status**: IN PROGRESS
+    -   **Description**: The previous agent struggled with deploying updates to tenants. This agent has successfully performed multiple deployments using the Portainer API directly, suggesting the connection issues might be resolved or a stable workaround is now in place.
+    -   **Attempted fixes**: The agent used a robust multi-step deployment script involving , downloading artifacts from a build container, and uploading them to the target container via the Portainer API.
+    -   **Next debug checklist**: The specific Master Template Güncelle -> Web Template Güncelle flow from the SuperAdmin panel has not been tested since the fix. This should be verified once a stable feature is ready.
+    -   **Why fix this issue and what will be achieved with the fix?**: A reliable update mechanism is critical for managing tenants in the SaaS platform.
+    -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Both
     -   **Blocked on other issue**: None.
 
 -   **Issue 3**: Complete the removal of all mock/test data
-    -   **Description**: The user wants all placeholder data, test users, and data-seeding functions removed. The agent has only addressed one seed endpoint () by commenting it out.
-    -   **Attempted fixes**: Commented out one seeding endpoint in .
+    -   **Description**: The user wants all placeholder data, test users, and data-seeding functions removed. This task has not been started.
     -   **Next debug checklist**:
-        1.  Perform a  search for seed, mock, dummy, test, and any hardcoded example data (emails, names, etc.) across the entire  directory.
-        2.  Remove or disable all identified mock data and seed endpoints from both SuperAdmin and Tenant templates.
-        3.  Create a new tenant to verify it's provisioned with a clean, empty state.
-    -   **Why fix this issue and what will be achieved with the fix?**: Prepares the platform for production use with real customers.
+        1.   for seed, mock, dummy, test, and hardcoded example data across the  directory.
+        2.  Remove or disable all identified mock data and seed endpoints.
+        3.  Verify by creating a new tenant.
+    -   **Why fix this issue and what will be achieved with the fix?**: Prepares the platform for production use.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Both
     -   **Blocked on other issue**: None.
 
 **In progress Task List**:
-- **Task 1**: Connect pending application features
-  - **Where to resume**: The user requested connecting all pages, such as Tenant support tickets appearing in SuperAdmin and locations appearing on the landing page. The agent started by adding a webhook to the tenant's ticket creation endpoint but needs to verify the full flow.
-  - **What will be achieved with this?**: A fully functional and integrated application, moving beyond individual components.
-  - **Status**: IN PROGRESS
-  - **Should Test frontend/backend/both after fix?**: Both
-  - **Blocked on something**: None.
+-   **Task 1**: Implement new Tenant Panel features (Priority: P0)
+    -   **Description**: This is a massive task to build the full functionality for the recently added UI shells.
+    -   **Where to resume**: The frontend files (, , , , ) and backend  have been created/modified but contain only placeholder UI and stubbed endpoints. The next step is to implement the backend logic:
+        1.  Define Pydantic models for Branches, Users (with roles), and Finance records.
+        2.  Implement the full CRUD logic for the new API endpoints in  (for users, branches, finance).
+        3.  Implement the vehicle image upload logic (saving to a persistent volume) and the vehicle edit logic.
+        4.  Implement data scoping based on user roles (admin vs. branch user).
+        5.  Connect the frontend components to the working backend endpoints to fetch, display, and submit data.
+    -   **What will be achieved with this?**: A feature-rich, multi-branch capable, and manageable tenant panel.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Both
+    -   **Blocked on something**: No.
+
+-   **Task 2**: KABİS Integration (Priority: P1)
+    -   **Description**: The user wants to automate reporting to the EGM's KABİS system.
+    -   **Where to resume**: The agent has completed research and found there is no official API. The options (Selenium bot, 3rd party API, manual-with-reminders) have been presented to the user.
+    -   **What will be achieved with this?**: Compliance with legal requirements for car rentals in Turkey.
+    -   **Status**: BLOCKED (Waiting for user decision on which integration path to take).
+    -   **Should Test frontend/backend/both after fix?**: Both
+    -   **Blocked on something**: User feedback.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
@@ -97,92 +105,99 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 
 **Future Tasks:**
 -   **P5**: Implement the full SuperAdmin subscription and billing system.
--   **P6**: Refactor the monolithic  and  files.
+-   **P6**: Refactor the monolithic  files in both SuperAdmin and Tenant backends.
 
 **Completed work in this session**
--   **Versioning System Implemented**:
-    -   Created  and  files for SuperAdmin, Tenant Templates, and Mobile App repos, setting the initial version to  and later .
-    -   Added UI components to the SuperAdmin panel header and Tenant panel header to display the current version.
-    -   Implemented a check for updates feature in the SuperAdmin panel that compares the local version with the one on GitHub and displays a red notification if an update is available.
--   **Arvento GPS Integration (Initial)**:
-    -   Created a new backend service () to handle SOAP API communication with Arvento.
-    -   Added API endpoints to the tenant backend () for saving Arvento settings, testing the connection, and fetching vehicle data.
-    -   Added an Arvento GPS tab to the Tenant panel's  page, allowing users to input credentials.
--   **Production Deployment & Fixes**:
-    -   After extensive troubleshooting, successfully deployed the versioning and Arvento frontend changes to the user's live  and  containers.
-    -   Fixed a critical login issue by correcting the hardcoded backend URL in  and pushing the fix to GitHub.
--   **Tenant Update Workflow Fix (Attempted)**:
-    -   Modified  to build the tenant frontend from its correct source in GitHub () instead of incorrectly copying the SuperAdmin frontend.
+-   **Arvento Integration Scaffolding**:
+    -   Diagnosed API authentication failure, determining that separate API PINs are required.
+    -   Updated  with methods for all requested services.
+    -   Added dozens of new API endpoints to the tenant .
+    -   Completely redesigned the Arvento UI in .
+    -   Pushed all changes to GitHub.
+-   **Price/Availability Calendar Redesign**:
+    -   Completely rewrote  based on user's new design.
+    -   Implemented functionalities like starting from today and being responsive.
+    -   Successfully deployed the changes to both the template and the live  tenant.
+-   **KABİS Integration Research**:
+    -   Conducted web research and determined EGM does not offer a public API.
+    -   Provided the user with a detailed report outlining risks and alternative solutions (Selenium, 3rd party API, manual reminders).
+-   **Tenant Panel Feature Scaffolding**:
+    -   Created new placeholder pages: , , .
+    -   Updated  and  with new navigation and routes.
+    -   Updated  to support clickable stat cards and display the owner's name.
+    -   Updated  to add UI for image uploads and vehicle editing.
+    -   Added placeholder API endpoints for all new features to the backend.
+    -   Deployed the non-functional UI shell to  as requested by the user.
+-   **Resolved Deployment Issues**: Successfully connected to the Portainer API and performed multiple stable deployments, resolving a major blocker from the previous session.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1**: Deploy failed UI Bug
-    -   **Description**: The SuperAdmin frontend incorrectly reports Deploy failed when the backend restarts during a self-update.
-    -   **Debug checklist**: Investigate the frontend logic in  to better handle API call timeouts or network errors during the deployment process.
-    -   **Why to solve this issue and what will be achieved with this?**: Provides accurate feedback to the user, improving usability.
+    -   **Description**: The SuperAdmin frontend incorrectly reports Deploy failed during a self-update.
+    -   **Debug checklist**: Investigate frontend logic in  to better handle API timeouts.
+    -   **Why to solve this issue and what will be achieved with this?**: Provides accurate user feedback.
     -   **Should Test frontend/backend/both after fix**: Frontend.
     -   **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Unreliable deployments and updates causing white screens or incorrect versions.
--   **Recurrence count**: High. This was a central theme of the entire session.
--   **Status**: IN PROGRESS. The agent implemented a code fix for the update workflow, but deploying and verifying this fix has been problematic due to persistent network issues, and the user still reports failures. The core problem of a fragile deployment process remains.
+-   **Issue recurrence in previous fork**: Unreliable deployments causing white screens.
+-   **Recurrence count**: High.
+-   **Status**: RESOLVED (Potentially). The agent was able to connect to the Portainer API and perform multiple, successful, complex deployments. This indicates the previous network/firewall issues may be resolved or a stable workaround has been found. The specific SuperAdmin->Tenant update flow still needs full verification.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **SOAP API Integration**: Using Python (, ) to construct and send SOAP requests to the Arvento Web Service.
--   **Remote Orchestration via Portainer API**: The core architecture relies on a central backend to manage remote Docker containers. However, this is frequently blocked by network issues.
--   **Dynamic Frontend Configuration**: Using a  file that is generated/preserved during deployment to inject the correct backend URL for each tenant, avoiding hardcoded values in the build.
--   **In-Container Build Process**: Building React applications inside a temporary Docker container () by cloning from GitHub, running yarn install v1.22.22
-[1/4] Resolving packages...
-success Already up-to-date.
-Done in 0.03s.
-yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command., and then transferring the build artifacts to the final nginx container.
+-   **SOAP API Integration**: Using Python to debug the Arvento SOAP API.
+-   **Remote Orchestration via Portainer API**: Successfully used the Portainer API to perform complex, multi-step deployments, including building in one container and transferring artifacts to another. This is a major improvement.
+-   **Feature Scaffolding**: Rapidly creating UI shells and API stubs for a large set of features before implementing the core logic.
 
 **All files of reference**
--   : **Most critical file.** Contains all logic for tenant creation and updates. Was modified to fix the template update flow, but deployment of this fix is uncertain.
--   : **New file.** Contains the logic for Arvento SOAP API calls.
--   : Updated to include the Arvento GPS integration tab and form.
--   : Updated with a version endpoint and a commented-out seed endpoint.
--   : Updated with version and Arvento endpoints.
--   : Updated to display the version badge.
--   : The single source of truth for the SuperAdmin and Tenant templates. All recent changes (versioning, Arvento) have been pushed here.
+-   **New Files**:
+    -   
+    -   
+    -   
+-   **Heavily Modified Files**:
+    -   : Added many placeholder endpoints for branches, users, finance, and vehicle management.
+    -   : Rewritten with functions for all requested Arvento API calls.
+    -   : Completely rewritten with a new design and logic.
+    -   : Significantly refactored to support edit and image upload UI.
+    -   : Updated for clickable cards and dynamic welcome message.
+    -   : Added links for new pages.
+    -   : Added routes for new pages.
 
 **Critical Info for New Agent**
--   **SEVERE NETWORK ISSUES**: The agent CANNOT reliably connect to the user's server (72.61.158.147) on any port (SSH:22, Portainer:9443, Web:9000). The user added a firewall rule for the agent's IP (), but it did not resolve the timeouts. **Do not assume you can connect.** You will likely need to provide the user with exact  commands to run via their own SSH/KVM access. Be prepared for this to be a slow and error-prone process.
--   **User has KVM/SSH access**: The user is capable of running commands directly on the server but can get confused by complex, multi-step  and  sequences. Keep commands as simple and self-contained as possible.
--   **Arvento Credentials are Live**: The user provided working credentials for their Arvento account: **user: **, **password: **. Use these to debug the 0 vehicles issue directly. The login page is .
--   **Tenant Update Workflow is the Root of Many Problems**: The user's primary frustration stems from the Master Template Güncelle -> Web Template Güncelle flow breaking their tenant panels. Even though the code to fix this is on GitHub, confirming it's active on the  and works end-to-end is the highest priority after fixing the Arvento bug.
+-   **Massive Feature Implementation is Pending:** The last user request was huge. The agent only created the UI/API skeletons. The immediate priority is to implement the full backend and frontend logic for **Branches, User Management, Finance, and Vehicle Editing/Images**.
+-   **Arvento is BLOCKED:** Do not work on the Arvento integration until the user provides the API , , and .
+-   **KABİS is BLOCKED:** Do not work on KABİS integration until the user chooses one of the proposed implementation strategies.
+-   **Deployment Workflow is Stable:** Unlike the previous agent, this one found a reliable way to deploy using the Portainer API. This process should be reusable for future deployments.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks how to add the firewall rule for the agent's IP.
-2.  **Agent:** Provides the  command.
-3.  **User:** Shares the command output confirming the rule was added.
-4.  **Agent:** Still can't connect, suspects a higher-level firewall (Hostinger panel). Asks the user to run  to get container names for manual commands.
-5.  **User:** Provides the  output.
-6.  **Agent:** Provides a 4-step sequence of  commands for the user to run to manually build and deploy the frontend.
-7.  **User:** Reports a 500 Internal Server Error on the tenant panel after running the commands.
-8.  **Agent:** Asks for logs from  and .
-9.  **User:** Provides logs showing  is empty (directory index... is forbidden).
-10. **User:** After the agent provides corrected commands, reports that Arvento is visible but shows 0 vehicles and provides live credentials for testing.
+1.  **User:** Requests deployment of the new Price Calendar.
+2.  **Agent:** Deploys the changes successfully via Portainer.
+3.  **User:** Provides feedback on the Price Calendar (start today, 31 days, responsive).
+4.  **Agent:** Implements feedback and deploys again.
+5.  **User:** Submits a very large list of new feature requests for the Tenant Panel: Dashboard changes, new Finance page, Vehicle editing/images, new User Management page, and a full-fledged Branches system. Asks to deploy to  when done, without testing.
+6.  **Agent:** Acknowledges the request and begins implementation.
+7.  **Agent:** Creates/modifies dozens of frontend and backend files to scaffold all the requested features.
+8.  **Agent:** Pushes all changes to GitHub.
+9.  **Agent:** Builds the project and successfully deploys the incomplete features to  as requested.
+10. **Agent:** Asks for confirmation and next steps. (This is where the session ended).
 
 **Project Health Check:**
 -   **Broken**:
-    -   The Arvento GPS integration is not fetching vehicle data.
-    -   The core Tenant Update workflow is highly unreliable and has repeatedly broken tenant UIs.
+    -   The Arvento GPS integration is blocked and non-functional.
+    -   The newly added features (Finance, User Management, Branches, Vehicle Editing) are just UI shells and are completely non-functional. The  is in a state of partial implementation.
 -   **Mocked**:
-    -   One seed endpoint has been disabled, but a full audit and removal of all test/mock data is still pending as per the original request.
+    -   A full audit and removal of all test/mock data is still pending.
 
 **3rd Party Integrations**
--   **Portainer**: Used for all container orchestration via its REST API. Agent access is currently blocked by network timeouts.
--   **Expo EAS**: Used for all mobile app builds.
--   **GitHub**: The single source of truth for all code. Agent has write access via a user-provided PAT.
--   **Arvento**: **New integration.** GPS vehicle tracking via a SOAP API.
+-   **Portainer**: Used for container orchestration. Access is working.
+-   **GitHub**: Source of truth for all code.
+-   **Arvento**: GPS tracking via SOAP API. Scaffolding is complete, but the integration is blocked waiting for user-provided API credentials.
+-   **KABİS**: (Proposed) EGM vehicle reporting. Research is complete, but the project is blocked waiting for user's decision on implementation strategy.
 
 **Testing status**
 -   **Testing agent used after significant changes**: NO
@@ -192,14 +207,11 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 **Credentials to test flow:**
 -   **SuperAdmin:**  / 
 -   **Tenant (Bitlis):**  / 
--   **Arvento Web Login**: 
--   **Arvento User:** 
--   **Arvento Password:** 
--   **Portainer URL:** 
+-   **Arvento User (for API):** **PENDING FROM USER**
+-   **Arvento Password (PIN1 for API):** **PENDING FROM USER**
 -   **Portainer API Key:** 
 -   **GitHub Token:** 
 
 **What agent forgot to execute**
--   The agent did not verify the end-to-end success of the permanent fix for the tenant update workflow. The code was written and pushed, but due to deployment issues, it's unclear if it's active and working correctly.
--   The agent did not complete the user's original request to audit and remove all mock/test data from the system.
--   The agent did not fully connect all pending features, such as tenant support tickets appearing in the SuperAdmin panel.</analysis>
+-   The agent intentionally did not test the last major deployment, as per the user's instruction.
+-   The full backend logic (database models, CRUD operations, data scoping) for the massive tenant panel feature update has not been implemented. The agent only created the frontend UI shells and backend API stubs. This is the largest piece of outstanding work.</analysis>
