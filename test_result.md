@@ -464,3 +464,32 @@ Save to GitHub → Portainer Redeploy → Backend otomatik git pull yapar
 - APK dosyaları Expo dashboard'dan indirilebilir
 - Her tenant için ayrı keystore oluşturuluyor
 
+
+---
+## 2025-12-30 - Tenant Panel Özellikleri İmplementasyonu
+
+### Yapılan Değişiklikler
+
+**Backend (Template):**
+1. ✅ `PUT /api/vehicles/{vehicle_id}` - Araç güncelleme endpoint'i eklendi
+2. ✅ `DELETE /api/vehicles/{vehicle_id}` - Araç silme endpoint'i eklendi
+3. ✅ Mevcut endpoint'ler: Branches CRUD, Users CRUD, Finance (stats, transactions)
+
+**Frontend (Template):**
+1. ✅ `Branches.js` - Şube yönetimi sayfası (CRUD + manager oluşturma)
+2. ✅ `UserManagement.js` - Kullanıcı yönetimi sayfası (CRUD + roller + izinler)
+3. ✅ `Finance.js` - Finans sayfası (grafikler, işlemler, PDF/XLSX export)
+4. ✅ `Vehicles.js` - Araç yönetimi (CRUD + resim yükleme + düzenleme)
+5. ✅ `Dashboard.js` - Tıklanabilir stat kartları, firma sahibi adı
+
+### Test Edilecekler
+- [ ] Branches CRUD işlemleri
+- [ ] User Management CRUD işlemleri
+- [ ] Finance sayfası veri görüntüleme ve export
+- [ ] Vehicle düzenleme ve silme
+- [ ] Dashboard tıklanabilir kartlar
+
+### Notlar
+- Template dosyaları güncellendi, Bitlis tenant'a deploy edilmesi gerekiyor
+- Arvento entegrasyonu BLOKE durumda (API credentials bekleniyor)
+- KABİS entegrasyonu BLOKE durumda (kullanıcı kararı bekleniyor)
