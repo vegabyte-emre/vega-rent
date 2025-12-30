@@ -27,6 +27,8 @@ import {
   CalendarDays,
   Link2,
   Smartphone,
+  Building2,
+  UserCog,
 } from "lucide-react";
 
 // Check if we're on panel subdomain
