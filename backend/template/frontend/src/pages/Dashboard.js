@@ -56,6 +56,7 @@ export function Dashboard() {
       icon: Car,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
+      link: "/vehicles",
     },
     {
       title: "Müsait Araç",
@@ -63,6 +64,7 @@ export function Dashboard() {
       icon: CheckCircle2,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10",
+      link: "/vehicles?status=available",
     },
     {
       title: "Kirada",
@@ -70,6 +72,7 @@ export function Dashboard() {
       icon: Clock,
       color: "text-amber-500",
       bgColor: "bg-amber-500/10",
+      link: "/vehicles?status=rented",
     },
     {
       title: "Aktif Rezervasyon",
@@ -77,6 +80,7 @@ export function Dashboard() {
       icon: Calendar,
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
+      link: "/reservations",
     },
     {
       title: "Toplam Müşteri",
@@ -84,6 +88,7 @@ export function Dashboard() {
       icon: Users,
       color: "text-cyan-500",
       bgColor: "bg-cyan-500/10",
+      link: "/customers",
     },
     {
       title: "Toplam Gelir",
@@ -92,6 +97,7 @@ export function Dashboard() {
       color: "text-green-500",
       bgColor: "bg-green-500/10",
       isRevenue: true,
+      link: "/finance",
     },
   ];
 
