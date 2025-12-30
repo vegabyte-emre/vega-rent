@@ -22,7 +22,9 @@ import { Reports } from "./pages/Reports";
 import { Settings } from "./pages/Settings";
 import { ThemeStore } from "./pages/ThemeStore";
 import { Support } from "./pages/Support";
-import Locations from "./pages/Locations";
+import { Finance } from "./pages/Finance";
+import { UserManagement } from "./pages/UserManagement";
+import { Branches } from "./pages/Branches";
 import MobileApps from "./pages/MobileApps";
 
 // Public Pages (Customer Facing)
