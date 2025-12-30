@@ -137,13 +137,15 @@ function AppRoutes() {
         <Route path="/customers" element={<Customers />} />
         <Route path="/reservations" element={<Reservations />} />
         <Route path="/reservations/new" element={<NewReservation />} />
+        <Route path="/branches" element={<Branches />} />
+        <Route path="/user-management" element={<UserManagement />} />
+        <Route path="/finance" element={<Finance />} />
         <Route path="/gps" element={<GPS />} />
         <Route path="/hgs" element={<HGS />} />
         <Route path="/kabis" element={<Kabis />} />
         <Route path="/integrations" element={<Integrations />} />
         <Route path="/payments" element={<Payments />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/locations" element={<Locations />} />
         <Route path="/mobile-apps" element={<MobileApps />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/theme-store" element={<ThemeStore />} />
