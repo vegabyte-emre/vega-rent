@@ -131,7 +131,7 @@ class ArventoService:
                                         item[child_tag] = child.text
                                     if item:
                                         results.append(item)
-                        except:
+                        except ET.ParseError:
                             pass
                             
         except ET.ParseError as e:
@@ -155,14 +155,16 @@ class ArventoService:
                 try:
                     lat = float(raw[field])
                     break
-                except: pass
+                except (ValueError, TypeError):
+                    pass
         
         for field in ['Longitude', 'longitude', 'Lng', 'lng', 'Lon', 'lon', 'Boylam', 'X', 'x']:
             if raw.get(field):
                 try:
                     lng = float(raw[field])
                     break
-                except: pass
+                except (ValueError, TypeError):
+                    pass
         
         # Hız
         speed = 0
@@ -171,7 +173,8 @@ class ArventoService:
                 try:
                     speed = float(raw[field])
                     break
-                except: pass
+                except (ValueError, TypeError):
+                    pass
         
         # Kontak durumu
         ignition = False
