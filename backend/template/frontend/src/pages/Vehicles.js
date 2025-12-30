@@ -789,15 +789,20 @@ export function Vehicles() {
                     <TableHead>Günlük Ücret</TableHead>
                     <TableHead>Kilometre</TableHead>
                     <TableHead>Durum</TableHead>
+                    <TableHead className="text-right">İşlemler</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredVehicles.map((vehicle) => (
-                    <TableRow key={vehicle.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableRow key={vehicle.id} className="hover:bg-muted/50">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Car className="h-5 w-5 text-primary" />
+                          <div className="w-12 h-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+                            {vehicle.image_url ? (
+                              <img src={vehicle.image_url} alt={vehicle.plate} className="w-full h-full object-cover" />
+                            ) : (
+                              <Car className="h-5 w-5 text-primary" />
+                            )}
                           </div>
                           <div>
                             <p className="font-medium">{vehicle.brand} {vehicle.model}</p>
@@ -817,11 +822,21 @@ export function Vehicles() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{formatCurrency(vehicle.daily_rate)}</TableCell>
-                      <TableCell>{vehicle.mileage.toLocaleString()} km</TableCell>
+                      <TableCell>{vehicle.mileage?.toLocaleString() || 0} km</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(vehicle.status)}>
                           {getStatusLabel(vehicle.status)}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(vehicle)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(vehicle.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
