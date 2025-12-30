@@ -714,7 +714,7 @@ export const PriceCalendar = () => {
             <div className="space-y-2">
               <Label>Müşteri</Label>
               <Select 
-                value={reservationForm.customer_id || ''} 
+                value={reservationForm.customer_id || 'none'} 
                 onValueChange={(v) => setReservationForm({...reservationForm, customer_id: v === 'none' ? '' : v})}
               >
                 <SelectTrigger>
